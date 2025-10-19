@@ -1,0 +1,288 @@
+use std::io;
+
+use chrono::{Datelike, NaiveDate, NaiveTime};
+use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
+use ratatui::Terminal;
+use ratatui::backend::Backend;
+
+use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
+use crate::persistence;
+use crate::ui::ui;
+
+fn normalize_time_input(input: &str) -> String {
+    let trimmed = input.trim();
+
+    // If it's already in HH:MM format, return as is
+    if trimmed.contains(':') {
+        let parts: Vec<&str> = trimmed.split(':').collect();
+        if parts.len() == 2 {
+            let hour = parts[0].parse::<u32>().unwrap_or(0);
+            let minute = parts[1].parse::<u32>().unwrap_or(0);
+            return format!("{hour:02}:{minute:02}");
+        }
+    }
+
+    // If it's just hours, add :00
+    if let Ok(hour) = trimmed.parse::<u32>() {
+        if hour <= 23 {
+            return format!("{hour:02}:00");
+        }
+    }
+
+    // If it's a single digit hour, pad with zero and add :00
+    if trimmed.len() == 1 {
+        if let Ok(hour) = trimmed.parse::<u32>() {
+            if hour <= 9 {
+                return format!("0{hour}:00");
+            }
+        }
+    }
+
+    // Return original if we can't parse it
+    trimmed.to_string()
+}
+
+pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+    loop {
+        terminal.draw(|f| ui(f, &mut app))?;
+
+        let event = event::read()?;
+        if !handle_event(&mut app, event)? {
+            break;
+        }
+    }
+    Ok(())
+}
+
+pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
+    if let CrosstermEvent::Key(key) = event {
+        match app.input_mode {
+            InputMode::Normal => match key.code {
+                KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(false),
+                KeyCode::Char('a') => {
+                    app.show_add_event_popup = true;
+                    app.input_mode = InputMode::EditingEventPopup;
+                    app.current_date_for_new_event = app.date;
+                    app.popup_event_title.clear();
+                    app.popup_event_time.clear();
+                    app.popup_event_description.clear();
+                    app.input.clear();
+                    app.selected_input_field = PopupInputField::Title;
+                    app.cursor_position = 0;
+                }
+                KeyCode::Left | KeyCode::Char('h') => {
+                    app.date -= chrono::Duration::days(1);
+                }
+                KeyCode::Right | KeyCode::Char('l') => {
+                    app.date += chrono::Duration::days(1);
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    app.date -= chrono::Duration::weeks(1);
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    app.date += chrono::Duration::weeks(1);
+                }
+                KeyCode::PageUp | KeyCode::Char('H') => {
+                    let mut year = app.date.year();
+                    let mut month = app.date.month();
+                    if month == 1 {
+                        month = 12;
+                        year -= 1;
+                    } else {
+                        month -= 1;
+                    }
+                    app.date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+                }
+                KeyCode::PageDown | KeyCode::Char('L') => {
+                    let mut year = app.date.year();
+                    let mut month = app.date.month();
+                    if month == 12 {
+                        month = 1;
+                        year += 1;
+                    } else {
+                        month += 1;
+                    }
+                    app.date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+                }
+                KeyCode::Char('o') => {
+                    app.show_view_events_popup = true;
+                    app.events_to_display_in_popup = app
+                        .events
+                        .iter()
+                        .filter(|event| event.date == app.date)
+                        .cloned()
+                        .collect();
+                    app.events_to_display_in_popup
+                        .sort_by_key(|event| event.time);
+                    app.selected_event_index = 0;
+                    app.input_mode = InputMode::ViewEventsPopup;
+                }
+                _ => {}
+            },
+            InputMode::EditingEventPopup => match key.code {
+                KeyCode::Enter => {
+                    let time_str = app.popup_event_time.drain(..).collect::<String>();
+                    let normalized_time_str = normalize_time_input(&time_str);
+
+                    if let Ok(time) = NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
+                        let title = app.popup_event_title.drain(..).collect();
+                        let description = app.popup_event_description.drain(..).collect();
+                        let event = CalendarEvent {
+                            date: app.current_date_for_new_event,
+                            time,
+                            title,
+                            description,
+                        };
+                        app.events.push(event.clone());
+                        persistence::save_event(&event);
+
+                        // If we came from the view events popup, refresh it and stay in that mode
+                        if app.show_view_events_popup {
+                            app.events_to_display_in_popup = app
+                                .events
+                                .iter()
+                                .filter(|event| event.date == app.date)
+                                .cloned()
+                                .collect();
+                            app.events_to_display_in_popup
+                                .sort_by_key(|event| event.time);
+                            app.selected_event_index = 0;
+                            app.input_mode = InputMode::ViewEventsPopup;
+                        } else {
+                            app.input_mode = InputMode::Normal;
+                        }
+                    } else {
+                        // If time parsing failed, just close popup and return to appropriate mode
+                        if app.show_view_events_popup {
+                            app.input_mode = InputMode::ViewEventsPopup;
+                        } else {
+                            app.input_mode = InputMode::Normal;
+                        }
+                    }
+                    app.show_add_event_popup = false;
+                }
+                KeyCode::Char(c) => {
+                    let cursor_pos = app.cursor_position;
+                    let field = app.get_current_field_mut();
+                    let byte_index = App::char_to_byte_index(field, cursor_pos);
+                    field.insert(byte_index, c);
+                    app.cursor_position += 1;
+                },
+                KeyCode::Backspace => {
+                    if app.cursor_position > 0 {
+                        let cursor_pos = app.cursor_position - 1;
+                        let field = app.get_current_field_mut();
+                        let byte_index = App::char_to_byte_index(field, cursor_pos);
+                        field.remove(byte_index);
+                        app.cursor_position -= 1;
+                    }
+                },
+                KeyCode::Esc => {
+                    app.show_add_event_popup = false;
+                    app.popup_event_title.clear();
+                    app.popup_event_time.clear();
+                    app.popup_event_description.clear();
+                    app.input.clear();
+
+                    // Return to view events popup if that's where we came from
+                    if app.show_view_events_popup {
+                        app.input_mode = InputMode::ViewEventsPopup;
+                    } else {
+                        app.input_mode = InputMode::Normal;
+                    }
+                }
+                KeyCode::Left => {
+                    if app.cursor_position > 0 {
+                        app.cursor_position -= 1;
+                    }
+                }
+                KeyCode::Right => {
+                    if app.cursor_position < app.get_current_field_char_count() {
+                        app.cursor_position += 1;
+                    }
+                },
+                KeyCode::Tab => {
+                    app.selected_input_field = match app.selected_input_field {
+                        PopupInputField::Title => {
+                            app.cursor_position = app.popup_event_time.chars().count();
+                            PopupInputField::Time
+                        }
+                        PopupInputField::Time => {
+                            app.cursor_position = app.popup_event_description.chars().count();
+                            PopupInputField::Description
+                        }
+                        PopupInputField::Description => {
+                            app.cursor_position = app.popup_event_title.chars().count();
+                            PopupInputField::Title
+                        }
+                    };
+                }
+                _ => {}
+            },
+            InputMode::ViewEventsPopup => match key.code {
+                KeyCode::Esc => {
+                    app.show_view_events_popup = false;
+                    app.events_to_display_in_popup.clear();
+                    app.selected_event_index = 0;
+                    app.event_to_delete_index = None;
+                    app.input_mode = InputMode::Normal;
+                }
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if app.selected_event_index > 0 {
+                        app.selected_event_index -= 1;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if app.selected_event_index < app.events_to_display_in_popup.len().saturating_sub(1) {
+                        app.selected_event_index += 1;
+                    }
+                }
+                KeyCode::Char('a') => {
+                    app.show_add_event_popup = true;
+                    app.input_mode = InputMode::EditingEventPopup;
+                    app.current_date_for_new_event = app.date;
+                    app.popup_event_title.clear();
+                    app.popup_event_time.clear();
+                    app.popup_event_description.clear();
+                    app.input.clear();
+                    app.selected_input_field = PopupInputField::Title;
+                    app.cursor_position = 0;
+                }
+                KeyCode::Char('d') | KeyCode::Delete => {
+                    if !app.events_to_display_in_popup.is_empty() {
+                        app.event_to_delete_index = Some(app.selected_event_index);
+                        app.input_mode = InputMode::DeleteConfirmation;
+                    }
+                }
+                _ => {}
+            },
+            InputMode::DeleteConfirmation => match key.code {
+                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                    if let Some(index) = app.event_to_delete_index {
+                        if index < app.events_to_display_in_popup.len() {
+                            let event_to_delete = &app.events_to_display_in_popup[index];
+                            // Remove from main events list
+                            app.events.retain(|event| event != event_to_delete);
+                            // Remove from persistence
+                            persistence::delete_event(event_to_delete);
+                            // Update display list
+                            app.events_to_display_in_popup.remove(index);
+                            // Adjust selection if necessary
+                            if app.selected_event_index >= app.events_to_display_in_popup.len() && app.selected_event_index > 0 {
+                                app.selected_event_index -= 1;
+                            }
+                        }
+                    }
+                    app.event_to_delete_index = None;
+                    app.input_mode = InputMode::ViewEventsPopup;
+                }
+                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                    app.event_to_delete_index = None;
+                    app.input_mode = InputMode::ViewEventsPopup;
+                }
+                _ => {}
+            }
+        }
+    }
+    Ok(true)
+}

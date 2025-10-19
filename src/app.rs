@@ -1,11 +1,22 @@
 use chrono::{Local, NaiveDate, NaiveTime};
 
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Debug)]
+pub enum Recurrence {
+    None,
+    Daily,
+    Weekly,
+    Monthly,
+}
+
+#[derive(Clone, PartialEq, Debug)]
 pub struct CalendarEvent {
     pub date: NaiveDate,
     pub time: NaiveTime,
     pub title: String,
     pub description: String,
+    pub recurrence: Recurrence,
+    pub is_recurring_instance: bool,
+    pub base_date: Option<NaiveDate>,
 }
 
 #[derive(PartialEq, Debug)]
@@ -21,6 +32,7 @@ pub enum PopupInputField {
     Title,
     Time,
     Description,
+    Recurrence,
 }
 
 pub struct App {
@@ -31,6 +43,7 @@ pub struct App {
     pub popup_event_title: String,
     pub popup_event_time: String,
     pub popup_event_description: String,
+    pub popup_event_recurrence: String,
     pub selected_input_field: PopupInputField,
     pub show_add_event_popup: bool,
     pub show_view_events_popup: bool,
@@ -39,6 +52,8 @@ pub struct App {
     pub event_to_delete_index: Option<usize>,
     pub current_date_for_new_event: NaiveDate,
     pub cursor_position: usize, // Character index for Unicode support
+    pub is_editing: bool,
+    pub event_being_edited: Option<CalendarEvent>,
 }
 
 impl Default for App {
@@ -57,6 +72,7 @@ impl App {
             popup_event_title: String::new(),
             popup_event_time: String::new(),
             popup_event_description: String::new(),
+            popup_event_recurrence: String::new(),
             selected_input_field: PopupInputField::Title,
             show_add_event_popup: false,
             show_view_events_popup: false,
@@ -65,12 +81,17 @@ impl App {
             event_to_delete_index: None,
             current_date_for_new_event: Local::now().date_naive(),
             cursor_position: 0,
+            is_editing: false,
+            event_being_edited: None,
         }
     }
 
     // Helper functions for Unicode-safe cursor handling
     pub fn char_to_byte_index(s: &str, char_index: usize) -> usize {
-        s.char_indices().nth(char_index).map(|(i, _)| i).unwrap_or(s.len())
+        s.char_indices()
+            .nth(char_index)
+            .map(|(i, _)| i)
+            .unwrap_or(s.len())
     }
 
     pub fn get_current_field(&self) -> &str {
@@ -78,6 +99,7 @@ impl App {
             PopupInputField::Title => &self.popup_event_title,
             PopupInputField::Time => &self.popup_event_time,
             PopupInputField::Description => &self.popup_event_description,
+            PopupInputField::Recurrence => &self.popup_event_recurrence,
         }
     }
 
@@ -86,6 +108,7 @@ impl App {
             PopupInputField::Title => &mut self.popup_event_title,
             PopupInputField::Time => &mut self.popup_event_time,
             PopupInputField::Description => &mut self.popup_event_description,
+            PopupInputField::Recurrence => &mut self.popup_event_recurrence,
         }
     }
 

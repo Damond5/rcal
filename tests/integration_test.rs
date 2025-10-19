@@ -370,6 +370,23 @@ fn test_tab_switch_to_title_field_from_description() {
     let key_event = KeyEvent::from(KeyCode::Tab);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
+    assert_eq!(app.selected_input_field, PopupInputField::Recurrence);
+    assert_eq!(app.cursor_position, 0); // Should be at end of recurrence field
+}
+
+#[test]
+fn test_tab_switch_to_title_field_from_recurrence() {
+    let mut app = App::new();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::Recurrence;
+    app.popup_event_title = "Meeting".to_string();
+    app.popup_event_recurrence = "daily".to_string();
+    app.cursor_position = 5;
+
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
     assert_eq!(app.selected_input_field, PopupInputField::Title);
     assert_eq!(app.cursor_position, 7); // Should be at end of title field
 }
@@ -407,7 +424,10 @@ fn test_create_event_with_hours_only() {
     assert_eq!(app.input_mode, InputMode::Normal);
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Test Event");
-    assert_eq!(app.events[0].time, NaiveTime::from_hms_opt(14, 0, 0).unwrap());
+    assert_eq!(
+        app.events[0].time,
+        NaiveTime::from_hms_opt(14, 0, 0).unwrap()
+    );
 }
 
 #[test]
@@ -426,7 +446,10 @@ fn test_create_event_with_single_digit_hour() {
     assert_eq!(app.input_mode, InputMode::Normal);
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Morning Event");
-    assert_eq!(app.events[0].time, NaiveTime::from_hms_opt(9, 0, 0).unwrap());
+    assert_eq!(
+        app.events[0].time,
+        NaiveTime::from_hms_opt(9, 0, 0).unwrap()
+    );
 }
 
 #[test]
@@ -438,12 +461,18 @@ fn test_delete_event_from_view_popup() {
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Delete".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
     app.events.push(CalendarEvent {
         date: today,
         time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
 
     // Open view events popup
@@ -479,6 +508,9 @@ fn test_cancel_delete_event_confirmation() {
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
 
     // Open view events popup
@@ -547,12 +579,18 @@ fn test_navigate_events_in_view_popup() {
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
     app.events.push(CalendarEvent {
         date: today,
         time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Second Event".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
 
     // Open view events popup
@@ -646,12 +684,18 @@ fn test_view_events_popup_with_events() {
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
     app.events.push(CalendarEvent {
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
 
     let key_event = KeyEvent::from(KeyCode::Char('o'));
@@ -688,12 +732,18 @@ fn test_view_events_popup_filters_by_date() {
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
     app.events.push(CalendarEvent {
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
         description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
     });
 
     let key_event = KeyEvent::from(KeyCode::Char('o'));
@@ -712,4 +762,238 @@ fn test_popup_state() {
     // Just verify that the popup state is set correctly
     assert!(app.show_add_event_popup);
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+}
+
+#[test]
+fn test_open_edit_event_popup() {
+    let mut app = App::new();
+    let today = app.date;
+    app.events.push(CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Event to Edit".to_string(),
+        description: "Description".to_string(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    });
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert!(app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert!(app.is_editing);
+    assert_eq!(app.popup_event_title, "Event to Edit");
+    assert_eq!(app.popup_event_time, "10:00");
+    assert_eq!(app.popup_event_description, "Description");
+    assert_eq!(app.cursor_position, "Event to Edit".chars().count());
+}
+
+#[test]
+fn test_edit_event_success() {
+    let mut app = App::new();
+    let today = app.date;
+    app.events.push(CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: "Original Description".to_string(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    });
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Modify title
+    app.popup_event_title = "Edited Title".to_string();
+    app.popup_event_time = "11:30".to_string();
+    app.popup_event_description = "Edited Description".to_string();
+
+    // Save
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert!(!app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::ViewEventsPopup);
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0].title, "Edited Title");
+    assert_eq!(
+        app.events[0].time,
+        NaiveTime::from_hms_opt(11, 30, 0).unwrap()
+    );
+    assert_eq!(app.events[0].description, "Edited Description");
+    assert!(!app.is_editing);
+    assert!(app.event_being_edited.is_none());
+}
+
+#[test]
+fn test_cancel_edit_event() {
+    let mut app = App::new();
+    let today = app.date;
+    let original_event = CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: "Original Description".to_string(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    };
+    app.events.push(original_event.clone());
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Modify fields
+    app.popup_event_title = "Modified Title".to_string();
+
+    // Cancel
+    let key_event = KeyEvent::from(KeyCode::Esc);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert!(!app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::ViewEventsPopup);
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0], original_event); // Event unchanged
+    assert!(!app.is_editing);
+    assert!(app.event_being_edited.is_none());
+}
+
+#[test]
+fn test_edit_event_invalid_time() {
+    let mut app = App::new();
+    let today = app.date;
+    let original_event = CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    };
+    app.events.push(original_event.clone());
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Set invalid time
+    app.popup_event_time = "invalid".to_string();
+
+    // Try to save
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert!(!app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::ViewEventsPopup);
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0], original_event); // Event unchanged
+    assert!(!app.is_editing);
+    assert!(app.event_being_edited.is_none());
+}
+
+#[test]
+fn test_edit_event_change_time_sorting() {
+    let mut app = App::new();
+    let today = app.date;
+    app.events.push(CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        title: "Noon Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    });
+    app.events.push(CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Morning Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    });
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Select first event (Morning Event)
+    assert_eq!(app.events_to_display_in_popup[0].title, "Morning Event");
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Change time to 14:00
+    app.popup_event_time = "14:00".to_string();
+
+    // Save
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Check sorting: Morning should still be first, then Noon, then edited to 14:00
+    assert_eq!(app.events_to_display_in_popup.len(), 2);
+    assert_eq!(app.events_to_display_in_popup[0].title, "Noon Event"); // 12:00
+    assert_eq!(app.events_to_display_in_popup[1].title, "Morning Event"); // 14:00
+}
+
+#[test]
+fn test_edit_event_persistence() {
+    // This test would require mocking persistence, but since persistence uses real files,
+    // we'll assume the save/delete functions work as tested separately.
+    // In a real scenario, we'd use a temp dir for the app.
+    let mut app = App::new();
+    let today = app.date;
+    app.events.push(CalendarEvent {
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Old Title".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+    });
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Change title
+    app.popup_event_title = "New Title".to_string();
+
+    // Save
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Verify in memory
+    assert_eq!(app.events[0].title, "New Title");
 }

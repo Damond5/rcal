@@ -1,6 +1,6 @@
 use std::path::Path;
 
-use chrono::{NaiveDate, NaiveTime};
+use chrono::{Datelike, Duration, NaiveDate, NaiveTime};
 use dirs;
 
 use crate::app::CalendarEvent;
@@ -33,13 +33,40 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                             if parts.len() == 2 {
                                 if let Ok(time) = NaiveTime::parse_from_str(parts[0], "%H:%M") {
                                     let title_and_desc: Vec<&str> = parts[1].split(": ").collect();
-                                    let title = title_and_desc[0].to_string();
+                                    let title_part = title_and_desc[0];
+                                    let (title, recurrence) = if let Some(pos) =
+                                        title_part.rfind(" (")
+                                    {
+                                        if title_part.ends_with(')') {
+                                            let rec_str =
+                                                &title_part[pos + 2..title_part.len() - 1];
+                                            let rec = match rec_str {
+                                                "daily" => crate::app::Recurrence::Daily,
+                                                "weekly" => crate::app::Recurrence::Weekly,
+                                                "monthly" => crate::app::Recurrence::Monthly,
+                                                _ => crate::app::Recurrence::None,
+                                            };
+                                            (title_part[..pos].to_string(), rec)
+                                        } else {
+                                            (title_part.to_string(), crate::app::Recurrence::None)
+                                        }
+                                    } else {
+                                        (title_part.to_string(), crate::app::Recurrence::None)
+                                    };
                                     let description = if title_and_desc.len() > 1 {
                                         title_and_desc[1..].join(": ")
                                     } else {
                                         String::new()
                                     };
-                                    events.push(CalendarEvent { date, time, title, description });
+                                    events.push(CalendarEvent {
+                                        date,
+                                        time,
+                                        title,
+                                        description,
+                                        recurrence,
+                                        is_recurring_instance: false,
+                                        base_date: None,
+                                    });
                                 }
                             }
                         }
@@ -50,7 +77,53 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
     }
 
     events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
-    events
+
+    // Generate recurring instances
+    let mut all_events = events.clone();
+    for event in &events {
+        if event.recurrence != crate::app::Recurrence::None {
+            let until = chrono::Local::now().date_naive() + Duration::days(365);
+            all_events.extend(generate_recurring_instances(event, until));
+        }
+    }
+    all_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+    all_events
+}
+
+fn generate_recurring_instances(
+    base_event: &CalendarEvent,
+    until: NaiveDate,
+) -> Vec<CalendarEvent> {
+    let mut instances = vec![];
+    let mut current_date = base_event.date;
+
+    while current_date <= until {
+        if current_date != base_event.date {
+            instances.push(CalendarEvent {
+                date: current_date,
+                time: base_event.time,
+                title: base_event.title.clone(),
+                description: base_event.description.clone(),
+                recurrence: crate::app::Recurrence::None,
+                is_recurring_instance: true,
+                base_date: Some(base_event.date),
+            });
+        }
+
+        match base_event.recurrence {
+            crate::app::Recurrence::Daily => current_date += Duration::days(1),
+            crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
+            crate::app::Recurrence::Monthly => {
+                if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
+                    current_date = new_date;
+                } else {
+                    break;
+                }
+            }
+            crate::app::Recurrence::None => break,
+        }
+    }
+    instances
 }
 
 pub fn save_event(event: &CalendarEvent) {
@@ -75,7 +148,23 @@ pub fn save_event_to_path(event: &CalendarEvent, calendar_dir: &Path) {
                 if parts.len() == 2 {
                     if let Ok(time) = NaiveTime::parse_from_str(parts[0], "%H:%M") {
                         let title_and_desc: Vec<&str> = parts[1].split(": ").collect();
-                        let title = title_and_desc[0].to_string();
+                        let title_part = title_and_desc[0];
+                        let (title, recurrence) = if let Some(pos) = title_part.rfind(" (") {
+                            if title_part.ends_with(')') {
+                                let rec_str = &title_part[pos + 2..title_part.len() - 1];
+                                let rec = match rec_str {
+                                    "daily" => crate::app::Recurrence::Daily,
+                                    "weekly" => crate::app::Recurrence::Weekly,
+                                    "monthly" => crate::app::Recurrence::Monthly,
+                                    _ => crate::app::Recurrence::None,
+                                };
+                                (title_part[..pos].to_string(), rec)
+                            } else {
+                                (title_part.to_string(), crate::app::Recurrence::None)
+                            }
+                        } else {
+                            (title_part.to_string(), crate::app::Recurrence::None)
+                        };
                         let description = if title_and_desc.len() > 1 {
                             title_and_desc[1..].join(": ")
                         } else {
@@ -86,6 +175,9 @@ pub fn save_event_to_path(event: &CalendarEvent, calendar_dir: &Path) {
                             time,
                             title,
                             description,
+                            recurrence,
+                            is_recurring_instance: false,
+                            base_date: None,
                         });
                     }
                 }
@@ -98,10 +190,27 @@ pub fn save_event_to_path(event: &CalendarEvent, calendar_dir: &Path) {
 
     let mut content = format!("# Events for {}\n\n", event.date.format("%Y-%m-%d"));
     for e in events_for_day {
+        let rec_str = match e.recurrence {
+            crate::app::Recurrence::None => "",
+            crate::app::Recurrence::Daily => " (daily)",
+            crate::app::Recurrence::Weekly => " (weekly)",
+            crate::app::Recurrence::Monthly => " (monthly)",
+        };
         if e.description.is_empty() {
-            content.push_str(&format!("- {} - {}\n", e.time.format("%H:%M"), e.title));
+            content.push_str(&format!(
+                "- {} - {}{}\n",
+                e.time.format("%H:%M"),
+                e.title,
+                rec_str
+            ));
         } else {
-            content.push_str(&format!("- {} - {}: {}\n", e.time.format("%H:%M"), e.title, e.description));
+            content.push_str(&format!(
+                "- {} - {}: {}{}\n",
+                e.time.format("%H:%M"),
+                e.title,
+                e.description,
+                rec_str
+            ));
         }
     }
 
@@ -132,7 +241,23 @@ pub fn delete_event_from_path(event: &CalendarEvent, calendar_dir: &Path) {
             if parts.len() == 2 {
                 if let Ok(time) = NaiveTime::parse_from_str(parts[0], "%H:%M") {
                     let title_and_desc: Vec<&str> = parts[1].split(": ").collect();
-                    let title = title_and_desc[0].to_string();
+                    let title_part = title_and_desc[0];
+                    let (title, recurrence) = if let Some(pos) = title_part.rfind(" (") {
+                        if title_part.ends_with(')') {
+                            let rec_str = &title_part[pos + 2..title_part.len() - 1];
+                            let rec = match rec_str {
+                                "daily" => crate::app::Recurrence::Daily,
+                                "weekly" => crate::app::Recurrence::Weekly,
+                                "monthly" => crate::app::Recurrence::Monthly,
+                                _ => crate::app::Recurrence::None,
+                            };
+                            (title_part[..pos].to_string(), rec)
+                        } else {
+                            (title_part.to_string(), crate::app::Recurrence::None)
+                        }
+                    } else {
+                        (title_part.to_string(), crate::app::Recurrence::None)
+                    };
                     let description = if title_and_desc.len() > 1 {
                         title_and_desc[1..].join(": ")
                     } else {
@@ -143,9 +268,20 @@ pub fn delete_event_from_path(event: &CalendarEvent, calendar_dir: &Path) {
                         time,
                         title,
                         description,
+                        recurrence,
+                        is_recurring_instance: false,
+                        base_date: None,
                     };
                     // Only keep events that don't match the one to delete
-                    if parsed_event != *event {
+                    let should_delete = if event.is_recurring_instance {
+                        parsed_event.date == event.base_date.unwrap()
+                            && parsed_event.title == event.title
+                            && parsed_event.time == event.time
+                            && parsed_event.description == event.description
+                    } else {
+                        parsed_event == *event
+                    };
+                    if !should_delete {
                         events_for_day.push(parsed_event);
                     }
                 }
@@ -163,7 +299,12 @@ pub fn delete_event_from_path(event: &CalendarEvent, calendar_dir: &Path) {
             if e.description.is_empty() {
                 content.push_str(&format!("- {} - {}\n", e.time.format("%H:%M"), e.title));
             } else {
-                content.push_str(&format!("- {} - {}: {}\n", e.time.format("%H:%M"), e.title, e.description));
+                content.push_str(&format!(
+                    "- {} - {}: {}\n",
+                    e.time.format("%H:%M"),
+                    e.title,
+                    e.description
+                ));
             }
         }
         std::fs::write(filepath, content).expect("Could not write file");
@@ -190,6 +331,9 @@ mod tests {
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
 
         save_event_to_path(&event, temp_dir.path());
@@ -209,12 +353,18 @@ mod tests {
             time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
             title: "Later Event".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
         let event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Earlier Event".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
 
         save_event_to_path(&event1, temp_dir.path());
@@ -235,12 +385,18 @@ mod tests {
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Day 1 Event".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
         let event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
 
         save_event_to_path(&event1, temp_dir.path());
@@ -261,6 +417,9 @@ mod tests {
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
             description: "This is a test description".to_string(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
 
         save_event_to_path(&event, temp_dir.path());
@@ -281,12 +440,18 @@ mod tests {
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Event 1".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
         let event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
             title: "Event 2".to_string(),
             description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
         };
 
         // Save both events

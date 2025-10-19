@@ -66,7 +66,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Block Borders**: Wrap input fields in `Block` widgets with titles for clear field identification
 - **Cursor Positioning**: Calculate cursor coordinates relative to input field positions using character-based indexing for Unicode support
 - **Style Management**: Use conditional styling based on `selected_input_field` for visual feedback
-- **Event Selection**: Highlight selected events in view popup with background color
+- **Event Selection**: Highlight selected events in view popup with black text on light blue background for improved readability
 
 ### Error Handling
 

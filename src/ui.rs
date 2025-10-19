@@ -51,13 +51,16 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             current_date_for_week_num = current_day_date;
 
             let mut day_display_str = day_str.clone();
-            if app
+            let has_event = app
                 .events
                 .iter()
-                .any(|event| event.date == current_day_date)
-            {
-                day_display_str.push('*');
-            }
+                .any(|event| event.date == current_day_date);
+            let symbol = if has_event {
+                "*"
+            } else {
+                ""
+            };
+            day_display_str.push_str(symbol);
 
             // Apply Saturday/Sunday colors
             if current_day_date.weekday().num_days_from_monday() == 5 {
@@ -75,7 +78,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
             // Apply selected day foreground and bold if it's the selected date
             if current_day_date == app.date {
-                final_style = final_style.bg(Color::LightBlue);
+                final_style = final_style.fg(Color::Black).bg(Color::LightBlue);
             }
             cell = Cell::from(day_display_str).style(final_style);
         }
@@ -151,14 +154,32 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .iter()
             .enumerate()
             .map(|(index, event)| {
-                let content = if event.description.is_empty() {
-                    format!("{} - {}", event.time.format("%H:%M"), event.title)
+                let recurring_indicator = if event.recurrence != crate::app::Recurrence::None
+                    || event.is_recurring_instance
+                {
+                    " (R)"
                 } else {
-                    format!("{} - {}: {}", event.time.format("%H:%M"), event.title, event.description)
+                    ""
+                };
+                let content = if event.description.is_empty() {
+                    format!(
+                        "{} - {}{}",
+                        event.time.format("%H:%M"),
+                        event.title,
+                        recurring_indicator
+                    )
+                } else {
+                    format!(
+                        "{} - {}: {}{}",
+                        event.time.format("%H:%M"),
+                        event.title,
+                        event.description,
+                        recurring_indicator
+                    )
                 };
 
                 if index == app.selected_event_index {
-                    ListItem::new(content).style(Style::default().bg(Color::LightBlue))
+                    ListItem::new(content).style(Style::default().fg(Color::Black).bg(Color::LightBlue))
                 } else {
                     ListItem::new(content)
                 }
@@ -167,7 +188,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
         let popup_list = List::new(popup_events)
             .block(Block::default().borders(Borders::NONE))
-            .highlight_style(Style::default().bg(Color::LightBlue));
+            .highlight_style(Style::default().fg(Color::Black).bg(Color::LightBlue));
 
         let area = Layout::default()
             .direction(Direction::Vertical)
@@ -235,18 +256,26 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     }
 
     if app.show_add_event_popup {
-        let popup_block = Block::default()
-            .title(format!(
+        let title = if app.is_editing {
+            format!(
+                "Edit Event for {}",
+                app.current_date_for_new_event.format("%Y-%m-%d")
+            )
+        } else {
+            format!(
                 "Add Event for {}",
                 app.current_date_for_new_event.format("%Y-%m-%d")
-            ))
+            )
+        };
+        let popup_block = Block::default()
+            .title(title)
             .borders(Borders::ALL)
             .style(Style::default().fg(Color::LightCyan));
 
         let area = {
             let size = f.size();
-            let popup_width = 70;
-            let popup_height = 15;
+            let popup_width = 70.min(size.width.saturating_sub(2));
+            let popup_height = 17.min(size.height.saturating_sub(2));
             Rect::new(
                 (size.width - popup_width) / 2,
                 (size.height - popup_height) / 2,
@@ -262,21 +291,34 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let input_chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
-            .constraints([Constraint::Length(3), Constraint::Length(3), Constraint::Length(5)].as_ref())
+            .constraints(
+                [
+                    Constraint::Length(3),
+                    Constraint::Length(3),
+                    Constraint::Length(5),
+                    Constraint::Length(5),
+                ]
+                .as_ref(),
+            )
             .split(inner_area);
 
         let title_style = if app.selected_input_field == PopupInputField::Title {
-            Style::default().fg(Color::Black).bg(Color::LightYellow)
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
         } else {
             Style::default()
         };
         let time_style = if app.selected_input_field == PopupInputField::Time {
-            Style::default().fg(Color::Black).bg(Color::LightYellow)
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
+        } else {
+            Style::default()
+        };
+        let recurrence_style = if app.selected_input_field == PopupInputField::Recurrence {
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
         } else {
             Style::default()
         };
         let description_style = if app.selected_input_field == PopupInputField::Description {
-            Style::default().fg(Color::Black).bg(Color::LightYellow)
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
         } else {
             Style::default()
         };
@@ -291,10 +333,17 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title("Time"));
         f.render_widget(time_input, input_chunks[1]);
 
-        let description_input = ratatui::widgets::Paragraph::new(app.popup_event_description.as_str())
-            .style(description_style)
-            .block(Block::default().borders(Borders::ALL).title("Description"));
+        let description_input =
+            ratatui::widgets::Paragraph::new(app.popup_event_description.as_str())
+                .style(description_style)
+                .block(Block::default().borders(Borders::ALL).title("Description"));
         f.render_widget(description_input, input_chunks[2]);
+
+        let recurrence_input =
+            ratatui::widgets::Paragraph::new(app.popup_event_recurrence.as_str())
+                .style(recurrence_style)
+                .block(Block::default().borders(Borders::ALL).title("Recurrence"));
+        f.render_widget(recurrence_input, input_chunks[3]);
 
         match app.selected_input_field {
             PopupInputField::Title => {
@@ -313,6 +362,12 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 f.set_cursor(
                     input_chunks[2].x + app.cursor_position as u16 + 1,
                     input_chunks[2].y + 1,
+                );
+            }
+            PopupInputField::Recurrence => {
+                f.set_cursor(
+                    input_chunks[3].x + app.cursor_position as u16 + 1,
+                    input_chunks[3].y + 1,
                 );
             }
         }

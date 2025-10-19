@@ -55,11 +55,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .events
                 .iter()
                 .any(|event| event.date == current_day_date);
-            let symbol = if has_event {
-                "*"
-            } else {
-                ""
-            };
+            let symbol = if has_event { "*" } else { "" };
             day_display_str.push_str(symbol);
 
             // Apply Saturday/Sunday colors
@@ -179,7 +175,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 };
 
                 if index == app.selected_event_index {
-                    ListItem::new(content).style(Style::default().fg(Color::Black).bg(Color::LightBlue))
+                    ListItem::new(content)
+                        .style(Style::default().fg(Color::Black).bg(Color::LightBlue))
                 } else {
                     ListItem::new(content)
                 }

@@ -5,7 +5,6 @@ use dirs;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_rust::Notification;
 
-
 use crate::persistence;
 
 pub fn run_daemon() -> Result<(), Box<dyn Error>> {
@@ -34,7 +33,11 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                     if !notified.contains(&key) {
                         Notification::new()
                             .summary("Upcoming Event")
-                            .body(&format!("{} at {}", event.title, event.time.format("%H:%M")))
+                            .body(&format!(
+                                "{} at {}",
+                                event.title,
+                                event.time.format("%H:%M")
+                            ))
                             .show()?;
                         notified.insert(key);
                     }
@@ -50,7 +53,7 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                 notified.clear();
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {}
-            Err(e) => eprintln!("Watch error: {:?}", e),
+            Err(e) => eprintln!("Watch error: {e:?}"),
         }
 
         thread::sleep(Duration::from_secs(60));
@@ -60,10 +63,9 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::app::CalendarEvent;
     use chrono::{Duration, NaiveDate, NaiveTime};
     use std::collections::HashSet;
-    use crate::app::CalendarEvent;
-
 
     // Mock function to check upcoming events
     fn check_upcoming_events(
@@ -81,7 +83,11 @@ mod tests {
                 if diff.num_minutes() <= 30 && diff.num_minutes() >= 0 {
                     let key = (event.date, event.time, event.title.clone());
                     if !notified.contains(&key) {
-                        notifications.push(format!("{} at {}", event.title, event.time.format("%H:%M")));
+                        notifications.push(format!(
+                            "{} at {}",
+                            event.title,
+                            event.time.format("%H:%M")
+                        ));
                         notified.insert(key);
                     }
                 }
@@ -110,7 +116,10 @@ mod tests {
         let notifications = check_upcoming_events(&events, now, &mut notified);
 
         assert_eq!(notifications.len(), 1);
-        assert_eq!(notifications[0], format!("Test Event at {}", future_time.format("%H:%M")));
+        assert_eq!(
+            notifications[0],
+            format!("Test Event at {}", future_time.format("%H:%M"))
+        );
     }
 
     #[test]

@@ -91,7 +91,7 @@ Always add accompanying test(s) when implementing new functionality.
 
 ## Test Coverage
 
-The application includes comprehensive test coverage (46 tests) for all functionality:
+The application includes comprehensive test coverage (59 tests) for all functionality:
 
 ### Navigation Tests
 - Day navigation (Left/Right, h/l)

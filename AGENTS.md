@@ -34,6 +34,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **State Verification**: Assert application state changes and UI behavior including mode transitions
 - **Workflow Testing**: Test complete user workflows (view → add → delete) for end-to-end functionality
 - **Avoid External Tools**: Do not use `xdotool` or similar tools; keep testing within the Rust ecosystem
+- **Daemon Testing**: Isolate notification logic into testable functions; avoid testing infinite loops or external D-Bus dependencies
 
 ### Testable Architecture
 
@@ -74,6 +75,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Input Validation**: Parse time strings with flexible format support (HH:MM, HH, H) and handle failures
 - **Boundary Checks**: Prevent cursor movement beyond string boundaries using character-based indexing
 - **Unicode Support**: Handle multi-byte characters properly in text input fields
+- **Notification Failures**: Gracefully handle D-Bus errors (e.g., no notification daemon) by logging without crashing the daemon
 
 ### Event Management
 
@@ -82,10 +84,14 @@ Always add accompanying test(s) when implementing new functionality.
 - **Context-Aware Adding**: Add events directly from view popup without losing context
 - **Persistent Storage**: Events saved to markdown files in user's home directory
 - **Real-time Updates**: View popup refreshes automatically after adding/deleting events
+- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, checking events 30 minutes ahead and sending desktop notifications via `notify-rust`
+- **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
+- **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
+- **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
 
 ## Test Coverage
 
-The application includes comprehensive test coverage (43 tests) for all functionality:
+The application includes comprehensive test coverage (46 tests) for all functionality:
 
 ### Navigation Tests
 - Day navigation (Left/Right, h/l)
@@ -120,3 +126,8 @@ The application includes comprehensive test coverage (43 tests) for all function
 - Invalid time format handling
 - No events scenarios
 - Unicode text handling
+
+### Daemon Tests
+- Notification logic for upcoming events
+- Deduplication of notifications
+- Handling of past events

@@ -12,14 +12,6 @@ fn test_quit_application() {
 }
 
 #[test]
-fn test_quit_application_uppercase() {
-    let mut app = App::new();
-    let key_event = KeyEvent::from(KeyCode::Char('Q'));
-    let should_continue = handle_event(&mut app, Event::Key(key_event)).unwrap();
-    assert!(!should_continue);
-}
-
-#[test]
 fn test_navigation_left() {
     let mut app = App::new();
     let original_date = app.date;

@@ -24,11 +24,13 @@ Key benefits:
 - Real-time file watching for event updates
 - Unicode support in text input
 - Confirmation dialogs for safe operations
+- Git-based synchronization for cross-device event sharing
 
 ### Supported Formats
 - Markdown-based event storage
 - Desktop notifications via D-Bus
 - Terminal-based UI with keyboard navigation
+- Git synchronization for remote repositories
 
 ## Installation
 
@@ -54,6 +56,10 @@ cargo install --path .
 ### Basic Commands
 - `rcal`: Launch the interactive calendar
 - `rcal --daemon`: Run in daemon mode for notifications
+- `rcal --sync-init <URL>`: Initialize sync with a Git remote
+- `rcal --sync-pull`: Pull events from remote
+- `rcal --sync-push`: Push events to remote
+- `rcal --sync-status`: Check sync status
 - `rcal --help`: Show help information
 
 ### Keybindings
@@ -69,6 +75,7 @@ cargo install --path .
 - **View Events**: `o`
 - **Delete Event**: `d` or Delete (in view popup)
 - **Edit Event**: `e` (in view popup)
+- **Sync Menu**: `s` (in main view)
 
 #### Input Forms
 - **Switch Fields**: Tab
@@ -86,9 +93,25 @@ rcal
 # Run notifications daemon
 rcal --daemon
 
+# Initialize sync with GitHub repo
+rcal --sync-init https://github.com/user/my-calendar.git
+
+# Pull latest events
+rcal --sync-pull
+
+# Push local changes
+rcal --sync-push
+
+# Check sync status
+rcal --sync-status
+
 # Add an event (interactive)
 rcal
 # Then press Enter on a date and fill in details
+
+# Access sync menu in TUI
+rcal
+# Press s to open sync popup, then f/p/s to pull/push/status
 ```
 
 ## Configuration
@@ -102,6 +125,12 @@ Events are stored as markdown files in `~/calendar/` directory:
 - Daemon checks for events 30 minutes ahead
 - Notifications use system desktop notification service
 - Duplicate notifications are prevented per session
+
+### Sync Configuration
+- Remote URL stored in `~/.config/rcal/config.toml`
+- Uses SSH keys for Git authentication
+- Supports rebase-based pulling to avoid merge commits
+- Conflicts must be resolved manually in the markdown files
 
 ### Customization
 Currently, rcal uses default settings. Future versions may support configuration files for themes and notification preferences.

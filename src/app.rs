@@ -1,3 +1,4 @@
+use crate::sync::{SyncProvider, SyncStatus};
 use chrono::{Local, NaiveDate, NaiveTime};
 
 #[derive(Clone, PartialEq, Debug)]
@@ -25,6 +26,7 @@ pub enum InputMode {
     EditingEventPopup,
     ViewEventsPopup,
     DeleteConfirmation,
+    Sync,
 }
 
 #[derive(PartialEq, Debug)]
@@ -54,6 +56,9 @@ pub struct App {
     pub cursor_position: usize, // Character index for Unicode support
     pub is_editing: bool,
     pub event_being_edited: Option<CalendarEvent>,
+    pub sync_provider: Option<Box<dyn SyncProvider>>,
+    pub sync_status: Option<SyncStatus>,
+    pub sync_message: String,
 }
 
 impl Default for App {
@@ -83,6 +88,9 @@ impl App {
             cursor_position: 0,
             is_editing: false,
             event_being_edited: None,
+            sync_provider: None,
+            sync_status: None,
+            sync_message: String::new(),
         }
     }
 

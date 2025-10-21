@@ -60,6 +60,8 @@ Always add accompanying test(s) when implementing new functionality.
 - **State Management**: Use enum-based input modes (`InputMode`) for clear state transitions including confirmation dialogs
 - **Event Filtering**: Filter events by date using iterator methods for efficient display
 - **Modal Interactions**: Support nested popup states (view → add → confirm) with proper state restoration
+- **Keybindings**: Always prefer vim-like keybindings (h/j/k/l for navigation) over modifier-based shortcuts (e.g., avoid Ctrl+S in favor of single-key alternatives). Use lowercase letters for commands, reserving uppercase (shift+letter) for future features, except where vim conventions apply (e.g., H/L for page navigation).
+- **Keybind Hints**: Display contextual keybind hints on all screens and popups to guide user interactions, positioned at the bottom of each interface element.
 
 ### UI Rendering
 
@@ -88,6 +90,16 @@ Always add accompanying test(s) when implementing new functionality.
 - **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
+
+### Sync Implementation
+- **Provider Abstraction**: Sync functionality uses a `SyncProvider` trait for extensibility, allowing future implementations (e.g., cloud storage, rsync) beyond the initial Git provider. This ensures the core app remains agnostic to sync mechanisms.
+- **Git as Initial Provider**: Starts with Git for version control and cross-device sync, leveraging markdown files' human-readable format for easy conflict resolution. Uses system `git` commands via `std::process::Command` for full SSH config support (e.g., host aliases), ensuring compatibility with user authentication setups.
+- **Manual and CLI Sync**: Sync is primarily manual via TUI (Ctrl+S menu) or CLI commands (`--sync-init`, `--sync-pull`, etc.) to give users control. Automatic sync is avoided to prevent unintended overwrites or conflicts.
+- **Configuration Storage**: Sync settings (e.g., remote URL) stored in `~/.config/rcal/config.toml` for persistence across sessions. Uses TOML for human-editable config.
+- **Error Handling and Safety**: Sync operations fail gracefully with user-friendly messages (e.g., conflict notifications). No automatic conflict resolution; users must manually edit markdown files. Operations do not crash the app or daemon.
+- **Integration with Existing Architecture**: Sync hooks into persistence layer for optional auto-push on save/delete. Daemon reloads events via file watching after sync, maintaining notification integrity without background sync loops.
+- **Security and Privacy**: Relies on user's Git/SSH setup; no app-level secrets stored. Markdown files remain local until explicitly pushed.
+- **Testing Strategy**: Unit tests for provider logic; integration tests for end-to-end sync workflows using temp directories. Avoids external Git repos in tests for isolation.
 
 ## Test Coverage
 

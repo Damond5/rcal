@@ -3,18 +3,19 @@ use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Style},
-    widgets::{Block, Borders, Cell, Clear, List, ListItem, Row, Table},
+    widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table},
 };
 
 use crate::app::{App, InputMode, PopupInputField};
 
 pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(100)].as_ref())
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
         .split(f.size());
 
     let calendar_chunk = chunks[0];
+    let hints_chunk = chunks[1];
 
     let today = Local::now().date_naive();
     let year = app.date.year();
@@ -139,6 +140,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     f.render_widget(calendar, calendar_chunk);
 
+    // Render main hints
+    let main_hints = Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page")
+        .style(Style::default().fg(Color::Gray));
+    f.render_widget(main_hints, hints_chunk);
+
     if app.show_view_events_popup {
         let popup_block = Block::default()
             .title(format!("Events on {}", app.date.format("%Y-%m-%d")))
@@ -207,9 +213,19 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
         let inner_area = popup_block.inner(area);
 
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
+            .split(inner_area);
+
         f.render_widget(Clear, area);
         f.render_widget(popup_block, area);
-        f.render_widget(popup_list, inner_area);
+        f.render_widget(popup_list, chunks[0]);
+
+        // Render hints
+        let hints = Paragraph::new("j/k: navigate, e: edit, a: add, d: delete, Esc: close")
+            .style(Style::default().fg(Color::Gray));
+        f.render_widget(hints, chunks[1]);
     }
 
     if app.input_mode == InputMode::DeleteConfirmation {
@@ -293,7 +309,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                     Constraint::Length(3),
                     Constraint::Length(3),
                     Constraint::Length(5),
-                    Constraint::Length(5),
+                    Constraint::Length(3),
+                    Constraint::Length(1),
                 ]
                 .as_ref(),
             )
@@ -368,5 +385,69 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 );
             }
         }
+
+        // Render hints
+        let hints = Paragraph::new("Tab: switch field, Enter: save, Esc: cancel")
+            .style(Style::default().fg(Color::Gray));
+        f.render_widget(hints, input_chunks[4]);
+    }
+
+    if app.input_mode == InputMode::Sync {
+        let popup_block = Block::default()
+            .title("Sync")
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::LightGreen));
+
+        let area = {
+            let size = f.size();
+            let popup_width = 50.min(size.width.saturating_sub(2));
+            let popup_height = 10.min(size.height.saturating_sub(2));
+            Rect::new(
+                (size.width - popup_width) / 2,
+                (size.height - popup_height) / 2,
+                popup_width,
+                popup_height,
+            )
+        };
+
+        let inner_area = popup_block.inner(area);
+        f.render_widget(Clear, area);
+        f.render_widget(popup_block, area);
+
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .margin(1)
+            .constraints(
+                [
+                    Constraint::Length(3),
+                    Constraint::Length(3),
+                    Constraint::Length(3),
+                ]
+                .as_ref(),
+            )
+            .split(inner_area);
+
+        let instructions = List::new(vec![
+            ListItem::new("f: Pull from remote"),
+            ListItem::new("p: Push to remote"),
+            ListItem::new("s: Check status"),
+        ]);
+        f.render_widget(instructions, chunks[0]);
+
+        if !app.sync_message.is_empty() {
+            let message = List::new(vec![ListItem::new(app.sync_message.as_str())]);
+            f.render_widget(message, chunks[1]);
+        }
+
+        let status_text = match app.sync_status {
+            Some(crate::sync::SyncStatus::UpToDate) => "Status: Up to date",
+            Some(crate::sync::SyncStatus::Ahead) => "Status: Ahead",
+            Some(crate::sync::SyncStatus::Behind) => "Status: Behind",
+            Some(crate::sync::SyncStatus::Conflicts) => "Status: Conflicts",
+            Some(crate::sync::SyncStatus::Error(_)) => "Status: Error",
+            None => "Status: Unknown",
+        };
+        let status = List::new(vec![ListItem::new(status_text)]);
+        f.render_widget(status, chunks[2]);
     }
 }

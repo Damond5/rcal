@@ -4,6 +4,7 @@ use chrono::{Datelike, Duration, NaiveDate, NaiveTime};
 use dirs;
 
 use crate::app::CalendarEvent;
+use crate::sync::SyncProvider;
 
 pub fn load_events() -> Vec<CalendarEvent> {
     let home = dirs::home_dir().expect("Could not find home directory");
@@ -128,10 +129,19 @@ fn generate_recurring_instances(
 
 pub fn save_event(event: &CalendarEvent) {
     let home = dirs::home_dir().expect("Could not find home directory");
-    save_event_to_path(event, &home.join("calendar"));
+    save_event_to_path(event, &home.join("calendar"), None);
 }
 
-pub fn save_event_to_path(event: &CalendarEvent, calendar_dir: &Path) {
+pub fn save_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) {
+    let home = dirs::home_dir().expect("Could not find home directory");
+    save_event_to_path(event, &home.join("calendar"), sync_provider);
+}
+
+pub fn save_event_to_path(
+    event: &CalendarEvent,
+    calendar_dir: &Path,
+    sync_provider: Option<&dyn SyncProvider>,
+) {
     std::fs::create_dir_all(calendar_dir).expect("Could not create calendar directory");
 
     let filename = format!("{}.md", event.date.format("%Y-%m-%d"));
@@ -215,14 +225,30 @@ pub fn save_event_to_path(event: &CalendarEvent, calendar_dir: &Path) {
     }
 
     std::fs::write(filepath, content).expect("Could not write file");
+
+    // Sync after save
+    if let Some(provider) = sync_provider {
+        if let Err(e) = provider.push(calendar_dir) {
+            eprintln!("Sync push failed: {e}");
+        }
+    }
 }
 
 pub fn delete_event(event: &CalendarEvent) {
     let home = dirs::home_dir().expect("Could not find home directory");
-    delete_event_from_path(event, &home.join("calendar"));
+    delete_event_from_path(event, &home.join("calendar"), None);
 }
 
-pub fn delete_event_from_path(event: &CalendarEvent, calendar_dir: &Path) {
+pub fn delete_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) {
+    let home = dirs::home_dir().expect("Could not find home directory");
+    delete_event_from_path(event, &home.join("calendar"), sync_provider);
+}
+
+pub fn delete_event_from_path(
+    event: &CalendarEvent,
+    calendar_dir: &Path,
+    sync_provider: Option<&dyn SyncProvider>,
+) {
     let filename = format!("{}.md", event.date.format("%Y-%m-%d"));
     let filepath = calendar_dir.join(filename);
 
@@ -309,6 +335,13 @@ pub fn delete_event_from_path(event: &CalendarEvent, calendar_dir: &Path) {
         }
         std::fs::write(filepath, content).expect("Could not write file");
     }
+
+    // Sync after delete
+    if let Some(provider) = sync_provider {
+        if let Err(e) = provider.push(calendar_dir) {
+            eprintln!("Sync push failed: {e}");
+        }
+    }
 }
 
 #[cfg(test)]
@@ -336,7 +369,7 @@ mod tests {
             base_date: None,
         };
 
-        save_event_to_path(&event, temp_dir.path());
+        save_event_to_path(&event, temp_dir.path(), None);
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 1);
@@ -367,8 +400,8 @@ mod tests {
             base_date: None,
         };
 
-        save_event_to_path(&event1, temp_dir.path());
-        save_event_to_path(&event2, temp_dir.path());
+        save_event_to_path(&event1, temp_dir.path(), None);
+        save_event_to_path(&event2, temp_dir.path(), None);
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -399,8 +432,8 @@ mod tests {
             base_date: None,
         };
 
-        save_event_to_path(&event1, temp_dir.path());
-        save_event_to_path(&event2, temp_dir.path());
+        save_event_to_path(&event1, temp_dir.path(), None);
+        save_event_to_path(&event2, temp_dir.path(), None);
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -422,7 +455,7 @@ mod tests {
             base_date: None,
         };
 
-        save_event_to_path(&event, temp_dir.path());
+        save_event_to_path(&event, temp_dir.path(), None);
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 1);
@@ -455,20 +488,20 @@ mod tests {
         };
 
         // Save both events
-        save_event_to_path(&event1, temp_dir.path());
-        save_event_to_path(&event2, temp_dir.path());
+        save_event_to_path(&event1, temp_dir.path(), None);
+        save_event_to_path(&event2, temp_dir.path(), None);
 
         let events = load_events_from_path(temp_dir.path());
         assert_eq!(events.len(), 2);
 
         // Delete first event
-        delete_event_from_path(&event1, temp_dir.path());
+        delete_event_from_path(&event1, temp_dir.path(), None);
         let events_after_delete = load_events_from_path(temp_dir.path());
         assert_eq!(events_after_delete.len(), 1);
         assert_eq!(events_after_delete[0].title, "Event 2");
 
         // Delete remaining event
-        delete_event_from_path(&event2, temp_dir.path());
+        delete_event_from_path(&event2, temp_dir.path(), None);
         let events_after_second_delete = load_events_from_path(temp_dir.path());
         assert_eq!(events_after_second_delete.len(), 0);
     }

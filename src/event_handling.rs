@@ -2,6 +2,7 @@ use std::io;
 
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
+use dirs;
 use ratatui::Terminal;
 use ratatui::backend::Backend;
 
@@ -58,7 +59,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
     if let CrosstermEvent::Key(key) = event {
         match app.input_mode {
             InputMode::Normal => match key.code {
-                KeyCode::Char('q') | KeyCode::Char('Q') => return Ok(false),
+                KeyCode::Char('q') => return Ok(false),
                 KeyCode::Char('a') => {
                     app.show_add_event_popup = true;
                     app.input_mode = InputMode::EditingEventPopup;
@@ -119,6 +120,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         .sort_by_key(|event| event.time);
                     app.selected_event_index = 0;
                     app.input_mode = InputMode::ViewEventsPopup;
+                }
+                KeyCode::Char('s') => {
+                    if app.sync_provider.is_some() {
+                        app.input_mode = InputMode::Sync;
+                        app.sync_message.clear();
+                        app.sync_status = None;
+                    }
                 }
                 _ => {}
             },
@@ -340,7 +348,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 _ => {}
             },
             InputMode::DeleteConfirmation => match key.code {
-                KeyCode::Char('y') | KeyCode::Char('Y') => {
+                KeyCode::Char('y') => {
                     if let Some(index) = app.event_to_delete_index {
                         if index < app.events_to_display_in_popup.len() {
                             let event_to_delete = &app.events_to_display_in_popup[index];
@@ -361,9 +369,80 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.event_to_delete_index = None;
                     app.input_mode = InputMode::ViewEventsPopup;
                 }
-                KeyCode::Char('n') | KeyCode::Char('N') | KeyCode::Esc => {
+                KeyCode::Char('n') | KeyCode::Esc => {
                     app.event_to_delete_index = None;
                     app.input_mode = InputMode::ViewEventsPopup;
+                }
+                _ => {}
+            },
+            InputMode::Sync => match key.code {
+                KeyCode::Char('f') => {
+                    if let Some(provider) = &app.sync_provider {
+                        let home = dirs::home_dir().expect("Could not find home directory");
+                        let calendar_dir = home.join("calendar");
+                        match provider.pull(&calendar_dir) {
+                            Ok(_) => {
+                                app.sync_message = "Pull successful".to_string();
+                                app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                                // Reload events
+                                app.events = persistence::load_events();
+                            }
+                            Err(e) => {
+                                app.sync_message = format!("Pull failed: {e}");
+                                app.sync_status =
+                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
+                            }
+                        }
+                    }
+                }
+                KeyCode::Char('p') => {
+                    if let Some(provider) = &app.sync_provider {
+                        let home = dirs::home_dir().expect("Could not find home directory");
+                        let calendar_dir = home.join("calendar");
+                        match provider.push(&calendar_dir) {
+                            Ok(_) => {
+                                app.sync_message = "Push successful".to_string();
+                                app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                            }
+                            Err(e) => {
+                                app.sync_message = format!("Push failed: {e}");
+                                app.sync_status =
+                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
+                            }
+                        }
+                    }
+                }
+                KeyCode::Char('s') => {
+                    if let Some(provider) = &app.sync_provider {
+                        let home = dirs::home_dir().expect("Could not find home directory");
+                        let calendar_dir = home.join("calendar");
+                        match provider.status(&calendar_dir) {
+                            Ok(status) => {
+                                app.sync_message = match &status {
+                                    crate::sync::SyncStatus::UpToDate => "Up to date".to_string(),
+                                    crate::sync::SyncStatus::Ahead => "Ahead of remote".to_string(),
+                                    crate::sync::SyncStatus::Behind => "Behind remote".to_string(),
+                                    crate::sync::SyncStatus::Conflicts => {
+                                        "Conflicts detected".to_string()
+                                    }
+                                    crate::sync::SyncStatus::Error(e) => {
+                                        format!("Status error: {e}")
+                                    }
+                                };
+                                app.sync_status = Some(status);
+                            }
+                            Err(e) => {
+                                app.sync_message = format!("Status failed: {e}");
+                                app.sync_status =
+                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
+                            }
+                        }
+                    }
+                }
+                KeyCode::Esc => {
+                    app.input_mode = InputMode::Normal;
+                    app.sync_message.clear();
+                    app.sync_status = None;
                 }
                 _ => {}
             },

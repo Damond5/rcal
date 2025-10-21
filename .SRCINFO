@@ -7,7 +7,7 @@ pkgbase = rcal
 	license = CC0-1.0
 	makedepends = cargo
 	makedepends = rust
-	source = rcal::git+https://github.com/Damond5/rcal.git#branch=main
+	source = rcal::git+https://github.com/Damond5/rcal.git#tag=v1.0.0
 	sha256sums = SKIP
 
 pkgname = rcal

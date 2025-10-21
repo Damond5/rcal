@@ -1,0 +1,13 @@
+pkgbase = rcal
+	pkgdesc = A terminal-based calendar application built with Rust and Ratatui.
+	pkgver = 0.1.0
+	pkgrel = 1
+	url = https://github.com/Damond5/rcal
+	arch = x86_64
+	license = CC0-1.0
+	makedepends = cargo
+	makedepends = rust
+	source = rcal::git+https://github.com/Damond5/rcal.git#branch=main
+	sha256sums = SKIP
+
+pkgname = rcal

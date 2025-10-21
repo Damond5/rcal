@@ -101,6 +101,13 @@ Always add accompanying test(s) when implementing new functionality.
 - **Security and Privacy**: Relies on user's Git/SSH setup; no app-level secrets stored. Markdown files remain local until explicitly pushed.
 - **Testing Strategy**: Unit tests for provider logic; integration tests for end-to-end sync workflows using temp directories. Avoids external Git repos in tests for isolation.
 
+### Packaging for Arch Linux AUR
+- **PKGBUILD Structure**: Standard Rust package with `cargo build --release`; installs binary to `/usr/bin/rcal`, license to `/usr/share/licenses/rcal/`, and systemd user service to `/usr/lib/systemd/user/rcal.service`.
+- **Systemd User Service**: Provides `rcal.service` for daemon mode, enabling background notifications with `systemctl --user enable rcal.service`.
+- **Dependencies**: No runtime deps; build deps include `cargo` and `rust`.
+- **Source**: Uses GitHub archive for releases; falls back to Git if needed.
+- **Maintenance**: Update `pkgver` and checksums on upstream releases; ensure AUR package stays current.
+
 ## Test Coverage
 
 The application includes comprehensive test coverage (59 tests) for all functionality:

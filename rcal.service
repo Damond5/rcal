@@ -1,0 +1,11 @@
+[Unit]
+Description=rcal notification daemon
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/rcal --daemon
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target

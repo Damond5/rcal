@@ -141,8 +141,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     f.render_widget(calendar, calendar_chunk);
 
     // Render main hints
-    let main_hints = Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page")
-        .style(Style::default().fg(Color::Gray));
+    let main_hints =
+        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page")
+            .style(Style::default().fg(Color::Gray));
     f.render_widget(main_hints, hints_chunk);
 
     if app.show_view_events_popup {

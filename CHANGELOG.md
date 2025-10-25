@@ -20,3 +20,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - Fixed git text display in TUI
 - Fixed issue with endless events
+- Removed debug print "Pushing event" that was appearing in the TUI during event loading in sync popup

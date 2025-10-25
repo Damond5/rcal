@@ -109,7 +109,6 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
             if let Some(sd) = start_date {
                 let is_all_day = start_time.is_none();
                 let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-                println!("Pushing event");
                 events.push(CalendarEvent {
                     date: sd,
                     time: st,

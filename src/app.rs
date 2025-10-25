@@ -22,6 +22,7 @@ pub struct CalendarEvent {
     pub end_date: Option<NaiveDate>,
     pub start_time: NaiveTime,
     pub end_time: Option<NaiveTime>,
+    pub is_all_day: bool,
     pub id: String,
 }
 

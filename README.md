@@ -17,12 +17,13 @@ Key benefits:
 - Interactive calendar view with month/week navigation
 - Add, view, edit, and delete events
 - Support for multi-day events with start and end dates and times
+- All-day events (leave time field empty when creating)
 - Event details including title, start/end dates, start/end times, and description
 - Flexible time input formats (HH:MM, HH, H)
 - End date input format: DD/MM with automatic year assumption
 
 ### Advanced Features
-- Daemon mode for background notifications
+- Daemon mode for background notifications (30 minutes before timed events, midday the day before for all-day events)
 - Real-time file watching for event updates
 - Unicode support in text input
 - Confirmation dialogs for safe operations

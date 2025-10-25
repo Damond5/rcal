@@ -164,20 +164,17 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 } else {
                     ""
                 };
+                let time_str = if event.is_all_day {
+                    "All day".to_string()
+                } else {
+                    event.time.format("%H:%M").to_string()
+                };
                 let content = if event.description.is_empty() {
-                    format!(
-                        "{} - {}{}",
-                        event.time.format("%H:%M"),
-                        event.title,
-                        recurring_indicator
-                    )
+                    format!("{} - {}{}", time_str, event.title, recurring_indicator)
                 } else {
                     format!(
                         "{} - {}: {}{}",
-                        event.time.format("%H:%M"),
-                        event.title,
-                        event.description,
-                        recurring_indicator
+                        time_str, event.title, event.description, recurring_indicator
                     )
                 };
 
@@ -239,10 +236,14 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                     .borders(Borders::ALL)
                     .style(Style::default().fg(Color::LightRed));
 
+                let time_str = if event.is_all_day {
+                    "All day".to_string()
+                } else {
+                    event.time.format("%H:%M").to_string()
+                };
                 let confirmation_text = format!(
                     "Delete event:\n\n  {}\n  {}\n\nPress 'y' to confirm, 'n' to cancel",
-                    event.title,
-                    event.time.format("%H:%M")
+                    event.title, time_str
                 );
 
                 let area = {

@@ -24,18 +24,28 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
         let now = Local::now();
 
         for event in &events {
-            let event_datetime = event.date.and_time(event.time);
-            let diff = event_datetime.signed_duration_since(now.naive_local());
-            if diff.num_minutes() >= 30 {
+            let should_notify = if event.is_all_day {
+                // Notify all-day events the day before at midday
+                let tomorrow = now.date_naive() + chrono::Duration::days(1);
+                event.date == tomorrow
+                    && now.time() < chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+            } else {
+                // Notify timed events 30 minutes before
+                let event_datetime = event.date.and_time(event.time);
+                let diff = event_datetime.signed_duration_since(now.naive_local());
+                diff.num_minutes() >= 30
+            };
+            if should_notify {
                 let key = (event.date, event.time, event.title.clone());
                 if !notified.contains(&key) {
+                    let body = if event.is_all_day {
+                        format!("{} (all day)", event.title)
+                    } else {
+                        format!("{} at {}", event.title, event.time.format("%H:%M"))
+                    };
                     Notification::new()
                         .summary("Upcoming Event")
-                        .body(&format!(
-                            "{} at {}",
-                            event.title,
-                            event.time.format("%H:%M")
-                        ))
+                        .body(&body)
                         .show()?;
                     notified.insert(key);
                 }
@@ -78,11 +88,12 @@ mod tests {
             if diff.num_minutes() >= 30 {
                 let key = (event.date, event.time, event.title.clone());
                 if !notified.contains(&key) {
-                    notifications.push(format!(
-                        "{} at {}",
-                        event.title,
-                        event.time.format("%H:%M")
-                    ));
+                    let body = if event.is_all_day {
+                        format!("{} (all day)", event.title)
+                    } else {
+                        format!("{} at {}", event.title, event.time.format("%H:%M"))
+                    };
+                    notifications.push(body);
                     notified.insert(key);
                 }
             }
@@ -108,6 +119,7 @@ mod tests {
             end_date: None,
             start_time: future_time,
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         }];
 
@@ -139,6 +151,7 @@ mod tests {
             end_date: None,
             start_time: past_time,
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         }];
 
@@ -155,6 +168,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(15);
 
         let events = vec![CalendarEvent {
+            is_all_day: false,
             id: String::new(),
             date: today,
             time: future_time,
@@ -176,12 +190,46 @@ mod tests {
     }
 
     #[test]
+    fn test_all_day_event_notification() {
+        let now = Local::now();
+        let today = now.date_naive();
+        let tomorrow = today + chrono::Duration::days(1);
+        // Set time to before midday
+        let before_midday = chrono::NaiveTime::from_hms_opt(11, 0, 0).unwrap();
+        let now_before_midday = today.and_time(before_midday);
+
+        let events = vec![CalendarEvent {
+            date: tomorrow,
+            time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            title: "All Day Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: tomorrow,
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: true,
+            id: String::new(),
+        }];
+
+        let mut notified = HashSet::new();
+        let now_dt = Local.from_local_datetime(&now_before_midday).unwrap();
+        let notifications = check_upcoming_events(&events, now_dt, &mut notified);
+
+        assert_eq!(notifications.len(), 1);
+        assert_eq!(notifications[0], "All Day Event (all day)");
+    }
+
+    #[test]
     fn test_no_duplicate_notifications() {
         let now = Local::now();
         let today = now.date_naive();
         let future_time = now.time() + Duration::minutes(30);
 
         let events = vec![CalendarEvent {
+            is_all_day: false,
             id: String::new(),
             date: today,
             time: future_time,

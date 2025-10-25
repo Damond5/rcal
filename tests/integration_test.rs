@@ -468,6 +468,7 @@ fn test_delete_event_from_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
+        is_all_day: false,
         id: String::new(),
     });
     app.events.push(CalendarEvent {
@@ -482,6 +483,7 @@ fn test_delete_event_from_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
+        is_all_day: false,
         id: String::new(),
     });
 
@@ -514,6 +516,7 @@ fn test_cancel_delete_event_confirmation() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -590,6 +593,7 @@ fn test_navigate_events_in_view_popup() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -615,6 +619,7 @@ fn test_navigate_events_in_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
+        is_all_day: false,
         id: String::new(),
     });
 
@@ -778,6 +783,7 @@ fn test_view_events_popup_with_events() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -792,6 +798,7 @@ fn test_view_events_popup_with_events() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
@@ -836,6 +843,7 @@ fn test_view_events_popup_filters_by_date() {
     let tomorrow = today + chrono::Duration::days(1);
 
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -850,6 +858,7 @@ fn test_view_events_popup_filters_by_date() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -887,6 +896,7 @@ fn test_open_edit_event_popup() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -923,6 +933,7 @@ fn test_edit_event_success() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -972,6 +983,7 @@ fn test_cancel_edit_event() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1015,6 +1027,7 @@ fn test_edit_event_invalid_time() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1058,6 +1071,7 @@ fn test_edit_event_empty_title() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1102,6 +1116,7 @@ fn test_edit_event_change_time_sorting() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
@@ -1116,6 +1131,7 @@ fn test_edit_event_change_time_sorting() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1162,6 +1178,7 @@ fn test_edit_event_persistence() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        is_all_day: false,
         id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),

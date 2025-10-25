@@ -93,12 +93,13 @@ Always add accompanying test(s) when implementing new functionality.
 - **UI Enhancements**: Updated event creation and editing popup to include input fields for end date and end time
 - **Event Format Specification**: Documented in EVENT_FORMAT.md for standardized event file format
 - **Real-time Updates**: View popup refreshes automatically after adding/deleting events
-- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, sending desktop notifications via `notify-rust` approximately 30 minutes before upcoming events. Notifications are checked for all events regardless of date, and sent only once per event per daemon session, with retriggering allowed on calendar file changes.
+- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, sending desktop notifications via `notify-rust` approximately 30 minutes before upcoming timed events and at midday the day before for all-day events. Notifications are checked for all events regardless of date, and sent only once per event per daemon session, with retriggering allowed on calendar file changes.
 - **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
 - **Mandatory Non-Empty Titles**: Events require non-empty titles to ensure meaningful identification.
 - **Default End Date/Time**: If end date is not specified during event creation/editing, it defaults to the start date, making the event last only on that single day. Similarly, if end time is not specified, it defaults to the start time, making it a point event.
+- **All-Day Events**: Events without a specified time are treated as all-day events. All-day events are notified the day before at midday. In the UI, all-day events display "All day" instead of a time. In storage, all-day events have time set to "all-day" in the markdown file.
 - **Configurable Calendar Directory**: App supports configurable calendar directory via `new_with_calendar_dir` constructor, enabling tests to use temporary directories and avoid interfering with real user events.
 
 ### Sync Implementation

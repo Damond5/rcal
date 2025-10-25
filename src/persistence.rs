@@ -78,19 +78,19 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     let date_str = stripped.trim();
                     if date_str.contains(" to ") {
                         let parts: Vec<&str> = date_str.split(" to ").collect();
-                        start_date = Some(NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").unwrap());
-                        end_date = Some(NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").unwrap());
+                        start_date = NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").ok();
+                        end_date = NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").ok();
                     } else {
-                        start_date = Some(NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap());
+                        start_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok();
                     }
                 } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
                     let time_str = stripped.trim();
                     if time_str.contains(" to ") {
                         let parts: Vec<&str> = time_str.split(" to ").collect();
-                        start_time = Some(NaiveTime::parse_from_str(parts[0], "%H:%M").unwrap());
-                        end_time = Some(NaiveTime::parse_from_str(parts[1], "%H:%M").unwrap());
+                        start_time = NaiveTime::parse_from_str(parts[0], "%H:%M").ok();
+                        end_time = NaiveTime::parse_from_str(parts[1], "%H:%M").ok();
                     } else {
-                        start_time = Some(NaiveTime::parse_from_str(time_str, "%H:%M").unwrap());
+                        start_time = NaiveTime::parse_from_str(time_str, "%H:%M").ok();
                     }
                 } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
                     description = stripped.trim().to_string();
@@ -106,7 +106,9 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     };
                 }
             }
-            if let (Some(sd), Some(st)) = (start_date, start_time) {
+            if let Some(sd) = start_date {
+                let is_all_day = start_time.is_none();
+                let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
                 println!("Pushing event");
                 events.push(CalendarEvent {
                     date: sd,
@@ -120,6 +122,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     end_date,
                     start_time: st,
                     end_time,
+                    is_all_day,
                     id,
                 });
             }
@@ -161,6 +164,7 @@ fn generate_recurring_instances(
                 end_date: base_event.end_date,
                 start_time: base_event.start_time,
                 end_time: base_event.end_time,
+                is_all_day: base_event.is_all_day,
                 id: String::new(),
             });
         }
@@ -226,7 +230,9 @@ pub fn save_event_to_path_without_sync(
         event.start_date.format("%Y-%m-%d").to_string()
     };
 
-    let time_str = if let Some(end) = event.end_time {
+    let time_str = if event.is_all_day {
+        "all-day".to_string()
+    } else if let Some(end) = event.end_time {
         format!(
             "{} to {}",
             event.start_time.format("%H:%M"),
@@ -342,6 +348,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
 
@@ -369,6 +376,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
         let mut event2 = CalendarEvent {
@@ -383,6 +391,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
 
@@ -411,6 +420,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
         let mut event2 = CalendarEvent {
@@ -425,6 +435,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
 
@@ -439,9 +450,39 @@ mod tests {
     }
 
     #[test]
+    fn test_save_and_load_all_day_event() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut event = CalendarEvent {
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            title: "All Day Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: true,
+            id: String::new(),
+        };
+
+        save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
+        let events = load_events_from_path(temp_dir.path());
+
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].date, event.date);
+        assert_eq!(events[0].time, event.time);
+        assert_eq!(events[0].title, event.title);
+        assert!(events[0].is_all_day);
+    }
+
+    #[test]
     fn test_save_and_load_event_with_description() {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
+            is_all_day: false,
             id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
@@ -470,6 +511,7 @@ mod tests {
     fn test_delete_event() {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
+            is_all_day: false,
             id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -484,6 +526,7 @@ mod tests {
             end_time: None,
         };
         let mut event2 = CalendarEvent {
+            is_all_day: false,
             id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
@@ -551,6 +594,7 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             end_time: None,
+            is_all_day: false,
             id: String::new(),
         };
         let mut event2 = event1.clone();

@@ -38,9 +38,9 @@ Each event file is a Markdown document with the following structure:
 - **Description**: The start date of the event, optionally followed by end date for spanning events
 
 ### Time
-- **Format**: `HH:MM` or `HH:MM to HH:MM` for events with duration
-- **Required**: Yes (start_time required)
-- **Description**: The start time of the event, optionally followed by end time
+- **Format**: `HH:MM` or `HH:MM to HH:MM` for events with duration, or `all-day` for all-day events
+- **Required**: No (optional for all-day events)
+- **Description**: The start time of the event, optionally followed by end time. If omitted or set to `all-day`, the event is all-day
 
 ### Description
 - **Format**: Free text
@@ -84,12 +84,22 @@ Each event file is a Markdown document with the following structure:
 - **Recurrence**: daily
 ```
 
+### All-Day Event
+```
+# Event: Holiday
+
+- **Date**: 2023-10-01
+- **Time**: all-day
+- **Description**: National holiday
+- **Recurrence**: none
+```
+
 ## Parsing Rules
 
 - All fields are parsed from the Markdown list items
 - Dates must be in `YYYY-MM-DD` format
-- Times must be in `HH:MM` format (24-hour)
-- Invalid dates/times will cause the event to be skipped
+- Times must be in `HH:MM` format (24-hour) or `all-day` for all-day events
+- If time is missing or invalid, the event is treated as all-day
 - Empty description and recurrence default to empty string and `none` respectively
 - Multi-day/time spans use ` to ` separator
 

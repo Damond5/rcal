@@ -145,146 +145,158 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     }
                     let time_str = app.popup_event_time.drain(..).collect::<String>();
                     let normalized_time_str = normalize_time_input(&time_str);
-
-                    if let Ok(time) = NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
-                        let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
-                        let end_date = if end_date_str.trim().is_empty() {
-                            Some(app.current_date_for_new_event)
-                        } else {
-                            let parts: Vec<&str> = end_date_str.trim().split('/').collect();
-                            if parts.len() == 2 {
-                                if let (Ok(day), Ok(month)) =
-                                    (parts[0].parse::<u32>(), parts[1].parse::<u32>())
-                                {
-                                    let start_date = app.current_date_for_new_event;
-                                    let mut year = start_date.year();
-                                    if month < start_date.month()
-                                        || (month == start_date.month() && day < start_date.day())
-                                    {
-                                        year += 1;
-                                    }
-                                    NaiveDate::from_ymd_opt(year, month, day)
+                    let is_all_day = normalized_time_str.trim().is_empty();
+                    let time = if is_all_day {
+                        NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                    } else {
+                        match NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
+                            Ok(t) => t,
+                            Err(_) => {
+                                // Invalid time, close popup
+                                app.show_add_event_popup = false;
+                                app.input_mode = if app.show_view_events_popup {
+                                    InputMode::ViewEventsPopup
                                 } else {
-                                    None
+                                    InputMode::Normal
+                                };
+                                app.popup_event_title.clear();
+                                app.popup_event_time.clear();
+                                app.popup_event_end_date.clear();
+                                app.popup_event_end_time.clear();
+                                app.popup_event_description.clear();
+                                app.popup_event_recurrence.clear();
+                                app.is_editing = false;
+                                app.event_being_edited = None;
+                                return Ok(true);
+                            }
+                        }
+                    };
+                    let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
+                    let end_date = if end_date_str.trim().is_empty() {
+                        Some(app.current_date_for_new_event)
+                    } else {
+                        let parts: Vec<&str> = end_date_str.trim().split('/').collect();
+                        if parts.len() == 2 {
+                            if let (Ok(day), Ok(month)) =
+                                (parts[0].parse::<u32>(), parts[1].parse::<u32>())
+                            {
+                                let start_date = app.current_date_for_new_event;
+                                let mut year = start_date.year();
+                                if month < start_date.month()
+                                    || (month == start_date.month() && day < start_date.day())
+                                {
+                                    year += 1;
                                 }
+                                NaiveDate::from_ymd_opt(year, month, day)
                             } else {
                                 None
                             }
-                        };
-                        let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
-                        let normalized_end_time_str = normalize_time_input(&end_time_str);
-                        let end_time = if normalized_end_time_str.trim().is_empty() {
-                            Some(time)
                         } else {
-                            NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
-                        };
-                        let title = app.popup_event_title.drain(..).collect();
-                        let recurrence_str =
-                            app.popup_event_recurrence.drain(..).collect::<String>();
-                        let recurrence = match recurrence_str.trim().to_lowercase().as_str() {
-                            "daily" => crate::app::Recurrence::Daily,
-                            "weekly" => crate::app::Recurrence::Weekly,
-                            "monthly" => crate::app::Recurrence::Monthly,
-                            _ => crate::app::Recurrence::None,
-                        };
-                        let description = app.popup_event_description.drain(..).collect();
-                        let mut event = CalendarEvent {
-                            date: app.current_date_for_new_event,
-                            time,
-                            title,
-                            description,
-                            recurrence,
-                            is_recurring_instance: false,
-                            base_date: None,
-                            start_date: app.current_date_for_new_event,
-                            end_date,
-                            start_time: time,
-                            end_time,
-                            id: String::new(),
-                        };
+                            None
+                        }
+                    };
+                    let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
+                    let normalized_end_time_str = normalize_time_input(&end_time_str);
+                    let end_time = if normalized_end_time_str.trim().is_empty() {
+                        Some(time)
+                    } else {
+                        NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
+                    };
+                    let title = app.popup_event_title.drain(..).collect();
+                    let recurrence_str = app.popup_event_recurrence.drain(..).collect::<String>();
+                    let recurrence = match recurrence_str.trim().to_lowercase().as_str() {
+                        "daily" => crate::app::Recurrence::Daily,
+                        "weekly" => crate::app::Recurrence::Weekly,
+                        "monthly" => crate::app::Recurrence::Monthly,
+                        _ => crate::app::Recurrence::None,
+                    };
+                    let description = app.popup_event_description.drain(..).collect();
+                    let mut event = CalendarEvent {
+                        date: app.current_date_for_new_event,
+                        time,
+                        title,
+                        description,
+                        recurrence,
+                        is_recurring_instance: false,
+                        base_date: None,
+                        start_date: app.current_date_for_new_event,
+                        end_date,
+                        start_time: time,
+                        end_time,
+                        is_all_day,
+                        id: String::new(),
+                    };
 
-                        if app.is_editing {
-                            if let Some(old_event) = &app.event_being_edited {
-                                // Remove old event from main events list
-                                app.events.retain(|e| e != old_event);
-                                // Remove from persistence
-                                let _ = persistence::delete_event_from_path_without_sync(
-                                    old_event,
-                                    &app.calendar_dir,
-                                );
+                    if app.is_editing {
+                        if let Some(old_event) = &app.event_being_edited {
+                            // Remove old event from main events list
+                            app.events.retain(|e| e != old_event);
+                            // Remove from persistence
+                            let _ = persistence::delete_event_from_path_without_sync(
+                                old_event,
+                                &app.calendar_dir,
+                            );
 
-                                // Spawn async sync for delete
-                                if let Some(provider) = &app.sync_provider {
-                                    if let Some(git_provider) = provider
-                                        .as_any()
-                                        .downcast_ref::<crate::sync::GitSyncProvider>(
-                                    ) {
-                                        let remote_url = git_provider.remote_url.clone();
-                                        let calendar_dir = app.calendar_dir.clone();
-                                        thread::spawn(move || {
-                                            let provider =
-                                                crate::sync::GitSyncProvider::new(remote_url);
-                                            let _ = provider.push(&calendar_dir);
-                                        });
-                                    }
+                            // Spawn async sync for delete
+                            if let Some(provider) = &app.sync_provider {
+                                if let Some(git_provider) = provider
+                                    .as_any()
+                                    .downcast_ref::<crate::sync::GitSyncProvider>(
+                                ) {
+                                    let remote_url = git_provider.remote_url.clone();
+                                    let calendar_dir = app.calendar_dir.clone();
+                                    thread::spawn(move || {
+                                        let provider =
+                                            crate::sync::GitSyncProvider::new(remote_url);
+                                        let _ = provider.push(&calendar_dir);
+                                    });
                                 }
                             }
                         }
+                    }
 
-                        app.events.push(event.clone());
-                        let _ = persistence::save_event_to_path_without_sync(
-                            &mut event,
-                            &app.calendar_dir,
-                        );
+                    app.events.push(event.clone());
+                    let _ =
+                        persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
 
-                        // Spawn async sync
-                        if let Some(provider) = &app.sync_provider {
-                            if let Some(git_provider) = provider
-                                .as_any()
-                                .downcast_ref::<crate::sync::GitSyncProvider>(
-                            ) {
-                                let remote_url = git_provider.remote_url.clone();
-                                let calendar_dir = app.calendar_dir.clone();
-                                thread::spawn(move || {
-                                    let provider = crate::sync::GitSyncProvider::new(remote_url);
-                                    let _ = provider.push(&calendar_dir);
-                                });
-                            }
+                    // Spawn async sync
+                    if let Some(provider) = &app.sync_provider {
+                        if let Some(git_provider) = provider
+                            .as_any()
+                            .downcast_ref::<crate::sync::GitSyncProvider>()
+                        {
+                            let remote_url = git_provider.remote_url.clone();
+                            let calendar_dir = app.calendar_dir.clone();
+                            thread::spawn(move || {
+                                let provider = crate::sync::GitSyncProvider::new(remote_url);
+                                let _ = provider.push(&calendar_dir);
+                            });
                         }
+                    }
 
-                        app.error_message.clear();
+                    app.error_message.clear();
 
-                        // Reset editing state
-                        app.is_editing = false;
-                        app.event_being_edited = None;
+                    // Reset editing state
+                    app.is_editing = false;
+                    app.event_being_edited = None;
 
-                        // If we came from the view events popup, refresh it and stay in that mode
-                        if app.show_view_events_popup {
-                            app.events_to_display_in_popup = app
-                                .events
-                                .iter()
-                                .filter(|event| {
-                                    event.start_date <= app.date
-                                        && event.end_date.is_none_or(|end| end >= app.date)
-                                })
-                                .cloned()
-                                .collect();
-                            app.events_to_display_in_popup
-                                .sort_by_key(|event| event.time);
-                            app.selected_event_index = 0;
-                            app.input_mode = InputMode::ViewEventsPopup;
-                        } else {
-                            app.input_mode = InputMode::Normal;
-                        }
+                    // If we came from the view events popup, refresh it and stay in that mode
+                    if app.show_view_events_popup {
+                        app.events_to_display_in_popup = app
+                            .events
+                            .iter()
+                            .filter(|event| {
+                                event.start_date <= app.date
+                                    && event.end_date.is_none_or(|end| end >= app.date)
+                            })
+                            .cloned()
+                            .collect();
+                        app.events_to_display_in_popup
+                            .sort_by_key(|event| event.time);
+                        app.selected_event_index = 0;
+                        app.input_mode = InputMode::ViewEventsPopup;
                     } else {
-                        // If time parsing failed, just close popup and return to appropriate mode
-                        app.is_editing = false;
-                        app.event_being_edited = None;
-                        if app.show_view_events_popup {
-                            app.input_mode = InputMode::ViewEventsPopup;
-                        } else {
-                            app.input_mode = InputMode::Normal;
-                        }
+                        app.input_mode = InputMode::Normal;
                     }
                     app.show_add_event_popup = false;
                 }

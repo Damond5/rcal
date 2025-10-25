@@ -1,4 +1,4 @@
-# Todo
+# TODO
 
 ## Potential Enhancements
 - Calendar import/export features

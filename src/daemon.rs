@@ -7,21 +7,21 @@ use notify_rust::Notification;
 
 use crate::persistence;
 
-    pub fn run_daemon() -> Result<(), Box<dyn Error>> {
-        let home = dirs::home_dir().expect("Could not find home directory");
-        let calendar_dir = home.join("calendar");
+pub fn run_daemon() -> Result<(), Box<dyn Error>> {
+    let home = dirs::home_dir().expect("Could not find home directory");
+    let calendar_dir = home.join("calendar");
 
-        let mut events = persistence::load_events();
-        let mut notified = HashSet::new();
+    let mut events = persistence::load_events();
+    let mut notified = HashSet::new();
 
-        let (tx, rx) = std::sync::mpsc::channel();
+    let (tx, rx) = std::sync::mpsc::channel();
 
-        let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
-        watcher.watch(&calendar_dir, RecursiveMode::Recursive)?;
+    let mut watcher = RecommendedWatcher::new(tx, Config::default())?;
+    watcher.watch(&calendar_dir, RecursiveMode::Recursive)?;
 
-        loop {
-            // Check for upcoming events
-            let now = Local::now();
+    loop {
+        // Check for upcoming events
+        let now = Local::now();
 
         for event in &events {
             let event_datetime = event.date.and_time(event.time);

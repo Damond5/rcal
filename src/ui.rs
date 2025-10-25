@@ -52,12 +52,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             current_date_for_week_num = current_day_date;
 
             let mut day_display_str = day_str.clone();
-            let has_event = app
-                .events
-                .iter()
-                .any(|event| {
-                    event.start_date <= current_day_date && event.end_date.is_none_or(|end| end >= current_day_date)
-                });
+            let has_event = app.events.iter().any(|event| {
+                event.start_date <= current_day_date
+                    && event.end_date.is_none_or(|end| end >= current_day_date)
+            });
             let symbol = if has_event { "*" } else { "" };
             day_display_str.push_str(symbol);
 
@@ -313,7 +311,14 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         } else {
             let chunks = Layout::default()
                 .direction(Direction::Vertical)
-                .constraints([Constraint::Min(1), Constraint::Length(1), Constraint::Length(1)].as_ref())
+                .constraints(
+                    [
+                        Constraint::Min(1),
+                        Constraint::Length(1),
+                        Constraint::Length(1),
+                    ]
+                    .as_ref(),
+                )
                 .split(inner_area);
             (chunks[0], Some(chunks[1]), chunks[2])
         };
@@ -438,8 +443,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
         // Render error message if present
         if let Some(error_area) = error_area {
-            let error = Paragraph::new(app.error_message.as_str())
-                .style(Style::default().fg(Color::Red));
+            let error =
+                Paragraph::new(app.error_message.as_str()).style(Style::default().fg(Color::Red));
             f.render_widget(error, error_area);
         }
 

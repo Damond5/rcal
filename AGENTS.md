@@ -99,6 +99,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
 - **Mandatory Non-Empty Titles**: Events require non-empty titles to ensure meaningful identification.
 - **Default End Date/Time**: If end date is not specified during event creation/editing, it defaults to the start date, making the event last only on that single day. Similarly, if end time is not specified, it defaults to the start time, making it a point event.
+- **Configurable Calendar Directory**: App supports configurable calendar directory via `new_with_calendar_dir` constructor, enabling tests to use temporary directories and avoid interfering with real user events.
 
 ### Sync Implementation
 - **Provider Abstraction**: Sync functionality uses a `SyncProvider` trait for extensibility, allowing future implementations (e.g., cloud storage, rsync) beyond the initial Git provider. This ensures the core app remains agnostic to sync mechanisms.

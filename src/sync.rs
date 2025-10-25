@@ -1,6 +1,6 @@
 use std::error::Error;
 use std::path::Path;
-use std::process::Command;
+use std::process::{Command, Stdio};
 
 #[derive(Debug, PartialEq)]
 pub enum SyncStatus {
@@ -36,16 +36,14 @@ impl SyncProvider for GitSyncProvider {
     fn init(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         // Init repo if not exists
         if !path.join(".git").exists() {
-            let output = Command::new("git")
+            let status = Command::new("git")
                 .args(["init"])
                 .current_dir(path)
-                .output()?;
-            if !output.status.success() {
-                return Err(format!(
-                    "Git init failed: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )
-                .into());
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()?;
+            if !status.success() {
+                return Err("Git init failed".into());
             }
         }
 
@@ -56,16 +54,14 @@ impl SyncProvider for GitSyncProvider {
             .output();
         if remote_check.is_err() || !remote_check.as_ref().unwrap().status.success() {
             // Add remote
-            let output = Command::new("git")
+            let status = Command::new("git")
                 .args(["remote", "add", "origin", &self.remote_url])
                 .current_dir(path)
-                .output()?;
-            if !output.status.success() {
-                return Err(format!(
-                    "Git remote add failed: {}",
-                    String::from_utf8_lossy(&output.stderr)
-                )
-                .into());
+                .stdout(Stdio::null())
+                .stderr(Stdio::null())
+                .status()?;
+            if !status.success() {
+                return Err("Git remote add failed".into());
             }
         }
 
@@ -73,6 +69,7 @@ impl SyncProvider for GitSyncProvider {
         let output = Command::new("git")
             .args(["fetch", "origin"])
             .current_dir(path)
+            .stdout(Stdio::null())
             .output()?;
         if !output.status.success() {
             return Err(format!(
@@ -90,6 +87,7 @@ impl SyncProvider for GitSyncProvider {
         let output = Command::new("git")
             .args(["pull", "--rebase", "origin", &self.branch])
             .current_dir(path)
+            .stdout(Stdio::null())
             .output()?;
 
         if !output.status.success() {
@@ -105,22 +103,22 @@ impl SyncProvider for GitSyncProvider {
 
     fn push(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         // Add all changes
-        let output = Command::new("git")
+        let status = Command::new("git")
             .args(["add", "."])
             .current_dir(path)
-            .output()?;
-        if !output.status.success() {
-            return Err(format!(
-                "Git add failed: {}",
-                String::from_utf8_lossy(&output.stderr)
-            )
-            .into());
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
+            .status()?;
+        if !status.success() {
+            return Err("Git add failed".into());
         }
 
         // Check if there are changes
         let diff_output = Command::new("git")
             .args(["diff", "--cached", "--quiet"])
             .current_dir(path)
+            .stdout(Stdio::null())
+            .stderr(Stdio::null())
             .status()?;
         if diff_output.success() {
             return Ok(()); // No changes to commit
@@ -130,6 +128,7 @@ impl SyncProvider for GitSyncProvider {
         let output = Command::new("git")
             .args(["commit", "-m", "Sync events"])
             .current_dir(path)
+            .stdout(Stdio::null())
             .output()?;
         if !output.status.success() {
             let stderr = String::from_utf8_lossy(&output.stderr);
@@ -142,6 +141,7 @@ impl SyncProvider for GitSyncProvider {
         let output = Command::new("git")
             .args(["push", "origin", &self.branch])
             .current_dir(path)
+            .stdout(Stdio::null())
             .output()?;
         if !output.status.success() {
             return Err(format!(

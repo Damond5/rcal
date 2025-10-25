@@ -1,7 +1,6 @@
 use crate::sync::{SyncProvider, SyncStatus};
 use chrono::{Local, NaiveDate, NaiveTime};
 
-
 #[derive(Clone, PartialEq, Debug)]
 pub enum Recurrence {
     None,
@@ -105,7 +104,39 @@ impl App {
             sync_provider: None,
             sync_status: None,
             sync_message: String::new(),
-            calendar_dir: dirs::home_dir().expect("Could not find home directory").join("calendar"),
+            calendar_dir: dirs::home_dir()
+                .expect("Could not find home directory")
+                .join("calendar"),
+            error_message: String::new(),
+        }
+    }
+
+    pub fn new_with_calendar_dir(calendar_dir: std::path::PathBuf) -> App {
+        App {
+            date: Local::now().date_naive(),
+            events: Vec::new(),
+            input: String::new(),
+            input_mode: InputMode::Normal,
+            popup_event_title: String::new(),
+            popup_event_time: String::new(),
+            popup_event_end_date: String::new(),
+            popup_event_end_time: String::new(),
+            popup_event_description: String::new(),
+            popup_event_recurrence: String::new(),
+            selected_input_field: PopupInputField::Title,
+            show_add_event_popup: false,
+            show_view_events_popup: false,
+            events_to_display_in_popup: Vec::new(),
+            selected_event_index: 0,
+            event_to_delete_index: None,
+            current_date_for_new_event: Local::now().date_naive(),
+            cursor_position: 0,
+            is_editing: false,
+            event_being_edited: None,
+            sync_provider: None,
+            sync_status: None,
+            sync_message: String::new(),
+            calendar_dir,
             error_message: String::new(),
         }
     }

@@ -2,11 +2,18 @@ use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use rcal::app::{App, CalendarEvent, InputMode, PopupInputField};
 use rcal::event_handling::handle_event;
+use tempfile::TempDir;
 
+fn setup_app() -> (App, TempDir) {
+    let temp_dir = TempDir::new().unwrap();
+    let mut app = App::new_with_calendar_dir(temp_dir.path().to_path_buf());
+    app.events = rcal::persistence::load_events_from_path(&app.calendar_dir);
+    (app, temp_dir)
+}
 
 #[test]
 fn test_quit_application() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let key_event = KeyEvent::from(KeyCode::Char('q'));
     let should_continue = handle_event(&mut app, Event::Key(key_event)).unwrap();
     assert!(!should_continue);
@@ -14,7 +21,7 @@ fn test_quit_application() {
 
 #[test]
 fn test_navigation_left() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Left);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -23,7 +30,7 @@ fn test_navigation_left() {
 
 #[test]
 fn test_navigation_right() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Right);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -32,7 +39,7 @@ fn test_navigation_right() {
 
 #[test]
 fn test_navigation_vim_left() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('h'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -41,7 +48,7 @@ fn test_navigation_vim_left() {
 
 #[test]
 fn test_navigation_vim_right() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('l'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -50,7 +57,7 @@ fn test_navigation_vim_right() {
 
 #[test]
 fn test_navigation_up() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Up);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -59,7 +66,7 @@ fn test_navigation_up() {
 
 #[test]
 fn test_navigation_down() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Down);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -68,7 +75,7 @@ fn test_navigation_down() {
 
 #[test]
 fn test_navigation_vim_up() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('k'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -77,7 +84,7 @@ fn test_navigation_vim_up() {
 
 #[test]
 fn test_navigation_vim_down() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('j'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -86,7 +93,7 @@ fn test_navigation_vim_down() {
 
 #[test]
 fn test_navigation_page_up() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::PageUp);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -97,7 +104,7 @@ fn test_navigation_page_up() {
 
 #[test]
 fn test_navigation_page_down() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::PageDown);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -108,7 +115,7 @@ fn test_navigation_page_down() {
 
 #[test]
 fn test_navigation_vim_page_up() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('H'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -119,7 +126,7 @@ fn test_navigation_vim_page_up() {
 
 #[test]
 fn test_navigation_vim_page_down() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let original_date = app.date;
     let key_event = KeyEvent::from(KeyCode::Char('L'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -130,7 +137,7 @@ fn test_navigation_vim_page_down() {
 
 #[test]
 fn test_open_add_event_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let key_event = KeyEvent::from(KeyCode::Char('a'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
     assert!(app.show_add_event_popup);
@@ -143,7 +150,7 @@ fn test_open_add_event_popup() {
 
 #[test]
 fn test_open_view_events_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let key_event = KeyEvent::from(KeyCode::Char('o'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
     assert!(app.show_view_events_popup);
@@ -152,7 +159,7 @@ fn test_open_view_events_popup() {
 
 #[test]
 fn test_close_view_events_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_view_events_popup = true;
     app.input_mode = InputMode::ViewEventsPopup;
     app.events_to_display_in_popup = vec![]; // Add some dummy events
@@ -166,7 +173,7 @@ fn test_close_view_events_popup() {
 
 #[test]
 fn test_type_in_title_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -188,7 +195,7 @@ fn test_type_in_title_field() {
 
 #[test]
 fn test_type_in_time_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Time;
@@ -210,7 +217,7 @@ fn test_type_in_time_field() {
 
 #[test]
 fn test_backspace_in_title_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -226,7 +233,7 @@ fn test_backspace_in_title_field() {
 
 #[test]
 fn test_backspace_in_time_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Time;
@@ -242,7 +249,7 @@ fn test_backspace_in_time_field() {
 
 #[test]
 fn test_backspace_at_start() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -258,7 +265,7 @@ fn test_backspace_at_start() {
 
 #[test]
 fn test_cursor_left_movement() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -273,7 +280,7 @@ fn test_cursor_left_movement() {
 
 #[test]
 fn test_cursor_left_at_start() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -287,7 +294,7 @@ fn test_cursor_left_at_start() {
 
 #[test]
 fn test_cursor_right_movement() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -302,7 +309,7 @@ fn test_cursor_right_movement() {
 
 #[test]
 fn test_cursor_right_at_end() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -317,7 +324,7 @@ fn test_cursor_right_at_end() {
 
 #[test]
 fn test_tab_switch_to_time_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -334,7 +341,7 @@ fn test_tab_switch_to_time_field() {
 
 #[test]
 fn test_tab_switch_to_description_field() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Time;
@@ -351,7 +358,7 @@ fn test_tab_switch_to_description_field() {
 
 #[test]
 fn test_tab_switch_to_title_field_from_description() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Description;
@@ -369,7 +376,7 @@ fn test_tab_switch_to_title_field_from_description() {
 
 #[test]
 fn test_tab_switch_to_title_field_from_recurrence() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Recurrence;
@@ -386,7 +393,7 @@ fn test_tab_switch_to_title_field_from_recurrence() {
 
 #[test]
 fn test_unicode_character_input() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -403,7 +410,7 @@ fn test_unicode_character_input() {
 
 #[test]
 fn test_create_event_with_hours_only() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Time;
@@ -425,7 +432,7 @@ fn test_create_event_with_hours_only() {
 
 #[test]
 fn test_create_event_with_single_digit_hour() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Time;
@@ -447,7 +454,7 @@ fn test_create_event_with_single_digit_hour() {
 
 #[test]
 fn test_delete_event_from_view_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
         date: today,
@@ -504,10 +511,10 @@ fn test_delete_event_from_view_popup() {
 
 #[test]
 fn test_cancel_delete_event_confirmation() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
@@ -541,7 +548,7 @@ fn test_cancel_delete_event_confirmation() {
 
 #[test]
 fn test_add_event_from_view_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
 
     // Open view events popup (even with no events)
@@ -580,10 +587,10 @@ fn test_add_event_from_view_popup() {
 
 #[test]
 fn test_navigate_events_in_view_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
@@ -635,7 +642,7 @@ fn test_navigate_events_in_view_popup() {
 
 #[test]
 fn test_create_event_success() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
@@ -662,7 +669,7 @@ fn test_create_event_success() {
 
 #[test]
 fn test_create_event_invalid_time() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
@@ -678,7 +685,7 @@ fn test_create_event_invalid_time() {
 
 #[test]
 fn test_create_event_empty_title() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "".to_string();
@@ -695,7 +702,7 @@ fn test_create_event_empty_title() {
 
 #[test]
 fn test_create_event_empty_end_date_sets_to_start_date() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Single Day Event".to_string();
@@ -709,15 +716,21 @@ fn test_create_event_empty_end_date_sets_to_start_date() {
 
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Single Day Event");
-    assert_eq!(app.events[0].start_date, NaiveDate::from_ymd_opt(2025, 10, 19).unwrap());
-    assert_eq!(app.events[0].end_date, Some(NaiveDate::from_ymd_opt(2025, 10, 19).unwrap()));
+    assert_eq!(
+        app.events[0].start_date,
+        NaiveDate::from_ymd_opt(2025, 10, 19).unwrap()
+    );
+    assert_eq!(
+        app.events[0].end_date,
+        Some(NaiveDate::from_ymd_opt(2025, 10, 19).unwrap())
+    );
     assert!(!app.show_add_event_popup);
     assert_eq!(app.input_mode, InputMode::Normal);
 }
 
 #[test]
 fn test_create_event_empty_end_time_sets_to_start_time() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Point Event".to_string();
@@ -731,15 +744,21 @@ fn test_create_event_empty_end_time_sets_to_start_time() {
 
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Point Event");
-    assert_eq!(app.events[0].start_time, NaiveTime::from_hms_opt(14, 30, 0).unwrap());
-    assert_eq!(app.events[0].end_time, Some(NaiveTime::from_hms_opt(14, 30, 0).unwrap()));
+    assert_eq!(
+        app.events[0].start_time,
+        NaiveTime::from_hms_opt(14, 30, 0).unwrap()
+    );
+    assert_eq!(
+        app.events[0].end_time,
+        Some(NaiveTime::from_hms_opt(14, 30, 0).unwrap())
+    );
     assert!(!app.show_add_event_popup);
     assert_eq!(app.input_mode, InputMode::Normal);
 }
 
 #[test]
 fn test_cancel_add_event_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
@@ -756,10 +775,10 @@ fn test_cancel_add_event_popup() {
 
 #[test]
 fn test_view_events_popup_with_events() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
@@ -773,7 +792,7 @@ fn test_view_events_popup_with_events() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
@@ -800,7 +819,7 @@ fn test_view_events_popup_with_events() {
 
 #[test]
 fn test_view_events_popup_no_events() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
 
     let key_event = KeyEvent::from(KeyCode::Char('o'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -812,12 +831,12 @@ fn test_view_events_popup_no_events() {
 
 #[test]
 fn test_view_events_popup_filters_by_date() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let tomorrow = today + chrono::Duration::days(1);
 
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
@@ -831,7 +850,7 @@ fn test_view_events_popup_filters_by_date() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
@@ -854,7 +873,7 @@ fn test_view_events_popup_filters_by_date() {
 
 #[test]
 fn test_popup_state() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
 
@@ -865,10 +884,10 @@ fn test_popup_state() {
 
 #[test]
 fn test_open_edit_event_popup() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Edit".to_string(),
@@ -901,10 +920,10 @@ fn test_open_edit_event_popup() {
 
 #[test]
 fn test_edit_event_success() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
@@ -950,22 +969,22 @@ fn test_edit_event_success() {
 
 #[test]
 fn test_cancel_edit_event() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
-let original_event = CalendarEvent {
-    id: String::new(),
-    date: today,
-    time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-    title: "Original Title".to_string(),
-    description: "Original Description".to_string(),
-    recurrence: rcal::app::Recurrence::None,
-    is_recurring_instance: false,
-    base_date: None,
-    start_date: today,
-    end_date: None,
-    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-    end_time: None,
-};
+    let original_event = CalendarEvent {
+        id: String::new(),
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: "Original Description".to_string(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
     app.events.push(original_event.clone());
 
     // Open view events popup
@@ -993,22 +1012,22 @@ let original_event = CalendarEvent {
 
 #[test]
 fn test_edit_event_invalid_time() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
-let original_event = CalendarEvent {
-    id: String::new(),
-    date: today,
-    time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-    title: "Original Title".to_string(),
-    description: String::new(),
-    recurrence: rcal::app::Recurrence::None,
-    is_recurring_instance: false,
-    base_date: None,
-    start_date: today,
-    end_date: None,
-    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-    end_time: None,
-};
+    let original_event = CalendarEvent {
+        id: String::new(),
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
     app.events.push(original_event.clone());
 
     // Open view events popup
@@ -1036,7 +1055,7 @@ let original_event = CalendarEvent {
 
 #[test]
 fn test_edit_event_empty_title() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
         id: String::new(),
@@ -1080,10 +1099,10 @@ fn test_edit_event_empty_title() {
 
 #[test]
 fn test_edit_event_change_time_sorting() {
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Noon Event".to_string(),
@@ -1097,7 +1116,7 @@ fn test_edit_event_change_time_sorting() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Event".to_string(),
@@ -1140,10 +1159,10 @@ fn test_edit_event_persistence() {
     // This test would require mocking persistence, but since persistence uses real files,
     // we'll assume the save/delete functions work as tested separately.
     // In a real scenario, we'd use a temp dir for the app.
-    let mut app = App::new();
+    let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: String::new(),
+        id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Title".to_string(),

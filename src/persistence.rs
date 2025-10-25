@@ -52,72 +52,77 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
 
     let mut events = Vec::new();
 
-        for entry in std::fs::read_dir(calendar_dir).expect("Could not read calendar directory") {
-            let entry = entry.expect("Error reading entry");
-            let path = entry.path();
-            if path.file_name().and_then(|n| n.to_str()).map(|s| s.ends_with(".md")).unwrap_or(false) {
-                let content = std::fs::read_to_string(&path).expect("Could not read file");
-                // new format
-                let mut id = String::new();
-                let mut title = String::new();
-                let mut start_date = None;
-                let mut end_date = None;
-                let mut start_time = None;
-                let mut end_time = None;
-                let mut description = String::new();
-                let mut recurrence = crate::app::Recurrence::None;
-                for line in content.lines() {
-                    if let Some(stripped) = line.strip_prefix("# Event: ") {
-                        title = stripped.trim().to_string();
-                    } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
-                        let date_str = stripped.trim();
-                        if date_str.contains(" to ") {
-                            let parts: Vec<&str> = date_str.split(" to ").collect();
-                            start_date = Some(NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").unwrap());
-                            end_date = Some(NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").unwrap());
-                        } else {
-                            start_date = Some(NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap());
-                        }
-                    } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
-                        let time_str = stripped.trim();
-                        if time_str.contains(" to ") {
-                            let parts: Vec<&str> = time_str.split(" to ").collect();
-                            start_time = Some(NaiveTime::parse_from_str(parts[0], "%H:%M").unwrap());
-                            end_time = Some(NaiveTime::parse_from_str(parts[1], "%H:%M").unwrap());
-                        } else {
-                            start_time = Some(NaiveTime::parse_from_str(time_str, "%H:%M").unwrap());
-                        }
-                    } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
-                        description = stripped.trim().to_string();
-                    } else if let Some(stripped) = line.strip_prefix("- **ID**: ") {
-                        id = stripped.trim().to_string();
-                    } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
-                        let rec_str = stripped.trim();
-                        recurrence = match rec_str {
-                            "daily" => crate::app::Recurrence::Daily,
-                            "weekly" => crate::app::Recurrence::Weekly,
-                            "monthly" => crate::app::Recurrence::Monthly,
-                            _ => crate::app::Recurrence::None,
-                        };
+    for entry in std::fs::read_dir(calendar_dir).expect("Could not read calendar directory") {
+        let entry = entry.expect("Error reading entry");
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.ends_with(".md"))
+            .unwrap_or(false)
+        {
+            let content = std::fs::read_to_string(&path).expect("Could not read file");
+            // new format
+            let mut id = String::new();
+            let mut title = String::new();
+            let mut start_date = None;
+            let mut end_date = None;
+            let mut start_time = None;
+            let mut end_time = None;
+            let mut description = String::new();
+            let mut recurrence = crate::app::Recurrence::None;
+            for line in content.lines() {
+                if let Some(stripped) = line.strip_prefix("# Event: ") {
+                    title = stripped.trim().to_string();
+                } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
+                    let date_str = stripped.trim();
+                    if date_str.contains(" to ") {
+                        let parts: Vec<&str> = date_str.split(" to ").collect();
+                        start_date = Some(NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").unwrap());
+                        end_date = Some(NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").unwrap());
+                    } else {
+                        start_date = Some(NaiveDate::parse_from_str(date_str, "%Y-%m-%d").unwrap());
                     }
+                } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
+                    let time_str = stripped.trim();
+                    if time_str.contains(" to ") {
+                        let parts: Vec<&str> = time_str.split(" to ").collect();
+                        start_time = Some(NaiveTime::parse_from_str(parts[0], "%H:%M").unwrap());
+                        end_time = Some(NaiveTime::parse_from_str(parts[1], "%H:%M").unwrap());
+                    } else {
+                        start_time = Some(NaiveTime::parse_from_str(time_str, "%H:%M").unwrap());
+                    }
+                } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
+                    description = stripped.trim().to_string();
+                } else if let Some(stripped) = line.strip_prefix("- **ID**: ") {
+                    id = stripped.trim().to_string();
+                } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
+                    let rec_str = stripped.trim();
+                    recurrence = match rec_str {
+                        "daily" => crate::app::Recurrence::Daily,
+                        "weekly" => crate::app::Recurrence::Weekly,
+                        "monthly" => crate::app::Recurrence::Monthly,
+                        _ => crate::app::Recurrence::None,
+                    };
                 }
-                if let (Some(sd), Some(st)) = (start_date, start_time) {
-                    println!("Pushing event");
-                    events.push(CalendarEvent {
-                        date: sd,
-                        time: st,
-                        title,
-                        description,
-                        recurrence,
-                        is_recurring_instance: false,
-                        base_date: None,
-                        start_date: sd,
-                        end_date,
-                        start_time: st,
-                        end_time,
-                        id,
-                    });
-                }
+            }
+            if let (Some(sd), Some(st)) = (start_date, start_time) {
+                println!("Pushing event");
+                events.push(CalendarEvent {
+                    date: sd,
+                    time: st,
+                    title,
+                    description,
+                    recurrence,
+                    is_recurring_instance: false,
+                    base_date: None,
+                    start_date: sd,
+                    end_date,
+                    start_time: st,
+                    end_time,
+                    id,
+                });
+            }
         }
     }
 
@@ -177,12 +182,21 @@ fn generate_recurring_instances(
 }
 
 pub fn save_event(event: &mut CalendarEvent) -> Result<(), std::io::Error> {
-    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Could not find home directory",
+    ))?;
     save_event_to_path(event, &home.join("calendar"), None)
 }
 
-pub fn save_event_with_sync(event: &mut CalendarEvent, sync_provider: Option<&dyn SyncProvider>) -> Result<(), std::io::Error> {
-    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+pub fn save_event_with_sync(
+    event: &mut CalendarEvent,
+    sync_provider: Option<&dyn SyncProvider>,
+) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Could not find home directory",
+    ))?;
     save_event_to_path(event, &home.join("calendar"), sync_provider)
 }
 
@@ -204,13 +218,21 @@ pub fn save_event_to_path(
     event.id = filename.trim_end_matches(".md").to_string();
 
     let date_str = if let Some(end) = event.end_date {
-        format!("{} to {}", event.start_date.format("%Y-%m-%d"), end.format("%Y-%m-%d"))
+        format!(
+            "{} to {}",
+            event.start_date.format("%Y-%m-%d"),
+            end.format("%Y-%m-%d")
+        )
     } else {
         event.start_date.format("%Y-%m-%d").to_string()
     };
 
     let time_str = if let Some(end) = event.end_time {
-        format!("{} to {}", event.start_time.format("%H:%M"), end.format("%H:%M"))
+        format!(
+            "{} to {}",
+            event.start_time.format("%H:%M"),
+            end.format("%H:%M")
+        )
     } else {
         event.start_time.format("%H:%M").to_string()
     };
@@ -239,12 +261,21 @@ pub fn save_event_to_path(
 }
 
 pub fn delete_event(event: &CalendarEvent) -> Result<(), std::io::Error> {
-    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    let home = dirs::home_dir().ok_or(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Could not find home directory",
+    ))?;
     delete_event_from_path(event, &home.join("calendar"), None)
 }
 
-pub fn delete_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) -> Result<(), std::io::Error> {
-    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+pub fn delete_event_with_sync(
+    event: &CalendarEvent,
+    sync_provider: Option<&dyn SyncProvider>,
+) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Could not find home directory",
+    ))?;
     delete_event_from_path(event, &home.join("calendar"), sync_provider)
 }
 
@@ -512,7 +543,8 @@ mod tests {
         save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
 
         // Check filenames exist
-        let files: Vec<String> = std::fs::read_dir(temp_dir.path()).unwrap()
+        let files: Vec<String> = std::fs::read_dir(temp_dir.path())
+            .unwrap()
             .map(|e| e.unwrap().file_name().into_string().unwrap())
             .collect();
         assert_eq!(files.len(), 2);

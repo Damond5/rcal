@@ -694,6 +694,50 @@ fn test_create_event_empty_title() {
 }
 
 #[test]
+fn test_create_event_empty_end_date_sets_to_start_date() {
+    let mut app = App::new();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Single Day Event".to_string();
+    app.popup_event_time = "14:30".to_string();
+    app.popup_event_end_date = "".to_string(); // Empty end date
+    app.popup_event_end_time = "15:30".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0].title, "Single Day Event");
+    assert_eq!(app.events[0].start_date, NaiveDate::from_ymd_opt(2025, 10, 19).unwrap());
+    assert_eq!(app.events[0].end_date, Some(NaiveDate::from_ymd_opt(2025, 10, 19).unwrap()));
+    assert!(!app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::Normal);
+}
+
+#[test]
+fn test_create_event_empty_end_time_sets_to_start_time() {
+    let mut app = App::new();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Point Event".to_string();
+    app.popup_event_time = "14:30".to_string();
+    app.popup_event_end_date = "20/10".to_string();
+    app.popup_event_end_time = "".to_string(); // Empty end time
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0].title, "Point Event");
+    assert_eq!(app.events[0].start_time, NaiveTime::from_hms_opt(14, 30, 0).unwrap());
+    assert_eq!(app.events[0].end_time, Some(NaiveTime::from_hms_opt(14, 30, 0).unwrap()));
+    assert!(!app.show_add_event_popup);
+    assert_eq!(app.input_mode, InputMode::Normal);
+}
+
+#[test]
 fn test_cancel_add_event_popup() {
     let mut app = App::new();
     app.show_add_event_popup = true;

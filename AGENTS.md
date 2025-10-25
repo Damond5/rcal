@@ -98,6 +98,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
 - **Mandatory Non-Empty Titles**: Events require non-empty titles to ensure meaningful identification.
+- **Default End Date/Time**: If end date is not specified during event creation/editing, it defaults to the start date, making the event last only on that single day. Similarly, if end time is not specified, it defaults to the start time, making it a point event.
 
 ### Sync Implementation
 - **Provider Abstraction**: Sync functionality uses a `SyncProvider` trait for extensibility, allowing future implementations (e.g., cloud storage, rsync) beyond the initial Git provider. This ensures the core app remains agnostic to sync mechanisms.
@@ -119,7 +120,7 @@ Always add accompanying test(s) when implementing new functionality.
 
 ## Test Coverage
 
-The application includes comprehensive test coverage (65 tests) for all functionality:
+The application includes comprehensive test coverage (67 tests) for all functionality:
 
 ### Navigation Tests
 - Day navigation (Left/Right, h/l)

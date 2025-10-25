@@ -145,32 +145,32 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                     if let Ok(time) = NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
                         let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
-                    let end_date = if end_date_str.trim().is_empty() {
-                        None
-                    } else {
-                        let parts: Vec<&str> = end_date_str.trim().split('/').collect();
-                        if parts.len() == 2 {
-                            if let (Ok(day), Ok(month)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                                let start_date = app.current_date_for_new_event;
-                                let mut year = start_date.year();
-                                if month < start_date.month() || (month == start_date.month() && day < start_date.day()) {
-                                    year += 1;
-                                }
-                                NaiveDate::from_ymd_opt(year, month, day)
-                            } else {
-                                None
-                            }
-                        } else {
-                            None
-                        }
-                    };
-                        let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
-                        let normalized_end_time_str = normalize_time_input(&end_time_str);
-                        let end_time = if normalized_end_time_str.trim().is_empty() {
-                            None
-                        } else {
-                            NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
-                        };
+                     let end_date = if end_date_str.trim().is_empty() {
+                         Some(app.current_date_for_new_event)
+                     } else {
+                         let parts: Vec<&str> = end_date_str.trim().split('/').collect();
+                         if parts.len() == 2 {
+                             if let (Ok(day), Ok(month)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                                 let start_date = app.current_date_for_new_event;
+                                 let mut year = start_date.year();
+                                 if month < start_date.month() || (month == start_date.month() && day < start_date.day()) {
+                                     year += 1;
+                                 }
+                                 NaiveDate::from_ymd_opt(year, month, day)
+                             } else {
+                                 None
+                             }
+                         } else {
+                             None
+                         }
+                     };
+                         let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
+                         let normalized_end_time_str = normalize_time_input(&end_time_str);
+                         let end_time = if normalized_end_time_str.trim().is_empty() {
+                             Some(time)
+                         } else {
+                             NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
+                         };
                         let title = app.popup_event_title.drain(..).collect();
                         let recurrence_str =
                             app.popup_event_recurrence.drain(..).collect::<String>();

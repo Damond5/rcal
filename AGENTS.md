@@ -104,10 +104,10 @@ Always add accompanying test(s) when implementing new functionality.
 ### Sync Implementation
 - **Provider Abstraction**: Sync functionality uses a `SyncProvider` trait for extensibility, allowing future implementations (e.g., cloud storage, rsync) beyond the initial Git provider. This ensures the core app remains agnostic to sync mechanisms.
 - **Git as Initial Provider**: Starts with Git for version control and cross-device sync, leveraging markdown files' human-readable format for easy conflict resolution. Uses system `git` commands via `std::process::Command` for full SSH config support (e.g., host aliases), ensuring compatibility with user authentication setups.
-- **Manual and CLI Sync**: Sync is primarily manual via TUI (Ctrl+S menu) or CLI commands (`--sync-init`, `--sync-pull`, etc.) to give users control. Automatic sync is avoided to prevent unintended overwrites or conflicts.
+- **Asynchronous Auto-Sync**: Automatic sync operations (push on save/delete) are performed asynchronously in background threads to avoid blocking the TUI. Manual sync operations (via TUI menu or CLI) remain synchronous for user feedback.
 - **Configuration Storage**: Sync settings (e.g., remote URL) stored in `~/.config/rcal/config.toml` for persistence across sessions. Uses TOML for human-editable config.
-- **Error Handling and Safety**: Sync operations fail gracefully with user-friendly messages (e.g., conflict notifications). No automatic conflict resolution; users must manually edit markdown files. Operations do not crash the app or daemon.
-- **Integration with Existing Architecture**: Sync hooks into persistence layer for optional auto-push on save/delete. Daemon reloads events via file watching after sync, maintaining notification integrity without background sync loops.
+- **Error Handling and Safety**: Sync operations fail gracefully with user-friendly messages (e.g., conflict notifications). No automatic conflict resolution; users must manually edit markdown files. Operations do not crash the app or daemon. Background sync errors are currently logged but not displayed to avoid interrupting the user experience.
+- **Integration with Existing Architecture**: Sync hooks into persistence layer for optional auto-push on save/delete via background threads. Daemon reloads events via file watching after sync, maintaining notification integrity without background sync loops.
 - **Security and Privacy**: Relies on user's Git/SSH setup; no app-level secrets stored. Markdown files remain local until explicitly pushed.
 - **Testing Strategy**: Unit tests for provider logic; integration tests for end-to-end sync workflows using temp directories. Avoids external Git repos in tests for isolation.
 

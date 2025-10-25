@@ -200,10 +200,9 @@ pub fn save_event_with_sync(
     save_event_to_path(event, &home.join("calendar"), sync_provider)
 }
 
-pub fn save_event_to_path(
+pub fn save_event_to_path_without_sync(
     event: &mut CalendarEvent,
     calendar_dir: &Path,
-    sync_provider: Option<&dyn SyncProvider>,
 ) -> Result<(), std::io::Error> {
     std::fs::create_dir_all(calendar_dir)?;
 
@@ -251,6 +250,16 @@ pub fn save_event_to_path(
 
     std::fs::write(filepath, content)?;
 
+    Ok(())
+}
+
+pub fn save_event_to_path(
+    event: &mut CalendarEvent,
+    calendar_dir: &Path,
+    sync_provider: Option<&dyn SyncProvider>,
+) -> Result<(), std::io::Error> {
+    save_event_to_path_without_sync(event, calendar_dir)?;
+
     // Sync after save
     if let Some(provider) = sync_provider {
         if let Err(e) = provider.push(calendar_dir) {
@@ -279,14 +288,23 @@ pub fn delete_event_with_sync(
     delete_event_from_path(event, &home.join("calendar"), sync_provider)
 }
 
+pub fn delete_event_from_path_without_sync(
+    event: &CalendarEvent,
+    calendar_dir: &Path,
+) -> Result<(), std::io::Error> {
+    let filename = format!("{}.md", event.id);
+    let filepath = calendar_dir.join(filename);
+    std::fs::remove_file(filepath)?;
+
+    Ok(())
+}
+
 pub fn delete_event_from_path(
     event: &CalendarEvent,
     calendar_dir: &Path,
     sync_provider: Option<&dyn SyncProvider>,
 ) -> Result<(), std::io::Error> {
-    let filename = format!("{}.md", event.id);
-    let filepath = calendar_dir.join(filename);
-    std::fs::remove_file(filepath)?;
+    delete_event_from_path_without_sync(event, calendar_dir)?;
 
     // Sync after delete
     if let Some(provider) = sync_provider {

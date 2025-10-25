@@ -26,7 +26,7 @@ Key benefits:
 - Real-time file watching for event updates
 - Unicode support in text input
 - Confirmation dialogs for safe operations
-- Git-based synchronization for cross-device event sharing
+- Asynchronous Git-based synchronization for cross-device event sharing (auto-sync happens in background)
 
 ### Supported Formats
 - Markdown-based event storage
@@ -144,6 +144,7 @@ Events are stored as individual markdown files in `~/calendar/` directory, one p
 - Remote URL stored in `~/.config/rcal/config.toml`
 - Uses SSH keys for Git authentication
 - Supports rebase-based pulling to avoid merge commits
+- Automatic push on save/delete happens asynchronously in background threads
 - Conflicts must be resolved manually in the markdown files
 
 ### Customization

@@ -1,3 +1,4 @@
+use std::any::Any;
 use std::error::Error;
 use std::path::Path;
 use std::process::{Command, Stdio};
@@ -16,6 +17,7 @@ pub trait SyncProvider {
     fn pull(&self, path: &Path) -> Result<(), Box<dyn Error>>;
     fn push(&self, path: &Path) -> Result<(), Box<dyn Error>>;
     fn status(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
+    fn as_any(&self) -> &dyn Any;
 }
 
 pub struct GitSyncProvider {
@@ -33,6 +35,9 @@ impl GitSyncProvider {
 }
 
 impl SyncProvider for GitSyncProvider {
+    fn as_any(&self) -> &dyn Any {
+        self
+    }
     fn init(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         // Init repo if not exists
         if !path.join(".git").exists() {

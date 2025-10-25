@@ -5,9 +5,11 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
 use ratatui::Terminal;
 use ratatui::backend::Backend;
+use std::thread;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
 use crate::persistence;
+use crate::sync::SyncProvider;
 use crate::ui::ui;
 
 fn normalize_time_input(input: &str) -> String {
@@ -206,20 +208,49 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 // Remove old event from main events list
                                 app.events.retain(|e| e != old_event);
                                 // Remove from persistence
-                                let _ = persistence::delete_event_from_path(
+                                let _ = persistence::delete_event_from_path_without_sync(
                                     old_event,
                                     &app.calendar_dir,
-                                    app.sync_provider.as_deref(),
                                 );
+
+                                // Spawn async sync for delete
+                                if let Some(provider) = &app.sync_provider {
+                                    if let Some(git_provider) = provider
+                                        .as_any()
+                                        .downcast_ref::<crate::sync::GitSyncProvider>(
+                                    ) {
+                                        let remote_url = git_provider.remote_url.clone();
+                                        let calendar_dir = app.calendar_dir.clone();
+                                        thread::spawn(move || {
+                                            let provider =
+                                                crate::sync::GitSyncProvider::new(remote_url);
+                                            let _ = provider.push(&calendar_dir);
+                                        });
+                                    }
+                                }
                             }
                         }
 
                         app.events.push(event.clone());
-                        let _ = persistence::save_event_to_path(
+                        let _ = persistence::save_event_to_path_without_sync(
                             &mut event,
                             &app.calendar_dir,
-                            app.sync_provider.as_deref(),
                         );
+
+                        // Spawn async sync
+                        if let Some(provider) = &app.sync_provider {
+                            if let Some(git_provider) = provider
+                                .as_any()
+                                .downcast_ref::<crate::sync::GitSyncProvider>(
+                            ) {
+                                let remote_url = git_provider.remote_url.clone();
+                                let calendar_dir = app.calendar_dir.clone();
+                                thread::spawn(move || {
+                                    let provider = crate::sync::GitSyncProvider::new(remote_url);
+                                    let _ = provider.push(&calendar_dir);
+                                });
+                            }
+                        }
 
                         app.error_message.clear();
 
@@ -467,11 +498,26 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             // Remove from main events list
                             app.events.retain(|event| event != event_to_delete);
                             // Remove from persistence
-                            let _ = persistence::delete_event_from_path(
+                            let _ = persistence::delete_event_from_path_without_sync(
                                 event_to_delete,
                                 &app.calendar_dir,
-                                app.sync_provider.as_deref(),
                             );
+
+                            // Spawn async sync for delete
+                            if let Some(provider) = &app.sync_provider {
+                                if let Some(git_provider) = provider
+                                    .as_any()
+                                    .downcast_ref::<crate::sync::GitSyncProvider>(
+                                ) {
+                                    let remote_url = git_provider.remote_url.clone();
+                                    let calendar_dir = app.calendar_dir.clone();
+                                    thread::spawn(move || {
+                                        let provider =
+                                            crate::sync::GitSyncProvider::new(remote_url);
+                                        let _ = provider.push(&calendar_dir);
+                                    });
+                                }
+                            }
                             // Update display list
                             app.events_to_display_in_popup.remove(index);
                             // Adjust selection if necessary

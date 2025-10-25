@@ -55,7 +55,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             let has_event = app
                 .events
                 .iter()
-                .any(|event| event.date == current_day_date);
+                .any(|event| {
+                    event.start_date <= current_day_date && event.end_date.map_or(true, |end| end >= current_day_date)
+                });
             let symbol = if has_event { "*" } else { "" };
             day_display_str.push_str(symbol);
 
@@ -289,7 +291,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let area = {
             let size = f.size();
             let popup_width = 70.min(size.width.saturating_sub(2));
-            let popup_height = 17.min(size.height.saturating_sub(2));
+            let popup_height = 25.min(size.height.saturating_sub(2));
             Rect::new(
                 (size.width - popup_width) / 2,
                 (size.height - popup_height) / 2,
@@ -302,6 +304,14 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(Clear, area);
         f.render_widget(popup_block, area);
 
+        let chunks = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
+            .split(inner_area);
+
+        let input_area = chunks[0];
+        let hints_area = chunks[1];
+
         let input_chunks = Layout::default()
             .direction(Direction::Vertical)
             .margin(1)
@@ -309,13 +319,14 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 [
                     Constraint::Length(3),
                     Constraint::Length(3),
-                    Constraint::Length(5),
                     Constraint::Length(3),
-                    Constraint::Length(1),
+                    Constraint::Length(3),
+                    Constraint::Length(7),
+                    Constraint::Length(3),
                 ]
                 .as_ref(),
             )
-            .split(inner_area);
+            .split(input_area);
 
         let title_style = if app.selected_input_field == PopupInputField::Title {
             Style::default().fg(Color::Black).bg(Color::LightBlue)
@@ -323,6 +334,16 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             Style::default()
         };
         let time_style = if app.selected_input_field == PopupInputField::Time {
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
+        } else {
+            Style::default()
+        };
+        let end_date_style = if app.selected_input_field == PopupInputField::EndDate {
+            Style::default().fg(Color::Black).bg(Color::LightBlue)
+        } else {
+            Style::default()
+        };
+        let end_time_style = if app.selected_input_field == PopupInputField::EndTime {
             Style::default().fg(Color::Black).bg(Color::LightBlue)
         } else {
             Style::default()
@@ -348,17 +369,27 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title("Time"));
         f.render_widget(time_input, input_chunks[1]);
 
+        let end_date_input = ratatui::widgets::Paragraph::new(app.popup_event_end_date.as_str())
+            .style(end_date_style)
+            .block(Block::default().borders(Borders::ALL).title("End Date"));
+        f.render_widget(end_date_input, input_chunks[2]);
+
+        let end_time_input = ratatui::widgets::Paragraph::new(app.popup_event_end_time.as_str())
+            .style(end_time_style)
+            .block(Block::default().borders(Borders::ALL).title("End Time"));
+        f.render_widget(end_time_input, input_chunks[3]);
+
         let description_input =
             ratatui::widgets::Paragraph::new(app.popup_event_description.as_str())
                 .style(description_style)
                 .block(Block::default().borders(Borders::ALL).title("Description"));
-        f.render_widget(description_input, input_chunks[2]);
+        f.render_widget(description_input, input_chunks[4]);
 
         let recurrence_input =
             ratatui::widgets::Paragraph::new(app.popup_event_recurrence.as_str())
                 .style(recurrence_style)
                 .block(Block::default().borders(Borders::ALL).title("Recurrence"));
-        f.render_widget(recurrence_input, input_chunks[3]);
+        f.render_widget(recurrence_input, input_chunks[5]);
 
         match app.selected_input_field {
             PopupInputField::Title => {
@@ -373,24 +404,36 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                     input_chunks[1].y + 1,
                 );
             }
-            PopupInputField::Description => {
+            PopupInputField::EndDate => {
                 f.set_cursor(
                     input_chunks[2].x + app.cursor_position as u16 + 1,
                     input_chunks[2].y + 1,
                 );
             }
-            PopupInputField::Recurrence => {
+            PopupInputField::EndTime => {
                 f.set_cursor(
                     input_chunks[3].x + app.cursor_position as u16 + 1,
                     input_chunks[3].y + 1,
                 );
             }
+            PopupInputField::Description => {
+                f.set_cursor(
+                    input_chunks[4].x + app.cursor_position as u16 + 1,
+                    input_chunks[4].y + 1,
+                );
+            }
+            PopupInputField::Recurrence => {
+                f.set_cursor(
+                    input_chunks[5].x + app.cursor_position as u16 + 1,
+                    input_chunks[5].y + 1,
+                );
+            }
         }
 
         // Render hints
-        let hints = Paragraph::new("Tab: switch field, Enter: save, Esc: cancel")
+        let hints = Paragraph::new("Tab/Shift+Tab: switch field, Enter: save, Esc: cancel")
             .style(Style::default().fg(Color::Gray));
-        f.render_widget(hints, input_chunks[4]);
+        f.render_widget(hints, hints_area);
     }
 
     if app.input_mode == InputMode::Sync {

@@ -22,6 +22,7 @@ Adhere to standard Rust conventions as enforced by `cargo fmt` and `cargo clippy
     - `PascalCase` for types (structs, enums, traits).
     - `SCREAMING_SNAKE_CASE` for constants.
 - **Error Handling**: Prefer `Result` and `Option` for error handling. Avoid `panic!` for recoverable errors.
+- **Import Management**: Remove unused imports to avoid warnings, e.g., fixed unused UUID import.
 
 ## Tests
 
@@ -60,8 +61,8 @@ Always add accompanying test(s) when implementing new functionality.
 - **State Management**: Use enum-based input modes (`InputMode`) for clear state transitions including confirmation dialogs
 - **Event Filtering**: Filter events by date using iterator methods for efficient display
 - **Modal Interactions**: Support nested popup states (view → add → confirm) with proper state restoration
-- **Keybindings**: Always prefer vim-like keybindings (h/j/k/l for navigation) over modifier-based shortcuts (e.g., avoid Ctrl+S in favor of single-key alternatives). Use lowercase letters for commands, reserving uppercase (shift+letter) for future features, except where vim conventions apply (e.g., H/L for page navigation).
-- **Keybind Hints**: Display contextual keybind hints on all screens and popups to guide user interactions, positioned at the bottom of each interface element.
+- **Keybindings**: Always prefer vim-like keybindings (h/j/k/l for navigation) over modifier-based shortcuts (e.g., avoid Ctrl+S in favor of single-key alternatives). Use lowercase letters for commands, reserving uppercase (shift+letter) for future features, except where vim conventions apply (e.g., H/L for page navigation). Added Shift+Tab support for backwards navigation in event popup fields.
+- **Keybind Hints**: Display contextual keybind hints on all screens and popups to guide user interactions, positioned at the bottom of each interface element. Fixed keybind hints display as footer instead of text field.
 
 ### UI Rendering
 
@@ -70,6 +71,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Cursor Positioning**: Calculate cursor coordinates relative to input field positions using character-based indexing for Unicode support
 - **Style Management**: Use conditional styling based on `selected_input_field` for visual feedback
 - **Event Selection**: Highlight selected events in view popup with black text on light blue background for improved readability
+- **Text Field Heights**: Fixed text field heights in event creation/editing popup for better visibility
 
 ### Error Handling
 
@@ -82,11 +84,15 @@ Always add accompanying test(s) when implementing new functionality.
 ### Event Management
 
 - **Flexible Time Input**: Support multiple time formats (HH:MM, HH, H) with automatic normalization
+- **End Date Input Format**: Changed to DD/MM with automatic year assumption
 - **Event Deletion**: Safe deletion with confirmation dialog to prevent accidental data loss
 - **Context-Aware Adding**: Add events directly from view popup without losing context
-- **Persistent Storage**: Events saved to markdown files in user's home directory
+- **Persistent Storage**: Events saved as individual markdown files in the user's home directory, one per event with UUID filenames
+- **Multi-day Events**: Support for events spanning multiple days with start_date, end_date, start_time, and end_time fields
+- **UI Enhancements**: Updated event creation and editing popup to include input fields for end date and end time
+- **Event Format Specification**: Documented in EVENT_FORMAT.md for standardized event file format
 - **Real-time Updates**: View popup refreshes automatically after adding/deleting events
-- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, checking events 30 minutes ahead and sending desktop notifications via `notify-rust`
+- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, sending desktop notifications via `notify-rust` approximately 30 minutes before upcoming events. Notifications are checked for all events regardless of date, and sent only once per event per daemon session, with retriggering allowed on calendar file changes.
 - **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
@@ -104,13 +110,14 @@ Always add accompanying test(s) when implementing new functionality.
 ### Packaging for Arch Linux AUR
 - **PKGBUILD Structure**: Standard Rust package with `cargo build --release`; installs binary to `/usr/bin/rcal`, license to `/usr/share/licenses/rcal/`, and systemd user service to `/usr/lib/systemd/user/rcal.service`.
 - **Systemd User Service**: Provides `rcal.service` for daemon mode, enabling background notifications with `systemctl --user enable rcal.service`.
+- **Service Enabling**: Manual by users to avoid interference with existing setups; automatic enabling on first TUI run considered but rejected for simplicity, compatibility, and to respect user preferences.
 - **Dependencies**: No runtime deps; build deps include `cargo` and `rust`.
-- **Source**: Uses GitHub archive for releases; falls back to Git if needed.
+- **Source**: Uses GitHub git repo with release tags for versioning.
 - **Maintenance**: Update `pkgver` and checksums on upstream releases; ensure AUR package stays current.
 
 ## Test Coverage
 
-The application includes comprehensive test coverage (59 tests) for all functionality:
+The application includes comprehensive test coverage (60 tests) for all functionality:
 
 ### Navigation Tests
 - Day navigation (Left/Right, h/l)

@@ -15,9 +15,11 @@ Key benefits:
 
 ### Core Functionality
 - Interactive calendar view with month/week navigation
-- Add, view, and delete events
-- Event details including title, time, and description
+- Add, view, edit, and delete events
+- Support for multi-day events with start and end dates and times
+- Event details including title, start/end dates, start/end times, and description
 - Flexible time input formats (HH:MM, HH, H)
+- End date input format: DD/MM with automatic year assumption
 
 ### Advanced Features
 - Daemon mode for background notifications
@@ -37,10 +39,22 @@ Key benefits:
 ### Prerequisites
 - Rust 1.70 or later
 - Cargo package manager
+- For notifications: A D-Bus compatible desktop environment
+
+### Arch Linux (AUR)
+Install the `rcal` package from the Arch User Repository:
+```bash
+paru -S rcal  # or your preferred AUR helper
+```
+After installation, enable the daemon service:
+```bash
+systemctl --user enable rcal.service
+systemctl --user start rcal.service
+```
 
 ### Build from Source
 ```bash
-git clone <repository-url>
+git clone https://github.com/Damond5/rcal
 cd rcal
 cargo build --release
 ```
@@ -79,6 +93,7 @@ cargo install --path .
 
 #### Input Forms
 - **Switch Fields**: Tab
+- **Backwards Field Switch**: Shift+Tab
 - **Save**: Enter
 - **Cancel**: Esc
 - **Cursor Movement**: Left/Right arrows
@@ -117,9 +132,8 @@ rcal
 ## Configuration
 
 ### Event Storage
-Events are stored as markdown files in `~/calendar/` directory:
-- Each day has its own file (e.g., `2024-01-15.md`)
-- Events include title, time, and description
+Events are stored as individual markdown files in `~/calendar/` directory, one per event with UUID-based filenames. See EVENT_FORMAT.md for the detailed event format specification.
+- Events include title, start date, start time, end date, end time, and description
 
 ### Notification Settings
 - Daemon checks for events 30 minutes ahead
@@ -162,6 +176,10 @@ Follow standard Rust conventions enforced by `cargo fmt` and `cargo clippy`:
 ## License
 
 CC0 1.0 Universal - see LICENSE file for details.
+
+## Version
+
+Current version: 1.0.0
 
 ## Demo
 

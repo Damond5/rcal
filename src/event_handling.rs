@@ -5,6 +5,7 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
 use ratatui::Terminal;
 use ratatui::backend::Backend;
+use uuid::Uuid;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
 use crate::persistence;
@@ -58,22 +59,24 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
 pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
     if let CrosstermEvent::Key(key) = event {
         match app.input_mode {
-            InputMode::Normal => match key.code {
-                KeyCode::Char('q') => return Ok(false),
-                KeyCode::Char('a') => {
-                    app.show_add_event_popup = true;
-                    app.input_mode = InputMode::EditingEventPopup;
-                    app.current_date_for_new_event = app.date;
-                    app.popup_event_title.clear();
-                    app.popup_event_time.clear();
-                    app.popup_event_recurrence.clear();
-                    app.popup_event_description.clear();
-                    app.input.clear();
-                    app.selected_input_field = PopupInputField::Title;
-                    app.cursor_position = 0;
-                    app.is_editing = false;
-                    app.event_being_edited = None;
-                }
+             InputMode::Normal => match key.code {
+                 KeyCode::Char('q') => return Ok(false),
+                 KeyCode::Char('a') => {
+                     app.show_add_event_popup = true;
+                     app.input_mode = InputMode::EditingEventPopup;
+                     app.current_date_for_new_event = app.date;
+                     app.popup_event_title.clear();
+                     app.popup_event_time.clear();
+                     app.popup_event_end_date.clear();
+                     app.popup_event_end_time.clear();
+                     app.popup_event_recurrence.clear();
+                     app.popup_event_description.clear();
+                     app.input.clear();
+                     app.selected_input_field = PopupInputField::Title;
+                     app.cursor_position = 0;
+                     app.is_editing = false;
+                     app.event_being_edited = None;
+                 }
                 KeyCode::Left | KeyCode::Char('h') => {
                     app.date -= chrono::Duration::days(1);
                 }
@@ -113,7 +116,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.events_to_display_in_popup = app
                         .events
                         .iter()
-                        .filter(|event| event.date == app.date)
+                        .filter(|event| {
+                            event.start_date <= app.date && event.end_date.map_or(true, |end| end >= app.date)
+                        })
                         .cloned()
                         .collect();
                     app.events_to_display_in_popup
@@ -136,6 +141,39 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     let normalized_time_str = normalize_time_input(&time_str);
 
                     if let Ok(time) = NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
+                        let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
+                        let end_date = if end_date_str.trim().is_empty() {
+                            None
+                        } else {
+                            let parts: Vec<&str> = end_date_str.trim().split('/').collect();
+                            if parts.len() == 2 {
+                                if let (Ok(day), Ok(month)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                                    let start_date = app.current_date_for_new_event;
+                                    let mut year = start_date.year();
+                                    if month < start_date.month() as u32 || (month == start_date.month() as u32 && day < start_date.day()) {
+                                        year += 1;
+                                    }
+                                    if let Some(ed) = NaiveDate::from_ymd_opt(year, month as u32, day) {
+                                        Some(ed)
+                                    } else {
+                                        None
+                                    }
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        };
+                        let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
+                        let normalized_end_time_str = normalize_time_input(&end_time_str);
+                        let end_time = if normalized_end_time_str.trim().is_empty() {
+                            None
+                        } else if let Ok(et) = NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M") {
+                            Some(et)
+                        } else {
+                            None
+                        };
                         let title = app.popup_event_title.drain(..).collect();
                         let recurrence_str =
                             app.popup_event_recurrence.drain(..).collect::<String>();
@@ -154,6 +192,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             recurrence,
                             is_recurring_instance: false,
                             base_date: None,
+                            start_date: app.current_date_for_new_event,
+                            end_date,
+                            start_time: time,
+                            end_time,
+                            id: Uuid::new_v4(),
                         };
 
                         if app.is_editing {
@@ -177,7 +220,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             app.events_to_display_in_popup = app
                                 .events
                                 .iter()
-                                .filter(|event| event.date == app.date)
+                                .filter(|event| {
+                                    event.start_date <= app.date && event.end_date.map_or(true, |end| end >= app.date)
+                                })
                                 .cloned()
                                 .collect();
                             app.events_to_display_in_popup
@@ -216,11 +261,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     }
                 }
                 KeyCode::Esc => {
-                    app.show_add_event_popup = false;
-                    app.popup_event_title.clear();
-                    app.popup_event_time.clear();
-                    app.popup_event_description.clear();
-                    app.popup_event_recurrence.clear();
+                     app.show_add_event_popup = false;
+                     app.popup_event_title.clear();
+                     app.popup_event_time.clear();
+                     app.popup_event_end_date.clear();
+                     app.popup_event_end_time.clear();
+                     app.popup_event_description.clear();
+                     app.popup_event_recurrence.clear();
                     app.input.clear();
                     app.is_editing = false;
                     app.event_being_edited = None;
@@ -242,6 +289,34 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         app.cursor_position += 1;
                     }
                 }
+                KeyCode::BackTab => {
+                    app.selected_input_field = match app.selected_input_field {
+                        PopupInputField::Title => {
+                            app.cursor_position = app.popup_event_recurrence.chars().count();
+                            PopupInputField::Recurrence
+                        }
+                        PopupInputField::Time => {
+                            app.cursor_position = app.popup_event_title.chars().count();
+                            PopupInputField::Title
+                        }
+                        PopupInputField::EndDate => {
+                            app.cursor_position = app.popup_event_time.chars().count();
+                            PopupInputField::Time
+                        }
+                        PopupInputField::EndTime => {
+                            app.cursor_position = app.popup_event_end_date.chars().count();
+                            PopupInputField::EndDate
+                        }
+                        PopupInputField::Description => {
+                            app.cursor_position = app.popup_event_end_time.chars().count();
+                            PopupInputField::EndTime
+                        }
+                        PopupInputField::Recurrence => {
+                            app.cursor_position = app.popup_event_description.chars().count();
+                            PopupInputField::Description
+                        }
+                    };
+                }
                 KeyCode::Tab => {
                     app.selected_input_field = match app.selected_input_field {
                         PopupInputField::Title => {
@@ -249,6 +324,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             PopupInputField::Time
                         }
                         PopupInputField::Time => {
+                            app.cursor_position = app.popup_event_end_date.chars().count();
+                            PopupInputField::EndDate
+                        }
+                        PopupInputField::EndDate => {
+                            app.cursor_position = app.popup_event_end_time.chars().count();
+                            PopupInputField::EndTime
+                        }
+                        PopupInputField::EndTime => {
                             app.cursor_position = app.popup_event_description.chars().count();
                             PopupInputField::Description
                         }
@@ -308,6 +391,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         };
                         app.popup_event_title = base_event.title.clone();
                         app.popup_event_time = base_event.time.format("%H:%M").to_string();
+                        app.popup_event_end_date = base_event.end_date.map_or(String::new(), |d| d.format("%d/%m").to_string());
+                        app.popup_event_end_time = base_event.end_time.map_or(String::new(), |t| t.format("%H:%M").to_string());
                         app.popup_event_recurrence = match base_event.recurrence {
                             crate::app::Recurrence::None => "none".to_string(),
                             crate::app::Recurrence::Daily => "daily".to_string(),
@@ -328,10 +413,12 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.show_add_event_popup = true;
                     app.input_mode = InputMode::EditingEventPopup;
                     app.current_date_for_new_event = app.date;
-                    app.popup_event_title.clear();
-                    app.popup_event_time.clear();
-                    app.popup_event_recurrence.clear();
-                    app.popup_event_description.clear();
+                     app.popup_event_title.clear();
+                     app.popup_event_time.clear();
+                     app.popup_event_end_date.clear();
+                     app.popup_event_end_time.clear();
+                     app.popup_event_recurrence.clear();
+                     app.popup_event_description.clear();
                     app.input.clear();
                     app.selected_input_field = PopupInputField::Title;
                     app.cursor_position = 0;

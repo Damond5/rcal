@@ -2,6 +2,7 @@ use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use rcal::app::{App, CalendarEvent, InputMode, PopupInputField};
 use rcal::event_handling::handle_event;
+use uuid::Uuid;
 
 #[test]
 fn test_quit_application() {
@@ -344,7 +345,7 @@ fn test_tab_switch_to_description_field() {
     let key_event = KeyEvent::from(KeyCode::Tab);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    assert_eq!(app.selected_input_field, PopupInputField::Description);
+    assert_eq!(app.selected_input_field, PopupInputField::EndDate);
     assert_eq!(app.cursor_position, 0); // Should be at start of description field (empty)
 }
 
@@ -456,6 +457,11 @@ fn test_delete_event_from_view_popup() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        id: Uuid::new_v4(),
     });
     app.events.push(CalendarEvent {
         date: today,
@@ -465,6 +471,11 @@ fn test_delete_event_from_view_popup() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        end_time: None,
+        id: Uuid::new_v4(),
     });
 
     // Open view events popup
@@ -496,6 +507,7 @@ fn test_cancel_delete_event_confirmation() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
@@ -503,6 +515,10 @@ fn test_cancel_delete_event_confirmation() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     // Open view events popup
@@ -567,6 +583,7 @@ fn test_navigate_events_in_view_popup() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
@@ -574,6 +591,10 @@ fn test_navigate_events_in_view_popup() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
     app.events.push(CalendarEvent {
         date: today,
@@ -583,6 +604,11 @@ fn test_navigate_events_in_view_popup() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        end_time: None,
+        id: Uuid::new_v4(),
     });
 
     // Open view events popup
@@ -672,6 +698,7 @@ fn test_view_events_popup_with_events() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
@@ -679,8 +706,13 @@ fn test_view_events_popup_with_events() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
@@ -688,6 +720,10 @@ fn test_view_events_popup_with_events() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
+        end_time: None,
     });
 
     let key_event = KeyEvent::from(KeyCode::Char('o'));
@@ -720,6 +756,7 @@ fn test_view_events_popup_filters_by_date() {
     let tomorrow = today + chrono::Duration::days(1);
 
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
@@ -727,8 +764,13 @@ fn test_view_events_popup_filters_by_date() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
@@ -736,6 +778,10 @@ fn test_view_events_popup_filters_by_date() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: tomorrow,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     let key_event = KeyEvent::from(KeyCode::Char('o'));
@@ -761,6 +807,7 @@ fn test_open_edit_event_popup() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Edit".to_string(),
@@ -768,6 +815,10 @@ fn test_open_edit_event_popup() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     // Open view events popup
@@ -792,6 +843,7 @@ fn test_edit_event_success() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
@@ -799,6 +851,10 @@ fn test_edit_event_success() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     // Open view events popup
@@ -835,15 +891,20 @@ fn test_edit_event_success() {
 fn test_cancel_edit_event() {
     let mut app = App::new();
     let today = app.date;
-    let original_event = CalendarEvent {
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-        title: "Original Title".to_string(),
-        description: "Original Description".to_string(),
-        recurrence: rcal::app::Recurrence::None,
-        is_recurring_instance: false,
-        base_date: None,
-    };
+let original_event = CalendarEvent {
+    id: Uuid::new_v4(),
+    date: today,
+    time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+    title: "Original Title".to_string(),
+    description: "Original Description".to_string(),
+    recurrence: rcal::app::Recurrence::None,
+    is_recurring_instance: false,
+    base_date: None,
+    start_date: today,
+    end_date: None,
+    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+    end_time: None,
+};
     app.events.push(original_event.clone());
 
     // Open view events popup
@@ -873,15 +934,20 @@ fn test_cancel_edit_event() {
 fn test_edit_event_invalid_time() {
     let mut app = App::new();
     let today = app.date;
-    let original_event = CalendarEvent {
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-        title: "Original Title".to_string(),
-        description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
-        is_recurring_instance: false,
-        base_date: None,
-    };
+let original_event = CalendarEvent {
+    id: Uuid::new_v4(),
+    date: today,
+    time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+    title: "Original Title".to_string(),
+    description: String::new(),
+    recurrence: rcal::app::Recurrence::None,
+    is_recurring_instance: false,
+    base_date: None,
+    start_date: today,
+    end_date: None,
+    start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+    end_time: None,
+};
     app.events.push(original_event.clone());
 
     // Open view events popup
@@ -912,6 +978,7 @@ fn test_edit_event_change_time_sorting() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Noon Event".to_string(),
@@ -919,8 +986,13 @@ fn test_edit_event_change_time_sorting() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        end_time: None,
     });
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Event".to_string(),
@@ -928,6 +1000,10 @@ fn test_edit_event_change_time_sorting() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     // Open view events popup
@@ -962,6 +1038,7 @@ fn test_edit_event_persistence() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
+            id: Uuid::new_v4(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Title".to_string(),
@@ -969,6 +1046,10 @@ fn test_edit_event_persistence() {
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
     });
 
     // Open view events popup

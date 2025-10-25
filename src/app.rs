@@ -1,5 +1,6 @@
 use crate::sync::{SyncProvider, SyncStatus};
 use chrono::{Local, NaiveDate, NaiveTime};
+use uuid::Uuid;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Recurrence {
@@ -11,13 +12,18 @@ pub enum Recurrence {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CalendarEvent {
-    pub date: NaiveDate,
-    pub time: NaiveTime,
+    pub date: NaiveDate, // Deprecated: use start_date
+    pub time: NaiveTime, // Deprecated: use start_time
     pub title: String,
     pub description: String,
     pub recurrence: Recurrence,
     pub is_recurring_instance: bool,
     pub base_date: Option<NaiveDate>,
+    pub start_date: NaiveDate,
+    pub end_date: Option<NaiveDate>,
+    pub start_time: NaiveTime,
+    pub end_time: Option<NaiveTime>,
+    pub id: Uuid,
 }
 
 #[derive(PartialEq, Debug)]
@@ -33,6 +39,8 @@ pub enum InputMode {
 pub enum PopupInputField {
     Title,
     Time,
+    EndDate,
+    EndTime,
     Description,
     Recurrence,
 }
@@ -44,6 +52,8 @@ pub struct App {
     pub input_mode: InputMode,
     pub popup_event_title: String,
     pub popup_event_time: String,
+    pub popup_event_end_date: String,
+    pub popup_event_end_time: String,
     pub popup_event_description: String,
     pub popup_event_recurrence: String,
     pub selected_input_field: PopupInputField,
@@ -76,6 +86,8 @@ impl App {
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
             popup_event_time: String::new(),
+            popup_event_end_date: String::new(),
+            popup_event_end_time: String::new(),
             popup_event_description: String::new(),
             popup_event_recurrence: String::new(),
             selected_input_field: PopupInputField::Title,
@@ -106,6 +118,8 @@ impl App {
         match self.selected_input_field {
             PopupInputField::Title => &self.popup_event_title,
             PopupInputField::Time => &self.popup_event_time,
+            PopupInputField::EndDate => &self.popup_event_end_date,
+            PopupInputField::EndTime => &self.popup_event_end_time,
             PopupInputField::Description => &self.popup_event_description,
             PopupInputField::Recurrence => &self.popup_event_recurrence,
         }
@@ -115,6 +129,8 @@ impl App {
         match self.selected_input_field {
             PopupInputField::Title => &mut self.popup_event_title,
             PopupInputField::Time => &mut self.popup_event_time,
+            PopupInputField::EndDate => &mut self.popup_event_end_date,
+            PopupInputField::EndTime => &mut self.popup_event_end_time,
             PopupInputField::Description => &mut self.popup_event_description,
             PopupInputField::Recurrence => &mut self.popup_event_recurrence,
         }

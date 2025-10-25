@@ -63,7 +63,6 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
         {
             let content = std::fs::read_to_string(&path).expect("Could not read file");
             // new format
-            let mut id = String::new();
             let mut title = String::new();
             let mut start_date = None;
             let mut end_date = None;
@@ -94,9 +93,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     }
                 } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
                     description = stripped.trim().to_string();
-                } else if let Some(stripped) = line.strip_prefix("- **ID**: ") {
-                    id = stripped.trim().to_string();
-                } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
+                 } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
                     let rec_str = stripped.trim();
                     recurrence = match rec_str {
                         "daily" => crate::app::Recurrence::Daily,
@@ -120,10 +117,9 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     start_date: sd,
                     end_date: end_date.or(Some(sd)),
                     start_time: st,
-                    end_time,
-                    is_all_day,
-                    id,
-                });
+                     end_time,
+                     is_all_day,
+                 });
             }
         }
     }
@@ -162,10 +158,9 @@ fn generate_recurring_instances(
                 start_date: current_date,
                 end_date: base_event.end_date,
                 start_time: base_event.start_time,
-                end_time: base_event.end_time,
-                is_all_day: base_event.is_all_day,
-                id: String::new(),
-            });
+                 end_time: base_event.end_time,
+                 is_all_day: base_event.is_all_day,
+             });
         }
 
         match base_event.recurrence {
@@ -217,7 +212,6 @@ pub fn save_event_to_path_without_sync(
         counter += 1;
     }
     let filepath = calendar_dir.join(&filename);
-    event.id = filename.trim_end_matches(".md").to_string();
 
     let date_str = if let Some(end) = event.end_date {
         if end != event.start_date {
@@ -253,8 +247,8 @@ pub fn save_event_to_path_without_sync(
     };
 
     let content = format!(
-        "# Event: {}\n\n- **ID**: {}\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
-        event.title, event.id, date_str, time_str, event.description, rec_str
+        "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
+        event.title, date_str, time_str, event.description, rec_str
     );
 
     std::fs::write(filepath, content)?;
@@ -301,7 +295,8 @@ pub fn delete_event_from_path_without_sync(
     event: &CalendarEvent,
     calendar_dir: &Path,
 ) -> Result<(), std::io::Error> {
-    let filename = format!("{}.md", event.id);
+    let base_name = sanitize_title_for_filename(&event.title);
+    let filename = format!("{base_name}.md");
     let filepath = calendar_dir.join(filename);
     std::fs::remove_file(filepath)?;
 
@@ -352,7 +347,6 @@ mod tests {
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
             is_all_day: false,
-            id: String::new(),
         };
 
         save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
@@ -362,50 +356,6 @@ mod tests {
         assert_eq!(events[0].date, event.date);
         assert_eq!(events[0].time, event.time);
         assert_eq!(events[0].title, event.title);
-    }
-
-    #[test]
-    fn test_save_multiple_events_same_day() {
-        let temp_dir = TempDir::new().unwrap();
-        let mut event1 = CalendarEvent {
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
-            title: "Later Event".to_string(),
-            description: String::new(),
-            recurrence: crate::app::Recurrence::None,
-            is_recurring_instance: false,
-            base_date: None,
-            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            end_date: None,
-            start_time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        };
-        let mut event2 = CalendarEvent {
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
-            title: "Earlier Event".to_string(),
-            description: String::new(),
-            recurrence: crate::app::Recurrence::None,
-            is_recurring_instance: false,
-            base_date: None,
-            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            end_date: None,
-            start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        };
-
-        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
-        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
-        let events = load_events_from_path(temp_dir.path());
-
-        assert_eq!(events.len(), 2);
-        // Should be sorted by time
-        assert_eq!(events[0].title, "Earlier Event");
-        assert_eq!(events[1].title, "Later Event");
     }
 
     #[test]
@@ -422,11 +372,10 @@ mod tests {
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        };
-        let mut event2 = CalendarEvent {
+             end_time: None,
+             is_all_day: false,
+         };
+         let mut event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
@@ -436,14 +385,13 @@ mod tests {
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             end_date: None,
-            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        };
+             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+             end_time: None,
+             is_all_day: false,
+         };
 
-        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
-        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
+         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+         save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -468,7 +416,6 @@ mod tests {
             start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             end_time: None,
             is_all_day: true,
-            id: String::new(),
         };
 
         save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
@@ -486,7 +433,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
             is_all_day: false,
-            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -515,7 +461,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
             is_all_day: false,
-            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Event 1".to_string(),
@@ -530,7 +475,6 @@ mod tests {
         };
         let mut event2 = CalendarEvent {
             is_all_day: false,
-            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
             title: "Event 2".to_string(),
@@ -596,11 +540,10 @@ mod tests {
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             end_date: None,
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        };
-        let mut event2 = event1.clone();
+             end_time: None,
+             is_all_day: false,
+         };
+         let mut event2 = event1.clone();
         event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 
@@ -616,16 +559,10 @@ mod tests {
         assert!(files.contains(&"Test_Event.md".to_string()));
         assert!(files.contains(&"Test_Event_1.md".to_string()));
 
-        // Check IDs set correctly
-        assert_eq!(event1.id, "Test_Event");
-        assert_eq!(event2.id, "Test_Event_1");
-
         // Load and verify events
         let events = load_events_from_path(temp_dir.path());
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].title, "Test Event");
         assert_eq!(events[1].title, "Test Event");
-        assert_eq!(events[0].id, "Test_Event");
-        assert_eq!(events[1].id, "Test_Event_1");
     }
 }

@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - Event files are now named by event title instead of date-based naming
+- Removed ID field from CalendarEvent struct, using title as unique identifier for file operations
 
 ### Fixed
 - Fixed git text display in TUI

@@ -101,6 +101,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Default End Date/Time**: If end date is not specified during event creation/editing, it defaults to the start date, making the event last only on that single day. Similarly, if end time is not specified, it defaults to the start time, making it a point event.
 - **Single-Day Event Handling**: Single-day events now properly have end_date set to start_date internally, and are saved without ' to ' in the file format. This ensures they display stars only on the single day.
 - **All-Day Events**: Events without a specified time are treated as all-day events. All-day events are notified the day before at midday. In the UI, all-day events display "All day" instead of a time. In storage, all-day events have time set to "all-day" in the markdown file.
+- **ID Removal**: Removed the `id` field from `CalendarEvent` struct to align with EVENT_FORMAT.md. Event title serves as the unique identifier for file operations, assuming titles are unique. Deletion generates filename from sanitized title without appending numbers for duplicates.
 - **Configurable Calendar Directory**: App supports configurable calendar directory via `new_with_calendar_dir` constructor, enabling tests to use temporary directories and avoid interfering with real user events.
 
 ### Sync Implementation

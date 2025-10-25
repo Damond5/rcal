@@ -222,10 +222,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         start_date: app.current_date_for_new_event,
                         end_date,
                         start_time: time,
-                        end_time,
-                        is_all_day,
-                        id: String::new(),
-                    };
+                         end_time,
+                         is_all_day,
+                     };
 
                     if app.is_editing {
                         if let Some(old_event) = &app.event_being_edited {

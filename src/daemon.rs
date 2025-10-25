@@ -118,12 +118,11 @@ mod tests {
             start_date: today,
             end_date: None,
             start_time: future_time,
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        }];
+             end_time: None,
+             is_all_day: false,
+         }];
 
-        let mut notified = HashSet::new();
+         let mut notified = HashSet::new();
         let notifications = check_upcoming_events(&events, now, &mut notified);
 
         assert_eq!(notifications.len(), 1);
@@ -149,14 +148,13 @@ mod tests {
             base_date: None,
             start_date: today,
             end_date: None,
-            start_time: past_time,
-            end_time: None,
-            is_all_day: false,
-            id: String::new(),
-        }];
+             start_time: past_time,
+             end_time: None,
+             is_all_day: false,
+         }];
 
-        let mut notified = HashSet::new();
-        let notifications = check_upcoming_events(&events, now, &mut notified);
+         let mut notified = HashSet::new();
+         let notifications = check_upcoming_events(&events, now, &mut notified);
 
         assert_eq!(notifications.len(), 0);
     }
@@ -169,7 +167,6 @@ mod tests {
 
         let events = vec![CalendarEvent {
             is_all_day: false,
-            id: String::new(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),
@@ -211,7 +208,6 @@ mod tests {
             start_time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             end_time: None,
             is_all_day: true,
-            id: String::new(),
         }];
 
         let mut notified = HashSet::new();
@@ -230,7 +226,6 @@ mod tests {
 
         let events = vec![CalendarEvent {
             is_all_day: false,
-            id: String::new(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),

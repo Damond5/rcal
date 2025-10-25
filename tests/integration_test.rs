@@ -2,7 +2,7 @@ use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use rcal::app::{App, CalendarEvent, InputMode, PopupInputField};
 use rcal::event_handling::handle_event;
-use uuid::Uuid;
+
 
 #[test]
 fn test_quit_application() {
@@ -461,7 +461,7 @@ fn test_delete_event_from_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
-        id: Uuid::new_v4(),
+        id: String::new(),
     });
     app.events.push(CalendarEvent {
         date: today,
@@ -475,7 +475,7 @@ fn test_delete_event_from_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
-        id: Uuid::new_v4(),
+        id: String::new(),
     });
 
     // Open view events popup
@@ -507,7 +507,7 @@ fn test_cancel_delete_event_confirmation() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
@@ -583,7 +583,7 @@ fn test_navigate_events_in_view_popup() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
@@ -608,7 +608,7 @@ fn test_navigate_events_in_view_popup() {
         end_date: None,
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
-        id: Uuid::new_v4(),
+        id: String::new(),
     });
 
     // Open view events popup
@@ -627,10 +627,10 @@ fn test_navigate_events_in_view_popup() {
     handle_event(&mut app, Event::Key(key_event)).unwrap();
     assert_eq!(app.selected_event_index, 0);
 
-    // Try to go up from first item (should stay at 0)
+    // Try to go up from first item (should cycle to last)
     let key_event = KeyEvent::from(KeyCode::Up);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
-    assert_eq!(app.selected_event_index, 0);
+    assert_eq!(app.selected_event_index, 1);
 }
 
 #[test]
@@ -677,6 +677,23 @@ fn test_create_event_invalid_time() {
 }
 
 #[test]
+fn test_create_event_empty_title() {
+    let mut app = App::new();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "".to_string();
+    app.popup_event_time = "14:30".to_string();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 0); // No event should be created
+    assert_eq!(app.error_message, "Title cannot be empty");
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+}
+
+#[test]
 fn test_cancel_add_event_popup() {
     let mut app = App::new();
     app.show_add_event_popup = true;
@@ -698,7 +715,7 @@ fn test_view_events_popup_with_events() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
@@ -712,7 +729,7 @@ fn test_view_events_popup_with_events() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
@@ -756,7 +773,7 @@ fn test_view_events_popup_filters_by_date() {
     let tomorrow = today + chrono::Duration::days(1);
 
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
@@ -770,7 +787,7 @@ fn test_view_events_popup_filters_by_date() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
@@ -807,7 +824,7 @@ fn test_open_edit_event_popup() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Edit".to_string(),
@@ -843,7 +860,7 @@ fn test_edit_event_success() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
@@ -892,7 +909,7 @@ fn test_cancel_edit_event() {
     let mut app = App::new();
     let today = app.date;
 let original_event = CalendarEvent {
-    id: Uuid::new_v4(),
+    id: String::new(),
     date: today,
     time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     title: "Original Title".to_string(),
@@ -935,7 +952,7 @@ fn test_edit_event_invalid_time() {
     let mut app = App::new();
     let today = app.date;
 let original_event = CalendarEvent {
-    id: Uuid::new_v4(),
+    id: String::new(),
     date: today,
     time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
     title: "Original Title".to_string(),
@@ -974,11 +991,55 @@ let original_event = CalendarEvent {
 }
 
 #[test]
+fn test_edit_event_empty_title() {
+    let mut app = App::new();
+    let today = app.date;
+    let original_event = CalendarEvent {
+        id: String::new(),
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Original Title".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    app.events.push(original_event.clone());
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Press 'e' to edit
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Set empty title
+    app.popup_event_title = "".to_string();
+
+    // Try to save
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.events.len(), 1);
+    assert_eq!(app.events[0], original_event); // Event unchanged
+    assert_eq!(app.error_message, "Title cannot be empty");
+    assert!(app.is_editing);
+    assert!(app.event_being_edited.is_some());
+}
+
+#[test]
 fn test_edit_event_change_time_sorting() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Noon Event".to_string(),
@@ -992,7 +1053,7 @@ fn test_edit_event_change_time_sorting() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Event".to_string(),
@@ -1038,7 +1099,7 @@ fn test_edit_event_persistence() {
     let mut app = App::new();
     let today = app.date;
     app.events.push(CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Title".to_string(),

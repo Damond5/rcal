@@ -132,7 +132,7 @@ rcal
 ## Configuration
 
 ### Event Storage
-Events are stored as individual markdown files in `~/calendar/` directory, one per event with UUID-based filenames. See EVENT_FORMAT.md for the detailed event format specification.
+Events are stored as individual markdown files in `~/calendar/` directory, one per event with title-based filenames. See EVENT_FORMAT.md for the detailed event format specification.
 - Events include title, start date, start time, end date, end time, and description
 
 ### Notification Settings

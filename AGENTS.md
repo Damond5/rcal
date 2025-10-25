@@ -63,6 +63,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **Modal Interactions**: Support nested popup states (view → add → confirm) with proper state restoration
 - **Keybindings**: Always prefer vim-like keybindings (h/j/k/l for navigation) over modifier-based shortcuts (e.g., avoid Ctrl+S in favor of single-key alternatives). Use lowercase letters for commands, reserving uppercase (shift+letter) for future features, except where vim conventions apply (e.g., H/L for page navigation). Added Shift+Tab support for backwards navigation in event popup fields.
 - **Keybind Hints**: Display contextual keybind hints on all screens and popups to guide user interactions, positioned at the bottom of each interface element. Fixed keybind hints display as footer instead of text field.
+- **Cycling Navigation**: In the events view popup, up/down navigation cycles to the opposite end when reaching bounds.
 
 ### UI Rendering
 
@@ -87,7 +88,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **End Date Input Format**: Changed to DD/MM with automatic year assumption
 - **Event Deletion**: Safe deletion with confirmation dialog to prevent accidental data loss
 - **Context-Aware Adding**: Add events directly from view popup without losing context
-- **Persistent Storage**: Events saved as individual markdown files in the user's home directory, one per event with UUID filenames
+- **Persistent Storage**: Events saved as individual markdown files in the user's home directory, one per event, with filenames based on sanitized event titles (replacing spaces with underscores, filtering to alphanumeric and underscore characters, with fallback to "untitled" for invalid titles), and duplicates handled by appending a number (e.g., "Team_Meeting.md", "Team_Meeting_1.md").
 - **Multi-day Events**: Support for events spanning multiple days with start_date, end_date, start_time, and end_time fields
 - **UI Enhancements**: Updated event creation and editing popup to include input fields for end date and end time
 - **Event Format Specification**: Documented in EVENT_FORMAT.md for standardized event file format
@@ -96,6 +97,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux
+- **Mandatory Non-Empty Titles**: Events require non-empty titles to ensure meaningful identification.
 
 ### Sync Implementation
 - **Provider Abstraction**: Sync functionality uses a `SyncProvider` trait for extensibility, allowing future implementations (e.g., cloud storage, rsync) beyond the initial Git provider. This ensures the core app remains agnostic to sync mechanisms.
@@ -117,7 +119,7 @@ Always add accompanying test(s) when implementing new functionality.
 
 ## Test Coverage
 
-The application includes comprehensive test coverage (60 tests) for all functionality:
+The application includes comprehensive test coverage (65 tests) for all functionality:
 
 ### Navigation Tests
 - Day navigation (Left/Right, h/l)

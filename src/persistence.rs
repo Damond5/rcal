@@ -2,10 +2,42 @@ use std::path::Path;
 
 use chrono::{Datelike, Duration, NaiveDate, NaiveTime};
 use dirs;
-use uuid::Uuid;
 
 use crate::app::CalendarEvent;
 use crate::sync::SyncProvider;
+
+fn sanitize_title_for_filename(title: &str) -> String {
+    let mut sanitized = title
+        .replace(' ', "_")
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '_')
+        .collect::<String>();
+    // Trim leading and trailing underscores
+    sanitized = sanitized.trim_matches('_').to_string();
+    // Collapse consecutive underscores
+    let mut collapsed = String::new();
+    let mut last_was_underscore = false;
+    for c in sanitized.chars() {
+        if c == '_' {
+            if !last_was_underscore {
+                collapsed.push(c);
+                last_was_underscore = true;
+            }
+        } else {
+            collapsed.push(c);
+            last_was_underscore = false;
+        }
+    }
+    // Limit length to 100 characters
+    if collapsed.len() > 100 {
+        collapsed.truncate(100);
+    }
+    if collapsed.is_empty() {
+        "untitled".to_string() // Fallback for empty or entirely invalid titles
+    } else {
+        collapsed
+    }
+}
 
 pub fn load_events() -> Vec<CalendarEvent> {
     let home = dirs::home_dir().expect("Could not find home directory");
@@ -20,21 +52,20 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
 
     let mut events = Vec::new();
 
-    for entry in std::fs::read_dir(calendar_dir).expect("Could not read calendar directory") {
-        let entry = entry.expect("Error reading entry");
-        let path = entry.path();
-        if path.extension() == Some(std::ffi::OsStr::new("md")) {
-            let content = std::fs::read_to_string(&path).expect("Could not read file");
-            // new format
-            let id_str = path.file_stem().and_then(|s| s.to_str()).unwrap();
-            let id = Uuid::parse_str(id_str).unwrap_or(Uuid::new_v4());
-            let mut title = String::new();
-            let mut start_date = None;
-            let mut end_date = None;
-            let mut start_time = None;
-            let mut end_time = None;
-            let mut description = String::new();
-            let mut recurrence = crate::app::Recurrence::None;
+        for entry in std::fs::read_dir(calendar_dir).expect("Could not read calendar directory") {
+            let entry = entry.expect("Error reading entry");
+            let path = entry.path();
+            if path.file_name().and_then(|n| n.to_str()).map(|s| s.ends_with(".md")).unwrap_or(false) {
+                let content = std::fs::read_to_string(&path).expect("Could not read file");
+                // new format
+                let mut id = String::new();
+                let mut title = String::new();
+                let mut start_date = None;
+                let mut end_date = None;
+                let mut start_time = None;
+                let mut end_time = None;
+                let mut description = String::new();
+                let mut recurrence = crate::app::Recurrence::None;
                 for line in content.lines() {
                     if let Some(stripped) = line.strip_prefix("# Event: ") {
                         title = stripped.trim().to_string();
@@ -58,6 +89,8 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                         }
                     } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
                         description = stripped.trim().to_string();
+                    } else if let Some(stripped) = line.strip_prefix("- **ID**: ") {
+                        id = stripped.trim().to_string();
                     } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
                         let rec_str = stripped.trim();
                         recurrence = match rec_str {
@@ -69,6 +102,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     }
                 }
                 if let (Some(sd), Some(st)) = (start_date, start_time) {
+                    println!("Pushing event");
                     events.push(CalendarEvent {
                         date: sd,
                         time: st,
@@ -122,7 +156,7 @@ fn generate_recurring_instances(
                 end_date: base_event.end_date,
                 start_time: base_event.start_time,
                 end_time: base_event.end_time,
-                id: Uuid::new_v4(),
+                id: String::new(),
             });
         }
 
@@ -142,25 +176,32 @@ fn generate_recurring_instances(
     instances
 }
 
-pub fn save_event(event: &CalendarEvent) {
-    let home = dirs::home_dir().expect("Could not find home directory");
-    save_event_to_path(event, &home.join("calendar"), None);
+pub fn save_event(event: &mut CalendarEvent) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    save_event_to_path(event, &home.join("calendar"), None)
 }
 
-pub fn save_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) {
-    let home = dirs::home_dir().expect("Could not find home directory");
-    save_event_to_path(event, &home.join("calendar"), sync_provider);
+pub fn save_event_with_sync(event: &mut CalendarEvent, sync_provider: Option<&dyn SyncProvider>) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    save_event_to_path(event, &home.join("calendar"), sync_provider)
 }
 
 pub fn save_event_to_path(
-    event: &CalendarEvent,
+    event: &mut CalendarEvent,
     calendar_dir: &Path,
     sync_provider: Option<&dyn SyncProvider>,
-) {
-    std::fs::create_dir_all(calendar_dir).expect("Could not create calendar directory");
+) -> Result<(), std::io::Error> {
+    std::fs::create_dir_all(calendar_dir)?;
 
-    let filename = format!("{}.md", event.id);
-    let filepath = calendar_dir.join(filename);
+    let base_name = sanitize_title_for_filename(&event.title);
+    let mut filename = format!("{base_name}.md");
+    let mut counter = 1;
+    while calendar_dir.join(&filename).exists() {
+        filename = format!("{base_name}_{counter}.md");
+        counter += 1;
+    }
+    let filepath = calendar_dir.join(&filename);
+    event.id = filename.trim_end_matches(".md").to_string();
 
     let date_str = if let Some(end) = event.end_date {
         format!("{} to {}", event.start_date.format("%Y-%m-%d"), end.format("%Y-%m-%d"))
@@ -182,11 +223,11 @@ pub fn save_event_to_path(
     };
 
     let content = format!(
-        "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
-        event.title, date_str, time_str, event.description, rec_str
+        "# Event: {}\n\n- **ID**: {}\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
+        event.title, event.id, date_str, time_str, event.description, rec_str
     );
 
-    std::fs::write(filepath, content).expect("Could not write file");
+    std::fs::write(filepath, content)?;
 
     // Sync after save
     if let Some(provider) = sync_provider {
@@ -194,26 +235,27 @@ pub fn save_event_to_path(
             eprintln!("Sync push failed: {e}");
         }
     }
+    Ok(())
 }
 
-pub fn delete_event(event: &CalendarEvent) {
-    let home = dirs::home_dir().expect("Could not find home directory");
-    delete_event_from_path(event, &home.join("calendar"), None);
+pub fn delete_event(event: &CalendarEvent) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    delete_event_from_path(event, &home.join("calendar"), None)
 }
 
-pub fn delete_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) {
-    let home = dirs::home_dir().expect("Could not find home directory");
-    delete_event_from_path(event, &home.join("calendar"), sync_provider);
+pub fn delete_event_with_sync(event: &CalendarEvent, sync_provider: Option<&dyn SyncProvider>) -> Result<(), std::io::Error> {
+    let home = dirs::home_dir().ok_or(std::io::Error::new(std::io::ErrorKind::NotFound, "Could not find home directory"))?;
+    delete_event_from_path(event, &home.join("calendar"), sync_provider)
 }
 
 pub fn delete_event_from_path(
     event: &CalendarEvent,
     calendar_dir: &Path,
     sync_provider: Option<&dyn SyncProvider>,
-) {
+) -> Result<(), std::io::Error> {
     let filename = format!("{}.md", event.id);
     let filepath = calendar_dir.join(filename);
-    let _ = std::fs::remove_file(filepath);
+    std::fs::remove_file(filepath)?;
 
     // Sync after delete
     if let Some(provider) = sync_provider {
@@ -221,6 +263,7 @@ pub fn delete_event_from_path(
             eprintln!("Sync push failed: {e}");
         }
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -238,7 +281,7 @@ mod tests {
     #[test]
     fn test_save_and_load_event() {
         let temp_dir = TempDir::new().unwrap();
-        let event = CalendarEvent {
+        let mut event = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -250,10 +293,10 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         };
 
-        save_event_to_path(&event, temp_dir.path(), None);
+        save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 1);
@@ -265,7 +308,7 @@ mod tests {
     #[test]
     fn test_save_multiple_events_same_day() {
         let temp_dir = TempDir::new().unwrap();
-        let event1 = CalendarEvent {
+        let mut event1 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
             title: "Later Event".to_string(),
@@ -277,9 +320,9 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(16, 0, 0).unwrap(),
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         };
-        let event2 = CalendarEvent {
+        let mut event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Earlier Event".to_string(),
@@ -291,11 +334,11 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         };
 
-        save_event_to_path(&event1, temp_dir.path(), None);
-        save_event_to_path(&event2, temp_dir.path(), None);
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -307,7 +350,7 @@ mod tests {
     #[test]
     fn test_save_events_different_days() {
         let temp_dir = TempDir::new().unwrap();
-        let event1 = CalendarEvent {
+        let mut event1 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Day 1 Event".to_string(),
@@ -319,9 +362,9 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         };
-        let event2 = CalendarEvent {
+        let mut event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
@@ -333,11 +376,11 @@ mod tests {
             end_date: None,
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         };
 
-        save_event_to_path(&event1, temp_dir.path(), None);
-        save_event_to_path(&event2, temp_dir.path(), None);
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -349,8 +392,8 @@ mod tests {
     #[test]
     fn test_save_and_load_event_with_description() {
         let temp_dir = TempDir::new().unwrap();
-        let event = CalendarEvent {
-            id: Uuid::new_v4(),
+        let mut event = CalendarEvent {
+            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -364,7 +407,7 @@ mod tests {
             end_time: None,
         };
 
-        save_event_to_path(&event, temp_dir.path(), None);
+        save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 1);
@@ -377,8 +420,8 @@ mod tests {
     #[test]
     fn test_delete_event() {
         let temp_dir = TempDir::new().unwrap();
-        let event1 = CalendarEvent {
-            id: Uuid::new_v4(),
+        let mut event1 = CalendarEvent {
+            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Event 1".to_string(),
@@ -391,8 +434,8 @@ mod tests {
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             end_time: None,
         };
-        let event2 = CalendarEvent {
-            id: Uuid::new_v4(),
+        let mut event2 = CalendarEvent {
+            id: String::new(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
             title: "Event 2".to_string(),
@@ -407,21 +450,85 @@ mod tests {
         };
 
         // Save both events
-        save_event_to_path(&event1, temp_dir.path(), None);
-        save_event_to_path(&event2, temp_dir.path(), None);
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
 
         let events = load_events_from_path(temp_dir.path());
         assert_eq!(events.len(), 2);
 
         // Delete first event
-        delete_event_from_path(&event1, temp_dir.path(), None);
+        let _ = delete_event_from_path(&event1, temp_dir.path(), None);
         let events_after_delete = load_events_from_path(temp_dir.path());
         assert_eq!(events_after_delete.len(), 1);
         assert_eq!(events_after_delete[0].title, "Event 2");
 
         // Delete remaining event
-        delete_event_from_path(&event2, temp_dir.path(), None);
+        let _ = delete_event_from_path(&event2, temp_dir.path(), None);
         let events_after_second_delete = load_events_from_path(temp_dir.path());
         assert_eq!(events_after_second_delete.len(), 0);
+    }
+
+    #[test]
+    fn test_sanitize_title_for_filename() {
+        assert_eq!(sanitize_title_for_filename("Team Meeting"), "Team_Meeting");
+        assert_eq!(sanitize_title_for_filename("Hello World!"), "Hello_World");
+        assert_eq!(sanitize_title_for_filename(""), "untitled");
+        assert_eq!(sanitize_title_for_filename("!@#"), "untitled");
+        assert_eq!(sanitize_title_for_filename("   "), "untitled");
+        assert_eq!(sanitize_title_for_filename("a_b"), "a_b");
+        assert_eq!(sanitize_title_for_filename("123"), "123");
+        assert_eq!(sanitize_title_for_filename("test-event"), "testevent");
+        assert_eq!(sanitize_title_for_filename("Café"), "Café");
+        assert_eq!(sanitize_title_for_filename("___hello___"), "hello");
+        assert_eq!(sanitize_title_for_filename("hello___world"), "hello_world");
+        let long_title = "a".repeat(150);
+        let sanitized = sanitize_title_for_filename(&long_title);
+        assert_eq!(sanitized.len(), 100);
+        assert!(sanitized.starts_with("a"));
+    }
+
+    #[test]
+    fn test_save_events_with_duplicate_titles() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut event1 = CalendarEvent {
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Test Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            id: String::new(),
+        };
+        let mut event2 = event1.clone();
+        event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
+        event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
+
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
+
+        // Check filenames exist
+        let files: Vec<String> = std::fs::read_dir(temp_dir.path()).unwrap()
+            .map(|e| e.unwrap().file_name().into_string().unwrap())
+            .collect();
+        assert_eq!(files.len(), 2);
+        assert!(files.contains(&"Test_Event.md".to_string()));
+        assert!(files.contains(&"Test_Event_1.md".to_string()));
+
+        // Check IDs set correctly
+        assert_eq!(event1.id, "Test_Event");
+        assert_eq!(event2.id, "Test_Event_1");
+
+        // Load and verify events
+        let events = load_events_from_path(temp_dir.path());
+        assert_eq!(events.len(), 2);
+        assert_eq!(events[0].title, "Test Event");
+        assert_eq!(events[1].title, "Test Event");
+        assert_eq!(events[0].id, "Test_Event");
+        assert_eq!(events[1].id, "Test_Event_1");
     }
 }

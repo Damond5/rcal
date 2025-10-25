@@ -1,6 +1,6 @@
 use crate::sync::{SyncProvider, SyncStatus};
 use chrono::{Local, NaiveDate, NaiveTime};
-use uuid::Uuid;
+
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Recurrence {
@@ -23,7 +23,7 @@ pub struct CalendarEvent {
     pub end_date: Option<NaiveDate>,
     pub start_time: NaiveTime,
     pub end_time: Option<NaiveTime>,
-    pub id: Uuid,
+    pub id: String,
 }
 
 #[derive(PartialEq, Debug)]
@@ -69,6 +69,8 @@ pub struct App {
     pub sync_provider: Option<Box<dyn SyncProvider>>,
     pub sync_status: Option<SyncStatus>,
     pub sync_message: String,
+    pub calendar_dir: std::path::PathBuf,
+    pub error_message: String,
 }
 
 impl Default for App {
@@ -103,6 +105,8 @@ impl App {
             sync_provider: None,
             sync_status: None,
             sync_message: String::new(),
+            calendar_dir: dirs::home_dir().expect("Could not find home directory").join("calendar"),
+            error_message: String::new(),
         }
     }
 

@@ -121,7 +121,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let mut app = App::new();
-    app.events = persistence::load_events();
+    app.events = persistence::load_events_from_path(&app.calendar_dir);
     if let Some(url) = load_remote_url() {
         app.sync_provider = Some(Box::new(GitSyncProvider::new(url)));
     }

@@ -56,7 +56,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .events
                 .iter()
                 .any(|event| {
-                    event.start_date <= current_day_date && event.end_date.map_or(true, |end| end >= current_day_date)
+                    event.start_date <= current_day_date && event.end_date.is_none_or(|end| end >= current_day_date)
                 });
             let symbol = if has_event { "*" } else { "" };
             day_display_str.push_str(symbol);
@@ -304,13 +304,19 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(Clear, area);
         f.render_widget(popup_block, area);
 
-        let chunks = Layout::default()
-            .direction(Direction::Vertical)
-            .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
-            .split(inner_area);
-
-        let input_area = chunks[0];
-        let hints_area = chunks[1];
+        let (input_area, error_area, hints_area) = if app.error_message.is_empty() {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
+                .split(inner_area);
+            (chunks[0], None, chunks[1])
+        } else {
+            let chunks = Layout::default()
+                .direction(Direction::Vertical)
+                .constraints([Constraint::Min(1), Constraint::Length(1), Constraint::Length(1)].as_ref())
+                .split(inner_area);
+            (chunks[0], Some(chunks[1]), chunks[2])
+        };
 
         let input_chunks = Layout::default()
             .direction(Direction::Vertical)
@@ -428,6 +434,13 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                     input_chunks[5].y + 1,
                 );
             }
+        }
+
+        // Render error message if present
+        if let Some(error_area) = error_area {
+            let error = Paragraph::new(app.error_message.as_str())
+                .style(Style::default().fg(Color::Red));
+            f.render_widget(error, error_area);
         }
 
         // Render hints

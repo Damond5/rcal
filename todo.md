@@ -1,6 +1,4 @@
 # Todo
-- Name event files by event title.
-  - Handle event files with the same name.
 - When on the events popup, navigating up and down at the bounds should cycle to the other bound.
 - Sandbox tests, so they dont mess with the currently stored events
 

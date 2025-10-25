@@ -4,8 +4,6 @@ use chrono::Local;
 use dirs;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_rust::Notification;
-#[cfg(test)]
-use uuid::Uuid;
 
 use crate::persistence;
 
@@ -110,7 +108,7 @@ mod tests {
             end_date: None,
             start_time: future_time,
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         }];
 
         let mut notified = HashSet::new();
@@ -141,7 +139,7 @@ mod tests {
             end_date: None,
             start_time: past_time,
             end_time: None,
-            id: Uuid::new_v4(),
+            id: String::new(),
         }];
 
         let mut notified = HashSet::new();
@@ -157,7 +155,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(15);
 
         let events = vec![CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),
@@ -184,7 +182,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(30);
 
         let events = vec![CalendarEvent {
-            id: Uuid::new_v4(),
+            id: String::new(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),

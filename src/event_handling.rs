@@ -5,7 +5,6 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
 use ratatui::Terminal;
 use ratatui::backend::Backend;
-use uuid::Uuid;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
 use crate::persistence;
@@ -117,7 +116,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         .events
                         .iter()
                         .filter(|event| {
-                            event.start_date <= app.date && event.end_date.map_or(true, |end| end >= app.date)
+                            event.start_date <= app.date && event.end_date.is_none_or(|end| end >= app.date)
                         })
                         .cloned()
                         .collect();
@@ -135,44 +134,42 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 }
                 _ => {}
             },
-            InputMode::EditingEventPopup => match key.code {
-                KeyCode::Enter => {
-                    let time_str = app.popup_event_time.drain(..).collect::<String>();
+             InputMode::EditingEventPopup => match key.code {
+                 KeyCode::Enter => {
+                     if app.popup_event_title.trim().is_empty() {
+                         app.error_message = "Title cannot be empty".to_string();
+                         return Ok(true);
+                     }
+                     let time_str = app.popup_event_time.drain(..).collect::<String>();
                     let normalized_time_str = normalize_time_input(&time_str);
 
                     if let Ok(time) = NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
                         let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
-                        let end_date = if end_date_str.trim().is_empty() {
-                            None
-                        } else {
-                            let parts: Vec<&str> = end_date_str.trim().split('/').collect();
-                            if parts.len() == 2 {
-                                if let (Ok(day), Ok(month)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
-                                    let start_date = app.current_date_for_new_event;
-                                    let mut year = start_date.year();
-                                    if month < start_date.month() as u32 || (month == start_date.month() as u32 && day < start_date.day()) {
-                                        year += 1;
-                                    }
-                                    if let Some(ed) = NaiveDate::from_ymd_opt(year, month as u32, day) {
-                                        Some(ed)
-                                    } else {
-                                        None
-                                    }
-                                } else {
-                                    None
+                    let end_date = if end_date_str.trim().is_empty() {
+                        None
+                    } else {
+                        let parts: Vec<&str> = end_date_str.trim().split('/').collect();
+                        if parts.len() == 2 {
+                            if let (Ok(day), Ok(month)) = (parts[0].parse::<u32>(), parts[1].parse::<u32>()) {
+                                let start_date = app.current_date_for_new_event;
+                                let mut year = start_date.year();
+                                if month < start_date.month() || (month == start_date.month() && day < start_date.day()) {
+                                    year += 1;
                                 }
+                                NaiveDate::from_ymd_opt(year, month, day)
                             } else {
                                 None
                             }
-                        };
+                        } else {
+                            None
+                        }
+                    };
                         let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
                         let normalized_end_time_str = normalize_time_input(&end_time_str);
                         let end_time = if normalized_end_time_str.trim().is_empty() {
                             None
-                        } else if let Ok(et) = NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M") {
-                            Some(et)
                         } else {
-                            None
+                            NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
                         };
                         let title = app.popup_event_title.drain(..).collect();
                         let recurrence_str =
@@ -184,7 +181,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             _ => crate::app::Recurrence::None,
                         };
                         let description = app.popup_event_description.drain(..).collect();
-                        let event = CalendarEvent {
+                        let mut event = CalendarEvent {
                             date: app.current_date_for_new_event,
                             time,
                             title,
@@ -196,7 +193,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             end_date,
                             start_time: time,
                             end_time,
-                            id: Uuid::new_v4(),
+                            id: String::new(),
                         };
 
                         if app.is_editing {
@@ -204,12 +201,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 // Remove old event from main events list
                                 app.events.retain(|e| e != old_event);
                                 // Remove from persistence
-                                persistence::delete_event(old_event);
+                                let _ = persistence::delete_event(old_event);
                             }
                         }
 
-                        app.events.push(event.clone());
-                        persistence::save_event(&event);
+                         app.events.push(event.clone());
+                        let _ = persistence::save_event(&mut event);
+
+                        app.error_message.clear();
 
                         // Reset editing state
                         app.is_editing = false;
@@ -221,7 +220,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 .events
                                 .iter()
                                 .filter(|event| {
-                                    event.start_date <= app.date && event.end_date.map_or(true, |end| end >= app.date)
+                                    event.start_date <= app.date && event.end_date.is_none_or(|end| end >= app.date)
                                 })
                                 .cloned()
                                 .collect();
@@ -232,7 +231,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         } else {
                             app.input_mode = InputMode::Normal;
                         }
-                    } else {
+                     } else {
                         // If time parsing failed, just close popup and return to appropriate mode
                         app.is_editing = false;
                         app.event_being_edited = None;
@@ -347,26 +346,34 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 }
                 _ => {}
             },
-            InputMode::ViewEventsPopup => match key.code {
-                KeyCode::Esc => {
-                    app.show_view_events_popup = false;
-                    app.events_to_display_in_popup.clear();
-                    app.selected_event_index = 0;
-                    app.event_to_delete_index = None;
-                    app.input_mode = InputMode::Normal;
-                }
-                KeyCode::Up | KeyCode::Char('k') => {
-                    if app.selected_event_index > 0 {
-                        app.selected_event_index -= 1;
-                    }
-                }
-                KeyCode::Down | KeyCode::Char('j') => {
-                    if app.selected_event_index
-                        < app.events_to_display_in_popup.len().saturating_sub(1)
-                    {
-                        app.selected_event_index += 1;
-                    }
-                }
+             InputMode::ViewEventsPopup => match key.code {
+                 KeyCode::Esc => {
+                     app.show_view_events_popup = false;
+                     app.events_to_display_in_popup.clear();
+                     app.selected_event_index = 0;
+                     app.event_to_delete_index = None;
+                     app.input_mode = InputMode::Normal;
+                 }
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     if app.events_to_display_in_popup.is_empty() {
+                         return Ok(true);
+                     }
+                     if app.selected_event_index == 0 {
+                         app.selected_event_index = app.events_to_display_in_popup.len() - 1;
+                     } else {
+                         app.selected_event_index -= 1;
+                     }
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     if app.events_to_display_in_popup.is_empty() {
+                         return Ok(true);
+                     }
+                     if app.selected_event_index == app.events_to_display_in_popup.len() - 1 {
+                         app.selected_event_index = 0;
+                     } else {
+                         app.selected_event_index += 1;
+                     }
+                 }
                 KeyCode::Char('e') => {
                     if !app.events_to_display_in_popup.is_empty() {
                         let selected_event =
@@ -402,7 +409,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         app.popup_event_description = base_event.description.clone();
                         app.current_date_for_new_event = base_event.date;
                         app.is_editing = true;
-                        app.event_being_edited = Some(base_event);
+                        app.event_being_edited = Some(base_event.clone());
                         app.show_add_event_popup = true;
                         app.input_mode = InputMode::EditingEventPopup;
                         app.selected_input_field = PopupInputField::Title;
@@ -442,7 +449,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             // Remove from main events list
                             app.events.retain(|event| event != event_to_delete);
                             // Remove from persistence
-                            persistence::delete_event(event_to_delete);
+                            let _ = persistence::delete_event(event_to_delete);
                             // Update display list
                             app.events_to_display_in_popup.remove(index);
                             // Adjust selection if necessary

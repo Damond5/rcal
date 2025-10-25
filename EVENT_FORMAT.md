@@ -18,7 +18,6 @@ Each event file is a Markdown document with the following structure:
 ```
 # Event: {title}
 
-- **ID**: {uuid}
 - **Date**: {start_date}[ to {end_date}]
 - **Time**: {start_time}[ to {end_time}]
 - **Description**: {description}
@@ -107,5 +106,4 @@ Each event file is a Markdown document with the following structure:
 
 - The deprecated old format (one file per date) is no longer supported
 - Events are sorted by date then time when loaded
-- Recurring events generate instances automatically</content>
-</xai:function_call">The event file format specification has been created in EVENT_FORMAT.md. This document provides a complete reference for the Markdown-based event storage format, including examples and parsing rules.
+- Recurring events generate instances automatically

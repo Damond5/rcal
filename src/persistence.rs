@@ -118,7 +118,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     is_recurring_instance: false,
                     base_date: None,
                     start_date: sd,
-                    end_date,
+                    end_date: end_date.or(Some(sd)),
                     start_time: st,
                     end_time,
                     is_all_day,
@@ -220,11 +220,15 @@ pub fn save_event_to_path_without_sync(
     event.id = filename.trim_end_matches(".md").to_string();
 
     let date_str = if let Some(end) = event.end_date {
-        format!(
-            "{} to {}",
-            event.start_date.format("%Y-%m-%d"),
-            end.format("%Y-%m-%d")
-        )
+        if end != event.start_date {
+            format!(
+                "{} to {}",
+                event.start_date.format("%Y-%m-%d"),
+                end.format("%Y-%m-%d")
+            )
+        } else {
+            event.start_date.format("%Y-%m-%d").to_string()
+        }
     } else {
         event.start_date.format("%Y-%m-%d").to_string()
     };

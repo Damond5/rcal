@@ -71,7 +71,7 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
 mod tests {
     use super::*;
     use crate::app::CalendarEvent;
-    use chrono::{Duration, NaiveDate, NaiveTime};
+    use chrono::{Duration, NaiveDate, NaiveTime, TimeZone};
     use std::collections::HashSet;
 
     // Mock function to check upcoming events

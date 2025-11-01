@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.1.0] - 2025-11-01
 
 ### Added
 - All-day event support with notifications the day before at midday
@@ -18,9 +18,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Event files are now named by event title instead of date-based naming
 - Removed ID field from CalendarEvent struct, using title as unique identifier for file operations
-
-### Fixed
-- Fixed git text display in TUI
-- Fixed issue with endless events
-- Removed debug print "Pushing event" that was appearing in the TUI during event loading in sync popup
-- Fixed single-day events displaying stars on multiple days by ensuring end_date is set to start_date for single-day events

@@ -93,7 +93,7 @@ Always add accompanying test(s) when implementing new functionality.
 - **UI Enhancements**: Updated event creation and editing popup to include input fields for end date and end time
 - **Event Format Specification**: Documented in EVENT_FORMAT.md for standardized event file format
 - **Real-time Updates**: View popup refreshes automatically after adding/deleting events
-- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, sending desktop notifications via `notify-rust` approximately 30 minutes before upcoming timed events and at midday the day before for all-day events. Notifications are checked for all events regardless of date, and sent only once per event per daemon session, with retriggering allowed on calendar file changes.
+- **Daemon Notifications**: Run with `--daemon` flag for background notifications independent of TUI, sending desktop notifications via `notify-rust` within approximately 30 minutes before upcoming timed events and at midday the day before for all-day events. Notifications are checked for all events regardless of date, and sent only once per event per daemon session, with retriggering allowed on calendar file changes.
 - **File Watching**: Use `notify` crate to monitor `~/calendar` directory for real-time event updates without restarting the daemon
 - **Notification Deduplication**: Track notified events in a `HashSet` to prevent duplicate alerts per session
 - **Systemd Integration**: Recommend systemd user services for reliable daemon startup and management in environments like i3/Arch Linux

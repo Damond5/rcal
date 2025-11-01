@@ -30,10 +30,10 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                 event.date == tomorrow
                     && now.time() < chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
             } else {
-                // Notify timed events 30 minutes before
+                // Notify timed events within approximately 30 minutes before
                 let event_datetime = event.date.and_time(event.time);
                 let diff = event_datetime.signed_duration_since(now.naive_local());
-                diff.num_minutes() >= 30
+                diff.num_minutes() <= 30 && diff.num_minutes() > 0
             };
             if should_notify {
                 let key = (event.date, event.time, event.title.clone());
@@ -83,9 +83,18 @@ mod tests {
         let mut notifications = Vec::new();
 
         for event in events {
-            let event_datetime = event.date.and_time(event.time);
-            let diff = event_datetime.signed_duration_since(now.naive_local());
-            if diff.num_minutes() >= 30 {
+            let should_notify = if event.is_all_day {
+                // Notify all-day events the day before at midday
+                let tomorrow = now.date_naive() + chrono::Duration::days(1);
+                event.date == tomorrow
+                    && now.time() < chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
+            } else {
+                // Notify timed events within approximately 30 minutes before
+                let event_datetime = event.date.and_time(event.time);
+                let diff = event_datetime.signed_duration_since(now.naive_local());
+                diff.num_minutes() <= 30 && diff.num_minutes() > 0
+            };
+            if should_notify {
                 let key = (event.date, event.time, event.title.clone());
                 if !notified.contains(&key) {
                     let body = if event.is_all_day {
@@ -160,7 +169,7 @@ mod tests {
     }
 
     #[test]
-    fn test_no_notification_for_15_minutes_ahead() {
+    fn test_notification_for_15_minutes_ahead() {
         let now = Local::now();
         let today = now.date_naive();
         let future_time = now.time() + Duration::minutes(15);
@@ -183,7 +192,11 @@ mod tests {
         let mut notified = HashSet::new();
         let notifications = check_upcoming_events(&events, now, &mut notified);
 
-        assert_eq!(notifications.len(), 0);
+        assert_eq!(notifications.len(), 1);
+        assert_eq!(
+            notifications[0],
+            format!("Test Event at {}", future_time.format("%H:%M"))
+        );
     }
 
     #[test]
@@ -245,5 +258,94 @@ mod tests {
 
         assert_eq!(notifications1.len(), 1);
         assert_eq!(notifications2.len(), 0);
+    }
+
+    #[test]
+    fn test_multiple_close_events() {
+        let now = Local::now();
+        let today = now.date_naive();
+        let time1 = now.time() + Duration::minutes(15);
+        let time2 = now.time() + Duration::minutes(20);
+        let time3 = now.time() + Duration::minutes(25);
+
+        let events = vec![
+            CalendarEvent {
+                is_all_day: false,
+                date: today,
+                time: time1,
+                title: "Event 1".to_string(),
+                description: String::new(),
+                recurrence: crate::app::Recurrence::None,
+                is_recurring_instance: false,
+                base_date: None,
+                start_date: today,
+                end_date: None,
+                start_time: time1,
+                end_time: None,
+            },
+            CalendarEvent {
+                is_all_day: false,
+                date: today,
+                time: time2,
+                title: "Event 2".to_string(),
+                description: String::new(),
+                recurrence: crate::app::Recurrence::None,
+                is_recurring_instance: false,
+                base_date: None,
+                start_date: today,
+                end_date: None,
+                start_time: time2,
+                end_time: None,
+            },
+            CalendarEvent {
+                is_all_day: false,
+                date: today,
+                time: time3,
+                title: "Event 3".to_string(),
+                description: String::new(),
+                recurrence: crate::app::Recurrence::None,
+                is_recurring_instance: false,
+                base_date: None,
+                start_date: today,
+                end_date: None,
+                start_time: time3,
+                end_time: None,
+            },
+        ];
+
+        let mut notified = HashSet::new();
+        let notifications = check_upcoming_events(&events, now, &mut notified);
+
+        assert_eq!(notifications.len(), 3);
+        assert!(notifications.contains(&format!("Event 1 at {}", time1.format("%H:%M"))));
+        assert!(notifications.contains(&format!("Event 2 at {}", time2.format("%H:%M"))));
+        assert!(notifications.contains(&format!("Event 3 at {}", time3.format("%H:%M"))));
+    }
+
+    #[test]
+    fn test_no_notification_for_31_minutes_ahead() {
+        let now = Local::now();
+        let today = now.date_naive();
+        let future_time = now.time() + Duration::minutes(31);
+
+        let events = vec![CalendarEvent {
+            is_all_day: false,
+            date: today,
+            time: future_time,
+            title: "Test Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: today,
+            end_date: None,
+            start_time: future_time,
+            end_time: None,
+        }];
+
+        let mut notified = HashSet::new();
+        let notifications = check_upcoming_events(&events, now, &mut notified);
+
+        assert_eq!(notifications.len(), 0);
     }
 }

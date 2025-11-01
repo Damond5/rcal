@@ -1,5 +1,5 @@
 pkgname=rcal
-pkgver=1.0.0
+pkgver=1.1.0
 pkgrel=1
 pkgdesc="A terminal-based calendar application built with Rust and Ratatui."
 arch=('x86_64')

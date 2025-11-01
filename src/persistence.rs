@@ -93,7 +93,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     }
                 } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
                     description = stripped.trim().to_string();
-                 } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
+                } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
                     let rec_str = stripped.trim();
                     recurrence = match rec_str {
                         "daily" => crate::app::Recurrence::Daily,
@@ -117,9 +117,9 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
                     start_date: sd,
                     end_date: end_date.or(Some(sd)),
                     start_time: st,
-                     end_time,
-                     is_all_day,
-                 });
+                    end_time,
+                    is_all_day,
+                });
             }
         }
     }
@@ -158,9 +158,9 @@ fn generate_recurring_instances(
                 start_date: current_date,
                 end_date: base_event.end_date,
                 start_time: base_event.start_time,
-                 end_time: base_event.end_time,
-                 is_all_day: base_event.is_all_day,
-             });
+                end_time: base_event.end_time,
+                is_all_day: base_event.is_all_day,
+            });
         }
 
         match base_event.recurrence {
@@ -372,10 +372,10 @@ mod tests {
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             end_date: None,
             start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
-             end_time: None,
-             is_all_day: false,
-         };
-         let mut event2 = CalendarEvent {
+            end_time: None,
+            is_all_day: false,
+        };
+        let mut event2 = CalendarEvent {
             date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
@@ -385,13 +385,13 @@ mod tests {
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             end_date: None,
-             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-             end_time: None,
-             is_all_day: false,
-         };
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        };
 
-         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
-         save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
         let events = load_events_from_path(temp_dir.path());
 
         assert_eq!(events.len(), 2);
@@ -540,10 +540,10 @@ mod tests {
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             end_date: None,
             start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-             end_time: None,
-             is_all_day: false,
-         };
-         let mut event2 = event1.clone();
+            end_time: None,
+            is_all_day: false,
+        };
+        let mut event2 = event1.clone();
         event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 

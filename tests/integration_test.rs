@@ -2,8 +2,8 @@ use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use rcal::app::{App, CalendarEvent, InputMode, PopupInputField};
 use rcal::event_handling::handle_event;
-use tempfile::TempDir;
 use std::sync::mpsc;
+use tempfile::TempDir;
 
 fn setup_app() -> (App, TempDir) {
     let temp_dir = TempDir::new().unwrap();

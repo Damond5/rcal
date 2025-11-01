@@ -118,11 +118,11 @@ mod tests {
             start_date: today,
             end_date: None,
             start_time: future_time,
-             end_time: None,
-             is_all_day: false,
-         }];
+            end_time: None,
+            is_all_day: false,
+        }];
 
-         let mut notified = HashSet::new();
+        let mut notified = HashSet::new();
         let notifications = check_upcoming_events(&events, now, &mut notified);
 
         assert_eq!(notifications.len(), 1);
@@ -148,13 +148,13 @@ mod tests {
             base_date: None,
             start_date: today,
             end_date: None,
-             start_time: past_time,
-             end_time: None,
-             is_all_day: false,
-         }];
+            start_time: past_time,
+            end_time: None,
+            is_all_day: false,
+        }];
 
-         let mut notified = HashSet::new();
-         let notifications = check_upcoming_events(&events, now, &mut notified);
+        let mut notified = HashSet::new();
+        let notifications = check_upcoming_events(&events, now, &mut notified);
 
         assert_eq!(notifications.len(), 0);
     }

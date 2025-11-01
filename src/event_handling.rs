@@ -5,6 +5,7 @@ use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
 use ratatui::Terminal;
 use ratatui::backend::Backend;
+use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
@@ -48,6 +49,26 @@ fn normalize_time_input(input: &str) -> String {
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
+
+        // Check for reload signal from async sync
+        if let Some(ref receiver) = app.reload_receiver {
+            match receiver.try_recv() {
+                Ok(Ok(_)) => {
+                    // Reload events
+                    app.events = persistence::load_events_from_path(&app.calendar_dir);
+                    // Update sync status
+                    app.sync_message = "Launch sync completed".to_string();
+                    app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                }
+                Ok(Err(e)) => {
+                    // Update sync status on error
+                    app.sync_message = format!("Launch sync failed: {e}");
+                    app.sync_status = Some(crate::sync::SyncStatus::Error(e));
+                }
+                Err(TryRecvError::Empty) => {}
+                Err(TryRecvError::Disconnected) => {}
+            }
+        }
 
         let event = event::read()?;
         if !handle_event(&mut app, event)? {

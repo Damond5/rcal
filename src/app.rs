@@ -1,5 +1,6 @@
 use crate::sync::{SyncProvider, SyncStatus};
 use chrono::{Local, NaiveDate, NaiveTime};
+use std::sync::mpsc::Receiver;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Recurrence {
@@ -70,6 +71,7 @@ pub struct App {
     pub sync_message: String,
     pub calendar_dir: std::path::PathBuf,
     pub error_message: String,
+    pub reload_receiver: Option<Receiver<Result<(), String>>>,
 }
 
 impl Default for App {
@@ -108,6 +110,7 @@ impl App {
                 .expect("Could not find home directory")
                 .join("calendar"),
             error_message: String::new(),
+            reload_receiver: None,
         }
     }
 
@@ -138,6 +141,7 @@ impl App {
             sync_message: String::new(),
             calendar_dir,
             error_message: String::new(),
+            reload_receiver: None,
         }
     }
 

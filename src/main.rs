@@ -1,4 +1,4 @@
-use std::{error::Error, fs, io, path::PathBuf};
+use std::{error::Error, fs, io, path::PathBuf, sync::mpsc, thread};
 
 use clap::Parser;
 use crossterm::{
@@ -122,8 +122,26 @@ fn main() -> Result<(), Box<dyn Error>> {
     // create app and run it
     let mut app = App::new();
     app.events = persistence::load_events_from_path(&app.calendar_dir);
+    let (tx, rx) = mpsc::channel::<Result<(), String>>();
+    app.reload_receiver = Some(rx);
     if let Some(url) = load_remote_url() {
-        app.sync_provider = Some(Box::new(GitSyncProvider::new(url)));
+        app.sync_provider = Some(Box::new(GitSyncProvider::new(url.clone())));
+        // Spawn async pull on launch
+        let provider = GitSyncProvider::new(url);
+        let calendar_dir = app.calendar_dir.clone();
+        let tx_clone = tx.clone();
+        thread::spawn(move || {
+            match provider.pull(&calendar_dir) {
+                Ok(_) => {
+                    // Send reload signal
+                    let _ = tx_clone.send(Ok(()));
+                }
+                Err(e) => {
+                    // Send error signal
+                    let _ = tx_clone.send(Err(e.to_string()));
+                }
+            }
+        });
     }
     let res = run_app(&mut terminal, app);
 

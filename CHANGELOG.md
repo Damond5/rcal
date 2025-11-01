@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - All-day event support with notifications the day before at midday
 - Asynchronous sync functionality for background operations
+- Added automatic pull on launch when sync is configured, performed asynchronously in the background
 - One file per event storage system
 - Multi-day event support
 - Event format specification documentation

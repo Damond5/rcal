@@ -145,7 +145,7 @@ Events are stored as individual markdown files in `~/calendar/` directory, one p
 - Remote URL stored in `~/.config/rcal/config.toml`
 - Uses SSH keys for Git authentication
 - Supports rebase-based pulling to avoid merge commits
-- Automatic push on save/delete happens asynchronously in background threads
+- Automatic pull on launch and push on save/delete happen asynchronously in background threads
 - Conflicts must be resolved manually in the markdown files
 
 ### Customization

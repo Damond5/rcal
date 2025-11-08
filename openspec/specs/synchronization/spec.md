@@ -4,12 +4,12 @@
 TBD - created by archiving change add-agent-guidelines-specs. Update Purpose after archive.
 ## Requirements
 ### Requirement: Provider Abstraction Pattern
-Sync functionality MUST use a `SyncProvider` trait for extensibility.
+Sync functionality MUST use a `SyncProvider` trait for extensibility, where push and pull methods return the updated `SyncStatus`.
 
 #### Scenario: Provider Implementation
-Given new sync method,
+Given new sync method with status-returning push/pull,
 When implementing SyncProvider,
-Then integrates with existing system.
+Then integrates with existing system and returns status after operations.
 
 ### Requirement: Git Provider Implementation
 Initial sync MUST use Git for version control and cross-device sync.
@@ -108,4 +108,15 @@ Sync status MUST be automatically fetched and displayed when entering the sync p
 Given sync popup is opened,
 When user enters sync mode,
 Then current sync status is immediately displayed without requiring user to press 's'.
+
+### Requirement: Status Update After Sync Operations
+Building on the Provider Abstraction Pattern, sync status MUST be updated and returned after successful push or pull operations to reflect the current repository state.
+
+#### Scenario: Status After Push
+- **WHEN** push operation completes successfully
+- **THEN** updated sync status is returned and can be displayed
+
+#### Scenario: Status After Pull
+- **WHEN** pull operation completes successfully
+- **THEN** updated sync status is returned and can be displayed
 

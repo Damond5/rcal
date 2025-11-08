@@ -580,9 +580,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         let home = dirs::home_dir().expect("Could not find home directory");
                         let calendar_dir = home.join("calendar");
                         match provider.pull(&calendar_dir) {
-                            Ok(_) => {
+                            Ok(status) => {
                                 app.sync_message = "Pull successful".to_string();
-                                app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                                app.sync_status = Some(status);
                                 // Reload events
                                 app.events = persistence::load_events();
                             }
@@ -599,9 +599,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         let home = dirs::home_dir().expect("Could not find home directory");
                         let calendar_dir = home.join("calendar");
                         match provider.push(&calendar_dir) {
-                            Ok(_) => {
+                            Ok(status) => {
                                 app.sync_message = "Push successful".to_string();
-                                app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                                app.sync_status = Some(status);
                             }
                             Err(e) => {
                                 app.sync_message = format!("Push failed: {e}");

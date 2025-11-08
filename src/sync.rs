@@ -14,8 +14,8 @@ pub enum SyncStatus {
 
 pub trait SyncProvider {
     fn init(&self, path: &Path) -> Result<(), Box<dyn Error>>;
-    fn pull(&self, path: &Path) -> Result<(), Box<dyn Error>>;
-    fn push(&self, path: &Path) -> Result<(), Box<dyn Error>>;
+    fn pull(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
+    fn push(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
     fn status(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
     fn as_any(&self) -> &dyn Any;
 }
@@ -87,7 +87,7 @@ impl SyncProvider for GitSyncProvider {
         Ok(())
     }
 
-    fn pull(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+    fn pull(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>> {
         // Use git command for pull with rebase to avoid conflicts
         let output = Command::new("git")
             .args(["pull", "--rebase", "origin", &self.branch])
@@ -103,10 +103,11 @@ impl SyncProvider for GitSyncProvider {
             return Err(format!("Git pull failed: {stderr}").into());
         }
 
-        Ok(())
+        // Return updated status after successful pull
+        self.status(path)
     }
 
-    fn push(&self, path: &Path) -> Result<(), Box<dyn Error>> {
+    fn push(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>> {
         // Add all changes
         let status = Command::new("git")
             .args(["add", "."])
@@ -126,7 +127,8 @@ impl SyncProvider for GitSyncProvider {
             .stderr(Stdio::null())
             .status()?;
         if diff_output.success() {
-            return Ok(()); // No changes to commit
+            // No changes to commit, return current status
+            return self.status(path);
         }
 
         // Commit
@@ -156,7 +158,8 @@ impl SyncProvider for GitSyncProvider {
             .into());
         }
 
-        Ok(())
+        // Return updated status after successful push
+        self.status(path)
     }
 
     fn status(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>> {
@@ -211,5 +214,23 @@ mod tests {
         let provider = GitSyncProvider::new("https://example.com/repo.git".to_string());
         assert_eq!(provider.remote_url, "https://example.com/repo.git");
         assert_eq!(provider.branch, "main");
+    }
+
+    #[test]
+    fn test_push_returns_status() {
+        let temp_dir = TempDir::new().unwrap();
+        let provider = GitSyncProvider::new("https://example.com/repo.git".to_string());
+        // Since no git repo, push should fail, but return type is checked
+        let result = provider.push(temp_dir.path());
+        assert!(result.is_err()); // Should be error due to no repo
+    }
+
+    #[test]
+    fn test_pull_returns_status() {
+        let temp_dir = TempDir::new().unwrap();
+        let provider = GitSyncProvider::new("https://example.com/repo.git".to_string());
+        // Since no git repo, pull should fail, but return type is checked
+        let result = provider.pull(temp_dir.path());
+        assert!(result.is_err()); // Should be error due to no repo
     }
 }

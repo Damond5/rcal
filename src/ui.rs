@@ -123,9 +123,6 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     let calendar_chunk = chunks[0];
     let hints_chunk = chunks[1];
 
-    let current_year = app.date.year();
-    let current_month = app.date.month();
-
     let calendar_block = Block::default()
         .title("RCal")
         .borders(Borders::ALL)
@@ -138,10 +135,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     for i in 0..3 {
         let month_offset = i as u32;
-        let (year, month) = if current_month + month_offset > 12 {
-            (current_year + 1, current_month + month_offset - 12)
+        let (year, month) = if app.view_start_month + month_offset > 12 {
+            (app.view_start_year + 1, app.view_start_month + month_offset - 12)
         } else {
-            (current_year, current_month + month_offset)
+            (app.view_start_year, app.view_start_month + month_offset)
         };
         let month_name = match month {
             1 => "January",

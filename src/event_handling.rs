@@ -101,15 +101,19 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 }
                 KeyCode::Left | KeyCode::Char('h') => {
                     app.date -= chrono::Duration::days(1);
+                    app.adjust_view_boundaries();
                 }
                 KeyCode::Right | KeyCode::Char('l') => {
                     app.date += chrono::Duration::days(1);
+                    app.adjust_view_boundaries();
                 }
                 KeyCode::Up | KeyCode::Char('k') => {
                     app.date -= chrono::Duration::weeks(1);
+                    app.adjust_view_boundaries();
                 }
                 KeyCode::Down | KeyCode::Char('j') => {
                     app.date += chrono::Duration::weeks(1);
+                    app.adjust_view_boundaries();
                 }
                 KeyCode::PageUp | KeyCode::Char('H') => {
                     let mut year = app.date.year();

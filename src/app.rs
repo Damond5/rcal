@@ -1,5 +1,5 @@
 use crate::sync::{SyncProvider, SyncStatus};
-use chrono::{Local, NaiveDate, NaiveTime};
+use chrono::{Datelike, Local, NaiveDate, NaiveTime};
 use std::sync::mpsc::Receiver;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -47,6 +47,8 @@ pub enum PopupInputField {
 
 pub struct App {
     pub date: NaiveDate, // Now represents the selected date
+    pub view_start_month: u32,
+    pub view_start_year: i32,
     pub events: Vec<CalendarEvent>,
     pub input: String,
     pub input_mode: InputMode,
@@ -82,8 +84,11 @@ impl Default for App {
 
 impl App {
     pub fn new() -> App {
+        let date = Local::now().date_naive();
         App {
-            date: Local::now().date_naive(),
+            date,
+            view_start_month: date.month(),
+            view_start_year: date.year(),
             events: Vec::new(),
             input: String::new(),
             input_mode: InputMode::Normal,
@@ -115,8 +120,11 @@ impl App {
     }
 
     pub fn new_with_calendar_dir(calendar_dir: std::path::PathBuf) -> App {
+        let date = Local::now().date_naive();
         App {
-            date: Local::now().date_naive(),
+            date,
+            view_start_month: date.month(),
+            view_start_year: date.year(),
             events: Vec::new(),
             input: String::new(),
             input_mode: InputMode::Normal,
@@ -177,5 +185,26 @@ impl App {
 
     pub fn get_current_field_char_count(&self) -> usize {
         self.get_current_field().chars().count()
+    }
+
+    pub fn adjust_view_boundaries(&mut self) {
+        let cursor_number = (self.date.year() as i64 * 12) + self.date.month() as i64;
+        let view_start_number = (self.view_start_year as i64 * 12) + self.view_start_month as i64;
+        let view_end_number = view_start_number + 2;
+
+        if cursor_number < view_start_number {
+            // Shift backward
+            self.view_start_month = self.date.month();
+            self.view_start_year = self.date.year();
+        } else if cursor_number > view_end_number {
+            // Shift forward
+            let new_start = cursor_number - 2;
+            self.view_start_year = (new_start / 12) as i32;
+            let month = (new_start % 12) as u32;
+            self.view_start_month = if month == 0 { 12 } else { month };
+            if month == 0 {
+                self.view_start_year -= 1;
+            }
+        }
     }
 }

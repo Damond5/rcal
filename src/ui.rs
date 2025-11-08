@@ -529,7 +529,6 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let instructions = List::new(vec![
             ListItem::new("f: Pull from remote"),
             ListItem::new("p: Push to remote"),
-            ListItem::new("s: Check status"),
         ]);
         f.render_widget(instructions, chunks[0]);
 

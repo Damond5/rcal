@@ -19,6 +19,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Removed
 - Removed H/L and PageUp/PageDown navigation keys for three-month paging, simplifying navigation to rely solely on h/j/k/l with automatic view shifting.
 - General agent instructions to prevent automatic OpenSpec proposal implementation
+- Removed obsolete "s: Check status" instruction from sync popup UI since status is now automatically displayed on entry
 
 ## [1.1.0] - 2025-11-01
 

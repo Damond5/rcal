@@ -613,33 +613,6 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                     }
                 }
-                KeyCode::Char('s') => {
-                    if let Some(provider) = &app.sync_provider {
-                        let home = dirs::home_dir().expect("Could not find home directory");
-                        let calendar_dir = home.join("calendar");
-                        match provider.status(&calendar_dir) {
-                            Ok(status) => {
-                                app.sync_message = match &status {
-                                    crate::sync::SyncStatus::UpToDate => "Up to date".to_string(),
-                                    crate::sync::SyncStatus::Ahead => "Ahead of remote".to_string(),
-                                    crate::sync::SyncStatus::Behind => "Behind remote".to_string(),
-                                    crate::sync::SyncStatus::Conflicts => {
-                                        "Conflicts detected".to_string()
-                                    }
-                                    crate::sync::SyncStatus::Error(e) => {
-                                        format!("Status error: {e}")
-                                    }
-                                };
-                                app.sync_status = Some(status);
-                            }
-                            Err(e) => {
-                                app.sync_message = format!("Status failed: {e}");
-                                app.sync_status =
-                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
-                            }
-                        }
-                    }
-                }
                 KeyCode::Esc => {
                     app.input_mode = InputMode::Normal;
                     app.sync_message.clear();

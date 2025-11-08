@@ -79,18 +79,16 @@ fn build_calendar_table(year: i32, month: u32, app: &App) -> (Table<'static>, us
         }
     }
 
-    let mut all_rows = vec![
-        Row::new(vec![
-            Cell::from(""),
-            Cell::from("Mo"),
-            Cell::from("Tu"),
-            Cell::from("We"),
-            Cell::from("Th"),
-            Cell::from("Fr"),
-            Cell::from("Sa").style(Style::default().fg(Color::LightYellow)),
-            Cell::from("Su").style(Style::default().fg(Color::Red)),
-        ]),
-    ];
+    let mut all_rows = vec![Row::new(vec![
+        Cell::from(""),
+        Cell::from("Mo"),
+        Cell::from("Tu"),
+        Cell::from("We"),
+        Cell::from("Th"),
+        Cell::from("Fr"),
+        Cell::from("Sa").style(Style::default().fg(Color::LightYellow)),
+        Cell::from("Su").style(Style::default().fg(Color::Red)),
+    ])];
     all_rows.append(&mut rows);
 
     let height = all_rows.len();
@@ -136,7 +134,10 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     for i in 0..3 {
         let month_offset = i as u32;
         let (year, month) = if app.view_start_month + month_offset > 12 {
-            (app.view_start_year + 1, app.view_start_month + month_offset - 12)
+            (
+                app.view_start_year + 1,
+                app.view_start_month + month_offset - 12,
+            )
         } else {
             (app.view_start_year, app.view_start_month + month_offset)
         };
@@ -170,16 +171,15 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(calendar_area);
 
     for (i, (month_name, year, calendar)) in calendars.into_iter().enumerate() {
-        let title = Paragraph::new(format!("{month_name} {year}"))
-            .style(Style::default().fg(Color::Cyan));
+        let title =
+            Paragraph::new(format!("{month_name} {year}")).style(Style::default().fg(Color::Cyan));
         f.render_widget(title, month_chunks[i * 3]);
         f.render_widget(calendar, month_chunks[i * 3 + 1]);
     }
 
     // Render main hints
-    let main_hints =
-        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate")
-            .style(Style::default().fg(Color::Gray));
+    let main_hints = Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate")
+        .style(Style::default().fg(Color::Gray));
     f.render_widget(main_hints, hints_chunk);
 
     if app.show_view_events_popup {

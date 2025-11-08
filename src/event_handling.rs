@@ -139,17 +139,21 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         if let Some(provider) = &app.sync_provider {
                             match provider.status(&app.calendar_dir) {
                                 Ok(status) => {
-                                     app.sync_message = match &status {
-                                         crate::sync::SyncStatus::UpToDate => "".to_string(),
-                                         crate::sync::SyncStatus::Ahead => "Ahead of remote".to_string(),
-                                         crate::sync::SyncStatus::Behind => "Behind remote".to_string(),
-                                         crate::sync::SyncStatus::Conflicts => {
-                                             "Conflicts detected".to_string()
-                                         }
-                                         crate::sync::SyncStatus::Error(e) => {
-                                             format!("Status error: {e}")
-                                         }
-                                     };
+                                    app.sync_message = match &status {
+                                        crate::sync::SyncStatus::UpToDate => "".to_string(),
+                                        crate::sync::SyncStatus::Ahead => {
+                                            "Ahead of remote".to_string()
+                                        }
+                                        crate::sync::SyncStatus::Behind => {
+                                            "Behind remote".to_string()
+                                        }
+                                        crate::sync::SyncStatus::Conflicts => {
+                                            "Conflicts detected".to_string()
+                                        }
+                                        crate::sync::SyncStatus::Error(e) => {
+                                            format!("Status error: {e}")
+                                        }
+                                    };
                                     app.sync_status = Some(status);
                                 }
                                 Err(e) => {

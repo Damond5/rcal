@@ -1,0 +1,5 @@
+- [x] Remove H/L and PageUp/PageDown key event handling from event_handling.rs
+- [x] Update UI hints in ui.rs to remove H/L references
+- [x] Update ui-rendering spec to remove H/L paging requirements
+- [x] Test navigation still works with h/j/k/l only
+- [x] Run integration tests to ensure no regressions

@@ -99,8 +99,8 @@ fn test_navigation_page_up() {
     let key_event = KeyEvent::from(KeyCode::PageUp);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // PageUp should change the date (to first day of previous month)
-    assert_ne!(app.date, original_date);
+    // PageUp should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -110,8 +110,8 @@ fn test_navigation_page_down() {
     let key_event = KeyEvent::from(KeyCode::PageDown);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // PageDown should change the date (to first day of next month)
-    assert_ne!(app.date, original_date);
+    // PageDown should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -121,8 +121,8 @@ fn test_navigation_vim_page_up() {
     let key_event = KeyEvent::from(KeyCode::Char('H'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // 'H' should change the date (to first day of previous month)
-    assert_ne!(app.date, original_date);
+    // 'H' should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -132,8 +132,8 @@ fn test_navigation_vim_page_down() {
     let key_event = KeyEvent::from(KeyCode::Char('L'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // 'L' should change the date (to first day of next month)
-    assert_ne!(app.date, original_date);
+    // 'L' should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]

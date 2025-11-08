@@ -170,7 +170,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         .split(calendar_area);
 
     for (i, (month_name, year, calendar)) in calendars.into_iter().enumerate() {
-        let title = Paragraph::new(format!("{} {}", month_name, year))
+        let title = Paragraph::new(format!("{month_name} {year}"))
             .style(Style::default().fg(Color::Cyan));
         f.render_widget(title, month_chunks[i * 3]);
         f.render_widget(calendar, month_chunks[i * 3 + 1]);
@@ -178,7 +178,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     // Render main hints
     let main_hints =
-        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page 3 months")
+        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate")
             .style(Style::default().fg(Color::Gray));
     f.render_widget(main_hints, hints_chunk);
 

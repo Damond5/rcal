@@ -74,23 +74,7 @@ Given the selected date moves to a month after the last displayed month,
 When navigating forward,
 Then the view shifts forward to show the new month range.
 
-### Requirement: Three-Month Navigation
-Navigation keys (H/L) MUST page through three-month periods instead of single months.
-
-#### Scenario: Forward Paging
-Given the calendar displays months X, X+1, X+2,
-When pressing L (next),
-Then display months X+3, X+4, X+5.
-
-#### Scenario: Backward Paging
-Given the calendar displays months X, X+1, X+2,
-When pressing H (previous),
-Then display months X-3, X-2, X-1.
-
-#### Scenario: Year Boundary Handling
-Given the current view ends in December,
-When paging forward,
-Then correctly display January of the next year.</content>
+</content>
 <parameter name="filePath">/home/nikv/workspace/rcal/openspec/changes/expand-calendar-view-to-three-months/specs/ui-rendering/spec.md
 
 ### Requirement: Cursor Navigation View Boundaries

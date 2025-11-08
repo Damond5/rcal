@@ -115,26 +115,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.date += chrono::Duration::weeks(1);
                     app.adjust_view_boundaries();
                 }
-                KeyCode::PageUp | KeyCode::Char('H') => {
-                    let mut year = app.date.year();
-                    let mut month = app.date.month();
-                    month -= 3;
-                    if month < 1 {
-                        month += 12;
-                        year -= 1;
-                    }
-                    app.date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-                }
-                KeyCode::PageDown | KeyCode::Char('L') => {
-                    let mut year = app.date.year();
-                    let mut month = app.date.month();
-                    month += 3;
-                    if month > 12 {
-                        month -= 12;
-                        year += 1;
-                    }
-                    app.date = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
-                }
+
                 KeyCode::Char('o') => {
                     app.show_view_events_popup = true;
                     app.events_to_display_in_popup = app

@@ -3,6 +3,8 @@
 
 These instructions are for AI assistants working in this project.
 
+OpenSpec is a specification system used in this project for managing change proposals and project guidelines.
+
 Always open `@/openspec/AGENTS.md` when the request:
 - Mentions planning or proposals (words like proposal, spec, change, plan)
 - Introduces new capabilities, breaking changes, architecture shifts, or big performance/security work
@@ -14,6 +16,10 @@ Use `@/openspec/AGENTS.md` to learn:
 - Project structure and guidelines
 
 Keep this managed block so 'openspec update' can refresh the instructions.
+
+The @/ notation refers to the project's openspec/ directory.
+
+This block is auto-managed and should not be edited manually.
 
 <!-- OPENSPEC:END -->
 
@@ -52,6 +58,7 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Sort imports alphabetically within each group
 - Use explicit imports over glob imports (`use std::path::PathBuf` not `use std::path::*`)
 - Remove unused imports
+- For intra-crate imports, prefer explicit paths (e.g., `use crate::module::function`) over glob imports.
 
 ### Formatting Standards
 - Use `cargo fmt` for consistent formatting
@@ -68,12 +75,17 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Use `Option<T>` for optional values instead of null
 - Prefer graceful error handling over panics for recoverable errors
 - Log errors appropriately without crashing the application
+- Integrate with a logging framework like `tracing` or `log` for error logging.
 
 ### Code Structure
 - Keep functions focused and single-purpose
 - Use meaningful variable and function names
 - Add comments for complex logic, but avoid obvious comments
 - Follow the existing patterns in the codebase for consistency
+
+### Documentation
+- Use `///` for public API documentation
+- Run `cargo doc` to generate documentation
 
 ## Testing Guidelines
 
@@ -94,6 +106,8 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 - Use temporary directories for file operations
 - Verify state transitions and mode changes
 - Test both success and failure scenarios
+- Aim for high test coverage; consider tools like `cargo tarpaulin`
+- Handle flaky TUI tests by using timeouts or stable event simulation
 
 ## Development Workflow
 
@@ -102,4 +116,20 @@ Keep this managed block so 'openspec update' can refresh the instructions.
 3. Run `cargo fmt` to format code
 4. Run `cargo clippy` to check for issues
 5. Run `cargo test` to verify functionality
-6. Commit changes following conventional commit format
+6. Commit changes following conventional commit format (e.g., 'feat:', 'fix:', 'docs:'). See https://conventionalcommits.org/ for details.
+
+## Security Guidelines
+
+- Validate all user inputs to prevent injection attacks
+- Avoid storing sensitive data in plain text
+- Follow Rust's memory safety guarantees
+
+## Performance Guidelines
+
+- Profile with `cargo flamegraph` for bottlenecks
+- Optimize rendering for smooth TUI updates
+
+## Accessibility
+
+- Ensure color schemes have sufficient contrast
+- Support keyboard navigation for all features

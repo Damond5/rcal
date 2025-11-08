@@ -14,7 +14,7 @@ Key benefits:
 ## Features
 
 ### Core Functionality
-- Interactive calendar view with month/week navigation
+- Interactive three-month calendar view with day/week/month navigation
 - Add, view, edit, and delete events
 - Support for multi-day events with start and end dates and times
 - All-day events (leave time field empty when creating)
@@ -80,9 +80,7 @@ cargo install --path .
 ### Keybindings
 
 #### Calendar Navigation
-- **Day**: Left/Right arrows or `h`/`l`
-- **Week**: Up/Down arrows or `k`/`j`
-- **Month**: PageUp/PageDown or `H`/`L`
+- **Day/Week**: Left/Right arrows or `h`/`l` for day, Up/Down arrows or `k`/`j` for week, with automatic view shifting for month changes.
 - **Quit**: `q` or `Q`
 
 #### Actions

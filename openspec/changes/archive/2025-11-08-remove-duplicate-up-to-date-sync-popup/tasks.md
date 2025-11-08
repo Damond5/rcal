@@ -1,0 +1,5 @@
+- [x] Modify `src/event_handling.rs` to not set `app.sync_message` when `sync_status` is `SyncStatus::UpToDate`, removing the redundant "Up to date" message.
+- [x] Run `cargo check` to verify the code compiles without errors.
+- [x] Run `cargo clippy` to check for any linting issues.
+- [x] Run `cargo test` to ensure existing tests pass and no regressions are introduced.
+- [x] Manually verify the sync popup shows only "Status: Up to date" without the duplicate message.

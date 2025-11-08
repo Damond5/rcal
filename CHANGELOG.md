@@ -21,6 +21,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - General agent instructions to prevent automatic OpenSpec proposal implementation
 - Removed obsolete "s: Check status" instruction from sync popup UI since status is now automatically displayed on entry
 
+### Fixed
+- Fixed bug where "Launch sync completed" message would incorrectly appear in sync popup, interfering with current sync operations
+
 ## [1.1.0] - 2025-11-01
 
 ### Added

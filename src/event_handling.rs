@@ -56,13 +56,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
                 Ok(Ok(_)) => {
                     // Reload events
                     app.events = persistence::load_events_from_path(&app.calendar_dir);
-                    // Update sync status
-                    app.sync_message = "Launch sync completed".to_string();
+                    // Update sync status (silently, don't interfere with sync popup)
                     app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
                 }
                 Ok(Err(e)) => {
-                    // Update sync status on error
-                    app.sync_message = format!("Launch sync failed: {e}");
+                    // Update sync status on error (silently, don't interfere with sync popup)
                     app.sync_status = Some(crate::sync::SyncStatus::Error(e));
                 }
                 Err(TryRecvError::Empty) => {}

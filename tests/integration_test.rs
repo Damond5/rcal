@@ -99,8 +99,8 @@ fn test_navigation_page_up() {
     let key_event = KeyEvent::from(KeyCode::PageUp);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // PageUp should change the date (to first day of previous month)
-    assert_ne!(app.date, original_date);
+    // PageUp should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -110,8 +110,8 @@ fn test_navigation_page_down() {
     let key_event = KeyEvent::from(KeyCode::PageDown);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // PageDown should change the date (to first day of next month)
-    assert_ne!(app.date, original_date);
+    // PageDown should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -121,8 +121,8 @@ fn test_navigation_vim_page_up() {
     let key_event = KeyEvent::from(KeyCode::Char('H'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // 'H' should change the date (to first day of previous month)
-    assert_ne!(app.date, original_date);
+    // 'H' should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -132,8 +132,8 @@ fn test_navigation_vim_page_down() {
     let key_event = KeyEvent::from(KeyCode::Char('L'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // 'L' should change the date (to first day of next month)
-    assert_ne!(app.date, original_date);
+    // 'L' should not change the date (removed H/L navigation)
+    assert_eq!(app.date, original_date);
 }
 
 #[test]
@@ -1206,4 +1206,94 @@ fn test_edit_event_persistence() {
 
     // Verify in memory
     assert_eq!(app.events[0].title, "New Title");
+}
+
+#[test]
+fn test_view_boundary_adjustment_forward_shift() {
+    let (mut app, _temp_dir) = setup_app();
+    // Set date to last day of the third month in the view
+    app.date = NaiveDate::from_ymd_opt(2025, 12, 31).unwrap(); // Dec 31
+    app.view_start_month = 10;
+    app.view_start_year = 2025;
+
+    // Navigate to next day (Jan 1, 2026)
+    let key_event = KeyEvent::from(KeyCode::Right);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should shift view forward: view should now start at Nov 2025
+    assert_eq!(app.view_start_month, 11);
+    assert_eq!(app.view_start_year, 2025);
+    assert_eq!(app.date, NaiveDate::from_ymd_opt(2026, 1, 1).unwrap());
+}
+
+#[test]
+fn test_view_boundary_adjustment_backward_shift() {
+    let (mut app, _temp_dir) = setup_app();
+    // Set date to first day of a month in the view
+    app.date = NaiveDate::from_ymd_opt(2025, 11, 1).unwrap(); // Nov 1
+    app.view_start_month = 11;
+    app.view_start_year = 2025;
+
+    // Navigate to previous day (Oct 31)
+    let key_event = KeyEvent::from(KeyCode::Left);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should shift view backward: view should now start at Oct 2025
+    assert_eq!(app.view_start_month, 10);
+    assert_eq!(app.view_start_year, 2025);
+    assert_eq!(app.date, NaiveDate::from_ymd_opt(2025, 10, 31).unwrap());
+}
+
+#[test]
+fn test_view_boundary_adjustment_year_boundary_forward() {
+    let (mut app, _temp_dir) = setup_app();
+    // Set date to Feb 28, 2025 (last day of Feb in view)
+    app.date = NaiveDate::from_ymd_opt(2025, 2, 28).unwrap();
+    app.view_start_month = 12;
+    app.view_start_year = 2024;
+
+    // Navigate to next day (Mar 1, 2025)
+    let key_event = KeyEvent::from(KeyCode::Right);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should shift view forward: view should now start at Jan 2025
+    assert_eq!(app.view_start_month, 1);
+    assert_eq!(app.view_start_year, 2025);
+    assert_eq!(app.date, NaiveDate::from_ymd_opt(2025, 3, 1).unwrap());
+}
+
+#[test]
+fn test_view_boundary_adjustment_year_boundary_backward() {
+    let (mut app, _temp_dir) = setup_app();
+    // Set date to Jan 1, 2025
+    app.date = NaiveDate::from_ymd_opt(2025, 1, 1).unwrap();
+    app.view_start_month = 1;
+    app.view_start_year = 2025;
+
+    // Navigate to previous day (Dec 31, 2024)
+    let key_event = KeyEvent::from(KeyCode::Left);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should shift view backward: view should now start at Dec 2024
+    assert_eq!(app.view_start_month, 12);
+    assert_eq!(app.view_start_year, 2024);
+    assert_eq!(app.date, NaiveDate::from_ymd_opt(2024, 12, 31).unwrap());
+}
+
+#[test]
+fn test_view_boundary_no_shift_within_view() {
+    let (mut app, _temp_dir) = setup_app();
+    // Set date to middle of view
+    app.date = NaiveDate::from_ymd_opt(2025, 10, 15).unwrap();
+    app.view_start_month = 10;
+    app.view_start_year = 2025;
+
+    // Navigate within the view (Oct 14)
+    let key_event = KeyEvent::from(KeyCode::Left);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // View should not shift
+    assert_eq!(app.view_start_month, 10);
+    assert_eq!(app.view_start_year, 2025);
+    assert_eq!(app.date, NaiveDate::from_ymd_opt(2025, 10, 14).unwrap());
 }

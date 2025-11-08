@@ -1,5 +1,5 @@
 pkgname=rcal
-pkgver=1.1.0
+pkgver=1.2.0
 pkgrel=1
 pkgdesc="A terminal-based calendar application built with Rust and Ratatui."
 arch=('x86_64')
@@ -7,7 +7,7 @@ url="https://github.com/Damond5/rcal"
 license=('CC0-1.0')
 depends=()
 makedepends=('cargo' 'rust')
-source=("$pkgname::git+$url.git#tag=v$pkgver")
+source=("$pkgname::git+$url.git")
 sha256sums=('SKIP')
 
 build() {

@@ -1,0 +1,183 @@
+# event-management Specification
+
+## Purpose
+TBD - created by archiving change add-agent-guidelines-specs. Update Purpose after archive.
+## Requirements
+### Requirement: Flexible Time Input Support
+Time inputs MUST support multiple formats (HH:MM, HH, H) with automatic normalization.
+
+#### Scenario: Time Format Acceptance
+Given time input in various formats,
+When parsing,
+Then all valid formats are accepted and normalized.
+
+### Requirement: End Date Format Handling
+End date inputs MUST use DD/MM format with automatic year assumption.
+
+#### Scenario: Date Input Parsing
+Given DD/MM date,
+When assuming current/next year,
+Then date is correctly interpreted.
+
+### Requirement: Safe Event Deletion
+Event deletion MUST require confirmation to prevent accidental data loss.
+
+#### Scenario: Confirmation Dialog
+Given delete action,
+When confirming deletion,
+Then event is safely removed.
+
+### Requirement: Context-Aware Event Addition
+Events MUST be addable from view popup without losing current context.
+
+#### Scenario: Contextual Adding
+Given view popup,
+When adding event,
+Then returns to view with new event shown.
+
+### Requirement: Markdown-Based Persistence
+Events MUST be stored as individual markdown files in user's home directory.
+
+#### Scenario: File Storage
+Given event data,
+When saving,
+Then creates markdown file in ~/calendar/.
+
+### Requirement: Title-Based Filenames
+Filenames MUST be based on sanitized event titles with duplicate handling.
+
+#### Scenario: Filename Generation
+Given event title,
+When sanitizing (spaces to underscores, alphanumeric+underscore),
+Then creates valid filename.
+
+#### Scenario: Duplicate Handling
+Given duplicate titles,
+When saving,
+Then appends number (e.g., title_1.md).
+
+### Requirement: Multi-Day Event Support
+Events MUST support start/end dates and times for spanning multiple days.
+
+#### Scenario: Multi-Day Creation
+Given start and end dates,
+When creating event,
+Then spans multiple days in calendar.
+
+### Requirement: UI Fields for Multi-Day
+Event creation/editing popup MUST include input fields for end date and end time.
+
+#### Scenario: Field Availability
+Given event popup,
+When editing,
+Then end date/time fields are present.
+
+### Requirement: Event Format Specification
+Events MUST follow format documented in EVENT_FORMAT.md.
+
+#### Scenario: Format Compliance
+Given event file,
+When following spec,
+Then parsing works correctly.
+
+### Requirement: Real-Time View Updates
+View popup MUST refresh automatically after adding/deleting events.
+
+#### Scenario: Post-Operation Refresh
+Given add/delete operation,
+When returning to view,
+Then list shows updated events.
+
+### Requirement: Daemon Notification Mode
+Application MUST support `--daemon` flag for background notifications.
+
+#### Scenario: Daemon Launch
+Given --daemon flag,
+When running,
+Then monitors events in background.
+
+### Requirement: Timed Event Notifications
+Timed events MUST trigger desktop notifications 30 minutes before.
+
+#### Scenario: Notification Timing
+Given timed event in 30 minutes,
+When daemon running,
+Then notification appears.
+
+### Requirement: All-Day Event Notifications
+All-day events MUST trigger notifications midday the day before.
+
+#### Scenario: All-Day Timing
+Given all-day event tomorrow,
+When midday today,
+Then notification appears.
+
+### Requirement: Notification Deduplication
+Notifications MUST be sent only once per event per daemon session.
+
+#### Scenario: Single Notification
+Given event,
+When daemon session active,
+Then notifies only once.
+
+### Requirement: File Watching Integration
+Daemon MUST use `notify` crate to monitor ~/calendar directory for updates.
+
+#### Scenario: Real-Time Monitoring
+Given file changes,
+When daemon watching,
+Then reloads events automatically.
+
+### Requirement: Mandatory Event Titles
+Events MUST require non-empty titles for meaningful identification.
+
+#### Scenario: Title Validation
+Given empty title,
+When creating event,
+Then creation fails.
+
+### Requirement: Default End Date/Time
+Unspecified end date/time MUST default to start date/time.
+
+#### Scenario: Default Values
+Given no end specified,
+When creating event,
+Then end equals start.
+
+### Requirement: Single-Day Event Storage
+Single-day events MUST have end_date set to start_date and omit ' to ' in file.
+
+#### Scenario: Storage Format
+Given single-day event,
+When saving,
+Then no ' to ' in markdown.
+
+### Requirement: All-Day Event Handling
+Events without time MUST be treated as all-day with "All day" display.
+
+#### Scenario: All-Day Display
+Given event without time,
+When viewing,
+Then shows "All day".
+
+#### Scenario: All-Day Storage
+Given all-day event,
+When saving,
+Then time set to "all-day" in file.
+
+### Requirement: Title-Based Uniqueness
+Event titles MUST serve as unique identifiers for file operations.
+
+#### Scenario: Title-Based Operations
+Given event title,
+When performing operations,
+Then uses title for identification.
+
+### Requirement: Configurable Calendar Directory
+App MUST support configurable calendar directory via constructor.
+
+#### Scenario: Custom Directory
+Given calendar directory path,
+When initializing,
+Then uses specified directory.
+

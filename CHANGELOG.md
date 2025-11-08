@@ -7,8 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.2.0] - 2025-11-08
 
+### Added
+- Three-month calendar display
+
+### Changed
+- Improved navigation with full view shifting
+- Migrated to OpenSpec for project specifications and change management
+- Optimized AGENTS.md and OpenSpec configuration
+
 ### Removed
 - Removed H/L and PageUp/PageDown navigation keys for three-month paging, simplifying navigation to rely solely on h/j/k/l with automatic view shifting.
+- General agent instructions to prevent automatic OpenSpec proposal implementation
 
 ## [1.1.0] - 2025-11-01
 

@@ -8,19 +8,8 @@ use ratatui::{
 
 use crate::app::{App, InputMode, PopupInputField};
 
-pub fn ui(f: &mut Frame, app: &mut App) {
-    let chunks = Layout::default()
-        .direction(Direction::Vertical)
-        .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
-        .split(f.size());
-
-    let calendar_chunk = chunks[0];
-    let hints_chunk = chunks[1];
-
+fn build_calendar_table(year: i32, month: u32, app: &App) -> (Table<'static>, usize) {
     let today = Local::now().date_naive();
-    let year = app.date.year();
-    let month = app.date.month();
-
     let first_day_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
     let weekday_of_first = first_day_of_month.weekday().num_days_from_monday();
 
@@ -43,8 +32,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
     for (i, day_str) in calendar_days.iter().enumerate() {
         let mut cell = Cell::from(day_str.clone());
-        let mut current_date_for_week_num = app.date;
-        let mut final_style = Style::default(); // Start with a default style
+        let mut current_date_for_week_num = first_day_of_month;
+        let mut final_style = Style::default();
 
         if !day_str.is_empty() {
             let day = day_str.parse::<u32>().unwrap();
@@ -61,10 +50,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
             // Apply Saturday/Sunday colors
             if current_day_date.weekday().num_days_from_monday() == 5 {
-                // Saturday
                 final_style = final_style.fg(Color::LightYellow);
             } else if current_day_date.weekday().num_days_from_monday() == 6 {
-                // Sunday
                 final_style = final_style.fg(Color::Red);
             }
 
@@ -83,32 +70,33 @@ pub fn ui(f: &mut Frame, app: &mut App) {
 
         if (i + 1) % 7 == 0 || i == calendar_days.len() - 1 {
             let week_num = current_date_for_week_num.iso_week().week();
-            let mut row_cells =
+            let row_cells =
                 vec![Cell::from(week_num.to_string()).style(Style::default().fg(Color::Magenta))];
-            row_cells.append(&mut week_cells);
-            rows.push(Row::new(row_cells));
+            let mut full_row_cells = row_cells;
+            full_row_cells.append(&mut week_cells);
+            rows.push(Row::new(full_row_cells));
             week_cells.clear();
         }
     }
 
-    let month_name = match month {
-        1 => "January",
-        2 => "February",
-        3 => "March",
-        4 => "April",
-        5 => "May",
-        6 => "June",
-        7 => "July",
-        8 => "August",
-        9 => "September",
-        10 => "October",
-        11 => "November",
-        12 => "December",
-        _ => "",
-    };
+    let mut all_rows = vec![
+        Row::new(vec![
+            Cell::from(""),
+            Cell::from("Mo"),
+            Cell::from("Tu"),
+            Cell::from("We"),
+            Cell::from("Th"),
+            Cell::from("Fr"),
+            Cell::from("Sa").style(Style::default().fg(Color::LightYellow)),
+            Cell::from("Su").style(Style::default().fg(Color::Red)),
+        ]),
+    ];
+    all_rows.append(&mut rows);
+
+    let height = all_rows.len();
 
     let calendar = Table::new(
-        rows,
+        all_rows,
         &[
             Constraint::Length(3),
             Constraint::Length(3),
@@ -120,29 +108,80 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             Constraint::Length(3),
         ],
     )
-    .header(Row::new(vec![
-        Cell::from(""),
-        Cell::from("Mo"),
-        Cell::from("Tu"),
-        Cell::from("We"),
-        Cell::from("Th"),
-        Cell::from("Fr"),
-        Cell::from("Sa").style(Style::default().fg(Color::LightYellow)),
-        Cell::from("Su").style(Style::default().fg(Color::Red)),
-    ]))
-    .block(
-        Block::default()
-            .title(format!("{month_name} {year}"))
-            .borders(Borders::ALL),
-    )
     .style(Style::default().fg(Color::White))
     .column_spacing(1);
 
-    f.render_widget(calendar, calendar_chunk);
+    (calendar, height)
+}
+
+pub fn ui(f: &mut Frame, app: &mut App) {
+    let chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
+        .split(f.size());
+
+    let calendar_chunk = chunks[0];
+    let hints_chunk = chunks[1];
+
+    let current_year = app.date.year();
+    let current_month = app.date.month();
+
+    let calendar_block = Block::default()
+        .title("RCal")
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::White));
+    let calendar_area = calendar_block.inner(calendar_chunk);
+    f.render_widget(calendar_block, calendar_chunk);
+
+    let mut calendars = vec![];
+    let mut constraints = vec![];
+
+    for i in 0..3 {
+        let month_offset = i as u32;
+        let (year, month) = if current_month + month_offset > 12 {
+            (current_year + 1, current_month + month_offset - 12)
+        } else {
+            (current_year, current_month + month_offset)
+        };
+        let month_name = match month {
+            1 => "January",
+            2 => "February",
+            3 => "March",
+            4 => "April",
+            5 => "May",
+            6 => "June",
+            7 => "July",
+            8 => "August",
+            9 => "September",
+            10 => "October",
+            11 => "November",
+            12 => "December",
+            _ => "",
+        };
+        constraints.push(Constraint::Length(1)); // title
+        let (calendar, height) = build_calendar_table(year, month, app);
+        constraints.push(Constraint::Length(height as u16)); // table
+        if i < 2 {
+            constraints.push(Constraint::Length(1)); // spacing
+        }
+        calendars.push((month_name, year, calendar));
+    }
+
+    let month_chunks = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints(constraints)
+        .split(calendar_area);
+
+    for (i, (month_name, year, calendar)) in calendars.into_iter().enumerate() {
+        let title = Paragraph::new(format!("{} {}", month_name, year))
+            .style(Style::default().fg(Color::Cyan));
+        f.render_widget(title, month_chunks[i * 3]);
+        f.render_widget(calendar, month_chunks[i * 3 + 1]);
+    }
 
     // Render main hints
     let main_hints =
-        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page")
+        Paragraph::new("q: quit, a: add, o: view, s: sync, h/j/k/l: navigate, H/L: page 3 months")
             .style(Style::default().fg(Color::Gray));
     f.render_widget(main_hints, hints_chunk);
 

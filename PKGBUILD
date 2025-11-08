@@ -7,7 +7,7 @@ url="https://github.com/Damond5/rcal"
 license=('CC0-1.0')
 depends=()
 makedepends=('cargo' 'rust')
-source=("$pkgname::git+$url.git#tag=v$pkgver")
+source=("$pkgname::git+$url.git")
 sha256sums=('SKIP')
 
 build() {

@@ -181,7 +181,7 @@ CC0 1.0 Universal - see LICENSE file for details.
 
 ## Version
 
-Current version: 1.1.0
+Current version: 1.2.0
 
 ## Demo
 

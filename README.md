@@ -125,7 +125,7 @@ rcal
 
 # Access sync menu in TUI
 rcal
-# Press s to open sync popup, then f/p/s to pull/push/status
+# Press s to open sync popup (status shown automatically), then f/p to pull/push
 ```
 
 ## Configuration

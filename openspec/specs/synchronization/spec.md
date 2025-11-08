@@ -101,3 +101,11 @@ Given sync workflow,
 When integration testing,
 Then end-to-end sync works.
 
+### Requirement: Automatic Status Update on Popup Entry
+Sync status MUST be automatically fetched and displayed when entering the sync popup.
+
+#### Scenario: Immediate Status Display
+Given sync popup is opened,
+When user enters sync mode,
+Then current sync status is immediately displayed without requiring user to press 's'.
+

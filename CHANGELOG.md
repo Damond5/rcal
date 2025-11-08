@@ -14,6 +14,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Improved navigation with full view shifting
 - Migrated to OpenSpec for project specifications and change management
 - Optimized AGENTS.md and OpenSpec configuration
+- Sync popup now automatically displays current status on entry without requiring manual check
 
 ### Removed
 - Removed H/L and PageUp/PageDown navigation keys for three-month paging, simplifying navigation to rely solely on h/j/k/l with automatic view shifting.

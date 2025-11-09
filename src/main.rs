@@ -121,7 +121,10 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let mut app = App::new();
-    app.events = persistence::load_events_from_path(&app.calendar_dir);
+    app.events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
+        eprintln!("Failed to load events: {e}");
+        Vec::new()
+    });
     let (tx, rx) = mpsc::channel::<Result<(), String>>();
     app.reload_receiver = Some(rx);
     if let Some(url) = load_remote_url() {

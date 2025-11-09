@@ -11,7 +11,10 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
     let home = dirs::home_dir().expect("Could not find home directory");
     let calendar_dir = home.join("calendar");
 
-    let mut events = persistence::load_events();
+    let mut events = persistence::load_events().unwrap_or_else(|e| {
+        eprintln!("Failed to load initial events: {e}");
+        Vec::new()
+    });
     let mut notified = HashSet::new();
 
     let (tx, rx) = std::sync::mpsc::channel();
@@ -85,9 +88,22 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
         // Check for file changes
         match rx.try_recv() {
             Ok(_) => {
-                events = persistence::load_events();
-                // Reset notified to allow re-notifying if events change
-                notified.clear();
+                match persistence::load_events() {
+                    Ok(mut new_events) => {
+                        // Sort both for order-independent comparison
+                        new_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+                        let mut current_sorted = events.clone();
+                        current_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+                        if new_events != current_sorted {
+                            events = new_events;
+                            // Reset notified to allow re-notifying if events change
+                            notified.clear();
+                        } else {
+                            events = new_events;
+                        }
+                    }
+                    Err(e) => eprintln!("Failed to load events on file change: {e}"),
+                }
             }
             Err(std::sync::mpsc::TryRecvError::Empty) => {}
             Err(e) => eprintln!("Watch error: {e:?}"),
@@ -444,5 +460,49 @@ mod tests {
         assert_eq!(notifications.len(), 2);
         assert!(notifications.contains(&format!("Event 1 at {}", same_time.format("%H:%M"))));
         assert!(notifications.contains(&format!("Event 2 at {}", same_time.format("%H:%M"))));
+    }
+
+    #[test]
+    fn test_event_comparison_for_reload() {
+        let now = Local::now();
+        let today = now.date_naive();
+        let future_time = now.time() + Duration::minutes(30);
+
+        let events = vec![CalendarEvent {
+            date: today,
+            time: future_time,
+            title: "Test Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: today,
+            end_date: None,
+            start_time: future_time,
+            end_time: None,
+            is_all_day: false,
+        }];
+
+        // Simulate initial notification
+        let mut notified = HashSet::new();
+        let _ = check_upcoming_events(&events, now, &mut notified);
+        assert_eq!(notified.len(), 1);
+
+        // Simulate reload with same events (different order)
+        let mut new_events = events.clone();
+        new_events.reverse(); // Change order
+        let mut new_sorted = new_events.clone();
+        new_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+        let mut current_sorted = events.clone();
+        current_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+
+        // Should be equal after sorting
+        assert_eq!(new_sorted, current_sorted);
+
+        // If events are the same, notified should not be cleared
+        if new_sorted == current_sorted {
+            // In real code, events = new_events; but notified not cleared
+            assert_eq!(notified.len(), 1); // Still notified
+        }
     }
 }

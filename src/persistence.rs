@@ -39,21 +39,22 @@ fn sanitize_title_for_filename(title: &str) -> String {
     }
 }
 
-pub fn load_events() -> Vec<CalendarEvent> {
-    let home = dirs::home_dir().expect("Could not find home directory");
+pub fn load_events() -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
+    let home = dirs::home_dir().ok_or("Could not find home directory")?;
     load_events_from_path(&home.join("calendar"))
 }
 
-pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
+pub fn load_events_from_path(calendar_dir: &Path) -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
     if !calendar_dir.exists() {
-        std::fs::create_dir_all(calendar_dir).expect("Could not create calendar directory");
-        return Vec::new();
+        std::fs::create_dir_all(calendar_dir)?;
+        return Ok(Vec::new());
     }
 
     let mut events = Vec::new();
 
-    for entry in std::fs::read_dir(calendar_dir).expect("Could not read calendar directory") {
-        let entry = entry.expect("Error reading entry");
+    let entries = std::fs::read_dir(calendar_dir)?;
+    for entry in entries {
+        let entry = entry?;
         let path = entry.path();
         if path
             .file_name()
@@ -61,7 +62,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
             .map(|s| s.ends_with(".md"))
             .unwrap_or(false)
         {
-            let content = std::fs::read_to_string(&path).expect("Could not read file");
+            let content = std::fs::read_to_string(&path)?;
             // new format
             let mut title = String::new();
             let mut start_date = None;
@@ -135,7 +136,7 @@ pub fn load_events_from_path(calendar_dir: &Path) -> Vec<CalendarEvent> {
         }
     }
     all_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
-    all_events
+    Ok(all_events)
 }
 
 fn generate_recurring_instances(
@@ -327,7 +328,7 @@ mod tests {
     #[test]
     fn test_load_events_empty_dir() {
         let temp_dir = TempDir::new().unwrap();
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
         assert!(events.is_empty());
     }
 
@@ -350,7 +351,7 @@ mod tests {
         };
 
         save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
@@ -392,7 +393,7 @@ mod tests {
 
         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
         save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 2);
         // Should be sorted by date then time
@@ -419,7 +420,7 @@ mod tests {
         };
 
         save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
@@ -447,7 +448,7 @@ mod tests {
         };
 
         save_event_to_path(&mut event, temp_dir.path(), None).unwrap();
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
@@ -492,18 +493,18 @@ mod tests {
         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
         save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
 
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
         assert_eq!(events.len(), 2);
 
         // Delete first event
         let _ = delete_event_from_path(&event1, temp_dir.path(), None);
-        let events_after_delete = load_events_from_path(temp_dir.path());
+        let events_after_delete = load_events_from_path(temp_dir.path()).unwrap();
         assert_eq!(events_after_delete.len(), 1);
         assert_eq!(events_after_delete[0].title, "Event 2");
 
         // Delete remaining event
         let _ = delete_event_from_path(&event2, temp_dir.path(), None);
-        let events_after_second_delete = load_events_from_path(temp_dir.path());
+        let events_after_second_delete = load_events_from_path(temp_dir.path()).unwrap();
         assert_eq!(events_after_second_delete.len(), 0);
     }
 
@@ -560,7 +561,7 @@ mod tests {
         assert!(files.contains(&"Test_Event_1.md".to_string()));
 
         // Load and verify events
-        let events = load_events_from_path(temp_dir.path());
+        let events = load_events_from_path(temp_dir.path()).unwrap();
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].title, "Test Event");
         assert_eq!(events[1].title, "Test Event");

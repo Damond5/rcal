@@ -55,10 +55,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
             match receiver.try_recv() {
                 Ok(Ok(_)) => {
                     // Reload events
-                    app.events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
-                        eprintln!("Failed to reload events after sync: {e}");
-                        Vec::new()
-                    });
+                    app.events = persistence::load_events_from_path(&app.calendar_dir)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Failed to reload events after sync: {e}");
+                            Vec::new()
+                        });
                     // Update sync status (silently, don't interfere with sync popup)
                     app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
                 }

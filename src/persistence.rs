@@ -44,7 +44,9 @@ pub fn load_events() -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
     load_events_from_path(&home.join("calendar"))
 }
 
-pub fn load_events_from_path(calendar_dir: &Path) -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
+pub fn load_events_from_path(
+    calendar_dir: &Path,
+) -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
     if !calendar_dir.exists() {
         std::fs::create_dir_all(calendar_dir)?;
         return Ok(Vec::new());

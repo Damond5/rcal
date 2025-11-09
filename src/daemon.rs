@@ -93,7 +93,8 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                         // Sort both for order-independent comparison
                         new_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
                         let mut current_sorted = events.clone();
-                        current_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+                        current_sorted
+                            .sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
                         if new_events != current_sorted {
                             events = new_events;
                             // Reset notified to allow re-notifying if events change

@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Automatic cleanup of finished events older than 2 months on launch (configurable via `auto_cleanup_old_events`)
 - Lazy loading for recurring event instances, enabling indefinite display of long-term recurring events
 - Recurrence dropdown for event creation/editing implemented as a popup overlay instead of inline to prevent invalid syntax and improve usability
+- Suggestions overlay for end date input: Implemented a dedicated overlay popup to display date suggestions without overlapping other input fields.
 - Real-time validation and auto-completion for end date input in event creation/editing, providing immediate feedback for invalid dates, suggesting common date patterns like "tomorrow", "next week", "end of month", while maintaining DD/MM format with automatic year assumption
 
 ### Changed

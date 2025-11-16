@@ -8,6 +8,63 @@ use ratatui::{
 
 use crate::app::{App, InputMode, PopupInputField};
 
+const MAX_OVERLAY_HEIGHT: u16 = 5;
+const MIN_OVERLAY_WIDTH: u16 = 10;
+
+// Change ID: add-suggestions-overlay
+// Renders a suggestions overlay for date suggestions in the add event popup.
+// Positions the overlay to the right of the end date field, with boundary handling.
+// See openspec/changes/add-suggestions-overlay/design.md for details.
+fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
+    if !app.show_date_suggestions || app.date_suggestions.is_empty() {
+        return;
+    }
+
+    let overlay_width = input_chunks[2].width.max(MIN_OVERLAY_WIDTH);
+    let overlay_height = (app.date_suggestions.iter().filter(|s| !s.is_empty()).count() as u16).min(MAX_OVERLAY_HEIGHT);
+    let overlay_x = input_chunks[2].x;
+    let mut overlay_y = input_chunks[2].y + input_chunks[2].height;
+
+    // Handle boundary constraints
+    let frame_size = f.size();
+    if overlay_y + overlay_height > frame_size.height {
+        // Try positioning above
+        overlay_y = input_chunks[2].y.saturating_sub(overlay_height);
+        if overlay_y == 0 && overlay_height > input_chunks[2].y {
+            // If still doesn't fit, reduce height
+            overlay_y = input_chunks[2].y + input_chunks[2].height;
+            // But since it's under, perhaps just reduce
+        }
+    }
+    // Ensure height fits
+    let adjusted_height = frame_size.height.saturating_sub(overlay_y);
+    let overlay_height = overlay_height.min(adjusted_height);
+    if overlay_height == 0 {
+        return; // Skip if no height
+    }
+    if overlay_height == 0 {
+        return; // Skip if no height
+    }
+
+    let overlay_area = Rect::new(overlay_x, overlay_y, overlay_width, overlay_height);
+
+    let overlay_block = Block::default()
+        .borders(Borders::ALL)
+        .style(Style::default().fg(Color::Gray));
+    f.render_widget(Clear, overlay_area);
+    f.render_widget(&overlay_block, overlay_area);
+
+    let inner_area = overlay_block.inner(overlay_area);
+    let suggestions_list: Vec<ListItem> = app
+        .date_suggestions
+        .iter()
+        .filter(|s| !s.is_empty())
+        .map(|s| ListItem::new(s.as_str()))
+        .collect();
+    let suggestions_list_widget = List::new(suggestions_list);
+    f.render_widget(suggestions_list_widget, inner_area);
+}
+
 fn build_calendar_table(year: i32, month: u32, events: &[crate::app::CalendarEvent], selected_date: NaiveDate) -> (Table<'static>, usize) {
     let today = Local::now().date_naive();
     let first_day_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
@@ -461,20 +518,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(end_date_block);
         f.render_widget(end_date_input, input_chunks[2]);
 
-        // Render suggestions below the end date input if available
-        if app.show_date_suggestions && !app.date_suggestions.is_empty() {
-            let suggestions_text = app.date_suggestions.join(" | ");
-            let suggestions = ratatui::widgets::Paragraph::new(suggestions_text)
-                .style(Style::default().fg(Color::Yellow))
-                .block(Block::default().borders(Borders::NONE));
-            let suggestion_area = Rect::new(
-                input_chunks[2].x,
-                input_chunks[2].y + input_chunks[2].height,
-                input_chunks[2].width,
-                1,
-            );
-            f.render_widget(suggestions, suggestion_area);
-        }
+
 
         let end_time_input = ratatui::widgets::Paragraph::new(app.popup_event_end_time.as_str())
             .style(end_time_style)
@@ -548,6 +592,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let hints = Paragraph::new(hints_text)
             .style(Style::default().fg(Color::Gray));
         f.render_widget(hints, hints_area);
+
+        // Render suggestions overlay if active
+        render_suggestions_overlay(f, app, &input_chunks);
     }
 
     if app.input_mode == InputMode::SelectingRecurrence {

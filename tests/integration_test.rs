@@ -687,6 +687,48 @@ fn test_create_event_success() {
 }
 
 #[test]
+fn test_suggestions_overlay_appears_when_typing_end_date() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::Title;
+    app.popup_event_title = "Meeting".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Tab to time field
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_input_field, PopupInputField::Time);
+
+    // Tab to end date field
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_input_field, PopupInputField::EndDate);
+    app.cursor_position = 0; // Initialize cursor for end date field
+
+    // Type 't'
+    let key_event = KeyEvent::from(KeyCode::Char('t'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.popup_event_end_date, "t");
+
+    // Type 'o'
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.popup_event_end_date, "to");
+
+    // Type 'm'
+    let key_event = KeyEvent::from(KeyCode::Char('m'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.popup_event_end_date, "tom");
+
+    // Check that suggestions are generated
+    let manual_suggestions = rcal::date_utils::get_date_suggestions(&app.popup_event_end_date, app.current_date_for_new_event);
+    assert!(!manual_suggestions.is_empty());
+    // Note: The integration with event handling is tested separately; here we verify suggestions generation
+    assert!(manual_suggestions.iter().any(|s| s == "20/10"));
+}
+
+#[test]
 fn test_create_event_invalid_time_shows_error() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;

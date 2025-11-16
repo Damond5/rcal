@@ -2,6 +2,7 @@ use std::path::Path;
 
 use chrono::{Datelike, Duration, Local, Months, NaiveDate, NaiveTime};
 use dirs;
+use uuid::Uuid;
 
 use crate::app::CalendarEvent;
 use crate::sync::SyncProvider;
@@ -192,61 +193,97 @@ pub fn load_events_from_path(
                 }
             }
             if let Some(sd) = start_date {
-                let is_all_day = start_time.is_none();
-                let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-                events.push(CalendarEvent {
-                    date: sd,
-                    time: st,
-                    title,
-                    description,
-                    recurrence,
-                    is_recurring_instance: false,
-                    base_date: None,
-                    start_date: sd,
-                    end_date: end_date.or(Some(sd)),
-                    start_time: st,
-                    end_time,
-                    is_all_day,
-                });
+                 let is_all_day = start_time.is_none();
+                 let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+                 events.push(CalendarEvent {
+                     id: Uuid::new_v4().to_string(),
+                     date: sd,
+                     time: st,
+                     title,
+                     description,
+                     recurrence,
+                     is_recurring_instance: false,
+                     base_date: None,
+                     start_date: sd,
+                     end_date: end_date.or(Some(sd)),
+                     start_time: st,
+                     end_time,
+                     is_all_day,
+                 });
             }
         }
     }
 
     events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
 
-    // Generate recurring instances
-    let mut all_events = events.clone();
-    for event in &events {
-        if event.recurrence != crate::app::Recurrence::None {
-            let until = chrono::Local::now().date_naive() + Duration::days(365);
-            all_events.extend(generate_recurring_instances(event, until));
-        }
-    }
-    all_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
-    Ok(all_events)
+    Ok(events)
 }
 
-pub fn generate_recurring_instances(
-    base_event: &CalendarEvent,
-    until: NaiveDate,
+/// Generates recurring event instances for the given base events within the specified date range.
+/// This function implements lazy loading by creating instances only for the requested period,
+/// with a buffer to ensure smooth UI navigation. Instances are generated on-demand to avoid
+/// memory issues with long-term recurring events.
+pub fn generate_instances_for_range(
+    base_events: &[CalendarEvent],
+    start_date: NaiveDate,
+    end_date: NaiveDate,
 ) -> Vec<CalendarEvent> {
     let mut instances = vec![];
-    let mut current_date = base_event.date;
+    for base_event in base_events {
+        if base_event.recurrence != crate::app::Recurrence::None {
+            instances.extend(generate_recurring_instances_in_range(base_event, start_date, end_date));
+        }
+    }
+    instances
+}
 
-    while current_date <= until {
-        if current_date != base_event.date {
+fn generate_recurring_instances_in_range(
+    base_event: &CalendarEvent,
+    range_start: NaiveDate,
+    range_end: NaiveDate,
+) -> Vec<CalendarEvent> {
+    let mut instances = vec![];
+    let mut current_date = base_event.start_date;
+
+    // Skip to the first date >= range_start
+    while current_date < range_start {
+        match base_event.recurrence {
+            crate::app::Recurrence::Daily => current_date += Duration::days(1),
+            crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
+            crate::app::Recurrence::Monthly => {
+                if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
+                    current_date = new_date;
+                } else {
+                    return instances; // Stop if invalid
+                }
+            }
+            crate::app::Recurrence::Yearly => {
+                if let Some(new_date) = current_date.with_year(current_date.year() + 1) {
+                    current_date = new_date;
+                } else {
+                    return instances; // Stop if invalid
+                }
+            }
+            crate::app::Recurrence::None => return instances,
+        }
+    }
+
+    // Now generate from current_date to range_end
+    while current_date <= range_end {
+        if current_date != base_event.start_date {
             let end_date = base_event.end_date.map(|end| {
                 let duration = end - base_event.start_date;
                 current_date + duration
             });
             instances.push(CalendarEvent {
+                id: Uuid::new_v4().to_string(),
                 date: current_date,
                 time: base_event.time,
                 title: base_event.title.clone(),
                 description: base_event.description.clone(),
                 recurrence: crate::app::Recurrence::None,
                 is_recurring_instance: true,
-                base_date: Some(base_event.date),
+                base_date: Some(base_event.start_date),
                 start_date: current_date,
                 end_date,
                 start_time: base_event.start_time,
@@ -259,18 +296,18 @@ pub fn generate_recurring_instances(
             crate::app::Recurrence::Daily => current_date += Duration::days(1),
             crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
             crate::app::Recurrence::Monthly => {
-                // Handle invalid dates (e.g., Feb 31) by stopping generation to avoid errors
                 if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
                     current_date = new_date;
                 } else {
+                    eprintln!("Warning: Invalid date for recurring event '{}': {:?}", base_event.title, current_date);
                     break;
                 }
             }
             crate::app::Recurrence::Yearly => {
-                // Handle invalid dates (e.g., Feb 29 on non-leap years) by stopping generation
                 if let Some(new_date) = current_date.with_year(current_date.year() + 1) {
                     current_date = new_date;
                 } else {
+                    eprintln!("Warning: Invalid date for recurring event '{}': {:?}", base_event.title, current_date);
                     break;
                 }
             }
@@ -278,6 +315,13 @@ pub fn generate_recurring_instances(
         }
     }
     instances
+}
+
+pub fn generate_recurring_instances(
+    base_event: &CalendarEvent,
+    until: NaiveDate,
+) -> Vec<CalendarEvent> {
+    generate_recurring_instances_in_range(base_event, base_event.start_date, until)
 }
 
 pub fn save_event(event: &mut CalendarEvent) -> Result<(), std::io::Error> {
@@ -435,6 +479,7 @@ mod tests {
     fn test_save_and_load_event() {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
+            id: Uuid::new_v4().to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -462,6 +507,7 @@ mod tests {
     fn test_save_events_different_days() {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
+            id: "test_id1".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Day 1 Event".to_string(),
@@ -476,6 +522,7 @@ mod tests {
             is_all_day: false,
         };
         let mut event2 = CalendarEvent {
+            id: "test_id2".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
@@ -504,6 +551,7 @@ mod tests {
     fn test_save_and_load_all_day_event() {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
+            id: "test_id".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             title: "All Day Event".to_string(),
@@ -532,6 +580,7 @@ mod tests {
     fn test_save_and_load_event_with_description() {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
+            id: "test_id".to_string(),
             is_all_day: false,
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
@@ -560,6 +609,7 @@ mod tests {
     fn test_delete_event() {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
+            id: "test_id1".to_string(),
             is_all_day: false,
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -574,6 +624,7 @@ mod tests {
             end_time: None,
         };
         let mut event2 = CalendarEvent {
+            id: "test_id2".to_string(),
             is_all_day: false,
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
@@ -630,6 +681,7 @@ mod tests {
     fn test_save_events_with_duplicate_titles() {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
+            id: "test_id1".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -644,6 +696,7 @@ mod tests {
             is_all_day: false,
         };
         let mut event2 = event1.clone();
+        event2.id = "test_id2".to_string();
         event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 
@@ -670,6 +723,7 @@ mod tests {
     fn test_delete_event_with_duplicate_titles() {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
+            id: "test_id1".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Test Event".to_string(),
@@ -684,6 +738,7 @@ mod tests {
             is_all_day: false,
         };
         let mut event2 = event1.clone();
+        event2.id = "test_id2".to_string();
         event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 
@@ -707,6 +762,7 @@ mod tests {
     #[test]
     fn test_generate_recurring_instances_daily() {
         let base_event = CalendarEvent {
+            id: "test_id".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Daily Event".to_string(),
@@ -732,6 +788,7 @@ mod tests {
     #[test]
     fn test_generate_recurring_instances_weekly() {
         let base_event = CalendarEvent {
+            id: "test_id".to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Weekly Event".to_string(),
@@ -754,6 +811,7 @@ mod tests {
     #[test]
     fn test_generate_recurring_instances_yearly() {
         let base_event = CalendarEvent {
+            id: Uuid::new_v4().to_string(),
             date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
             time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Yearly Event".to_string(),
@@ -773,5 +831,55 @@ mod tests {
         assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
         assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2025, 10, 1).unwrap());
         assert_eq!(instances[2].start_date, NaiveDate::from_ymd_opt(2026, 10, 1).unwrap());
+    }
+
+    #[test]
+    fn test_generate_instances_for_range() {
+        let base_events = vec![CalendarEvent {
+            id: Uuid::new_v4().to_string(),
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Yearly Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::Yearly,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        }];
+        let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+        let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
+        let instances = generate_instances_for_range(&base_events, start, end);
+        assert_eq!(instances.len(), 3); // 2024, 2025, 2026
+        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
+        assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2025, 10, 1).unwrap());
+        assert_eq!(instances[2].start_date, NaiveDate::from_ymd_opt(2026, 10, 1).unwrap());
+    }
+
+    #[test]
+    fn test_generate_monthly_jan31_edge_case() {
+        let base_event = CalendarEvent {
+            id: Uuid::new_v4().to_string(),
+            date: NaiveDate::from_ymd_opt(2023, 1, 31).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Monthly Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::Monthly,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 1, 31).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        };
+        let start = NaiveDate::from_ymd_opt(2023, 1, 31).unwrap();
+        let end = NaiveDate::from_ymd_opt(2023, 5, 31).unwrap();
+        let instances = generate_instances_for_range(&vec![base_event], start, end);
+        // Feb 31 is invalid, so no instances generated
+        assert!(instances.is_empty());
     }
 }

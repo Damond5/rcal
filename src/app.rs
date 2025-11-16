@@ -1,6 +1,8 @@
 use crate::sync::{SyncProvider, SyncStatus};
-use chrono::{Datelike, Local, NaiveDate, NaiveTime};
+use chrono::{Datelike, Duration, Local, NaiveDate, NaiveTime};
 use std::sync::mpsc::Receiver;
+
+const INSTANCE_BUFFER_DAYS: i64 = 365;
 
 #[derive(Clone, PartialEq, Debug)]
 pub enum Recurrence {
@@ -13,6 +15,7 @@ pub enum Recurrence {
 
 #[derive(Clone, PartialEq, Debug)]
 pub struct CalendarEvent {
+    pub id: String,
     pub date: NaiveDate, // Deprecated: use start_date
     pub time: NaiveTime, // Deprecated: use start_time
     pub title: String,
@@ -50,7 +53,9 @@ pub struct App {
     pub date: NaiveDate, // Now represents the selected date
     pub view_start_month: u32,
     pub view_start_year: i32,
-    pub events: Vec<CalendarEvent>,
+    pub events: Vec<CalendarEvent>, // Base events only
+    pub cached_instances: Vec<CalendarEvent>,
+    pub cached_range: Option<(NaiveDate, NaiveDate)>,
     pub input: String,
     pub input_mode: InputMode,
     pub popup_event_title: String,
@@ -91,6 +96,8 @@ impl App {
             view_start_month: date.month(),
             view_start_year: date.year(),
             events: Vec::new(),
+            cached_instances: Vec::new(),
+            cached_range: None,
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
@@ -127,6 +134,8 @@ impl App {
             view_start_month: date.month(),
             view_start_year: date.year(),
             events: Vec::new(),
+            cached_instances: Vec::new(),
+            cached_range: None,
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
@@ -186,6 +195,24 @@ impl App {
 
     pub fn get_current_field_char_count(&self) -> usize {
         self.get_current_field().chars().count()
+    }
+
+    /// Retrieves all events (base events + generated instances) for the given date range.
+    /// Uses session-level caching to avoid regenerating instances for the same range.
+    /// Generates instances with a buffer (INSTANCE_BUFFER_DAYS) around the requested range
+    /// to support smooth navigation without frequent regenerations.
+    pub fn get_all_events_for_range(&mut self, start: NaiveDate, end: NaiveDate) -> Vec<CalendarEvent> {
+        let buffer = Duration::days(INSTANCE_BUFFER_DAYS);
+        let gen_start = start - buffer;
+        let gen_end = end + buffer;
+        if self.cached_range != Some((gen_start, gen_end)) {
+            self.cached_instances = crate::persistence::generate_instances_for_range(&self.events, gen_start, gen_end);
+            self.cached_range = Some((gen_start, gen_end));
+        }
+        let mut all = self.events.clone();
+        all.extend(self.cached_instances.iter().cloned());
+        all.sort_by(|a, b| a.start_date.cmp(&b.start_date).then(a.start_time.cmp(&b.start_time)));
+        all
     }
 
     pub fn adjust_view_boundaries(&mut self) {

@@ -1,6 +1,6 @@
-use chrono::{Datelike, NaiveDate, NaiveTime};
+use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
-use rcal::app::{App, CalendarEvent, InputMode, PopupInputField};
+use rcal::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
 use rcal::event_handling::handle_event;
 use std::sync::mpsc;
 use tempfile::TempDir;
@@ -527,12 +527,13 @@ fn test_cancel_delete_event_confirmation() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: "test_id".to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
-        title: "Event to Keep".to_string(),
+        title: "Daily Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
         start_date: today,
@@ -1445,15 +1446,12 @@ fn test_recurring_event_instances_generated() {
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // Should have base event + instances
-    assert!(app.events.len() > 1);
+    // Should have base event only (instances generated lazily)
+    assert_eq!(app.events.len(), 1);
     // Check that base event is saved
     assert!(app.events.iter().any(|e| e.title == "Weekly Meeting" && !e.is_recurring_instance));
-    // Check that instances are generated
-    assert!(app.events.iter().any(|e| e.title == "Weekly Meeting" && e.is_recurring_instance));
-    // Check that instances have correct base_date
-    let base_date = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
-    assert!(app.events.iter().all(|e| e.title != "Weekly Meeting" || e.base_date == Some(base_date) || !e.is_recurring_instance));
+    // Check that base event has recurrence
+    assert!(app.events.iter().any(|e| e.title == "Weekly Meeting" && e.recurrence == Recurrence::Weekly));
 }
 
 #[test]
@@ -1751,21 +1749,10 @@ fn test_yearly_recurring_event_creation_and_display() {
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // Should have base event + instances
-    assert!(app.events.len() > 1);
+    // Should have base event only (instances generated lazily)
+    assert_eq!(app.events.len(), 1);
     // Check that base event is saved
     assert!(app.events.iter().any(|e| e.title == "Yearly Anniversary" && !e.is_recurring_instance));
-    // Check that instances are generated
-    assert!(app.events.iter().any(|e| e.title == "Yearly Anniversary" && e.is_recurring_instance));
-    // Check that instances have correct base_date
-    let base_date = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
-    assert!(app.events.iter().all(|e| e.title != "Yearly Anniversary" || e.base_date == Some(base_date) || !e.is_recurring_instance));
-    // Check that instances are on the same day/month next years
-    let yearly_instances: Vec<_> = app.events.iter().filter(|e| e.title == "Yearly Anniversary" && e.is_recurring_instance).collect();
-    assert!(!yearly_instances.is_empty());
-    for instance in yearly_instances {
-        assert_eq!(instance.start_date.month(), 10);
-        assert_eq!(instance.start_date.day(), 19);
-        assert!(instance.start_date.year() > 2025);
-    }
+    // Check that base event has recurrence
+    assert!(app.events.iter().any(|e| e.title == "Yearly Anniversary" && e.recurrence == Recurrence::Yearly));
 }

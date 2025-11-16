@@ -8,7 +8,7 @@ use ratatui::{
 
 use crate::app::{App, InputMode, PopupInputField};
 
-fn build_calendar_table(year: i32, month: u32, app: &App) -> (Table<'static>, usize) {
+fn build_calendar_table(year: i32, month: u32, events: &[crate::app::CalendarEvent], selected_date: NaiveDate) -> (Table<'static>, usize) {
     let today = Local::now().date_naive();
     let first_day_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
     let weekday_of_first = first_day_of_month.weekday().num_days_from_monday();
@@ -41,7 +41,7 @@ fn build_calendar_table(year: i32, month: u32, app: &App) -> (Table<'static>, us
             current_date_for_week_num = current_day_date;
 
             let mut day_display_str = day_str.clone();
-            let has_event = app.events.iter().any(|event| {
+            let has_event = events.iter().any(|event| {
                 event.start_date <= current_day_date
                     && event.end_date.is_none_or(|end| end >= current_day_date)
             });
@@ -61,7 +61,7 @@ fn build_calendar_table(year: i32, month: u32, app: &App) -> (Table<'static>, us
             }
 
             // Apply selected day foreground and bold if it's the selected date
-            if current_day_date == app.date {
+            if current_day_date == selected_date {
                 final_style = final_style.fg(Color::Black).bg(Color::LightBlue);
             }
             cell = Cell::from(day_display_str).style(final_style);
@@ -128,6 +128,32 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     let calendar_area = calendar_block.inner(calendar_chunk);
     f.render_widget(calendar_block, calendar_chunk);
 
+    // Calculate visible date range
+    let mut overall_start = NaiveDate::MAX;
+    let mut overall_end = NaiveDate::MIN;
+    for i in 0..3 {
+        let month_offset = i as u32;
+        let (year, month) = if app.view_start_month + month_offset > 12 {
+            (
+                app.view_start_year + 1,
+                app.view_start_month + month_offset - 12,
+            )
+        } else {
+            (app.view_start_year, app.view_start_month + month_offset)
+        };
+        let start_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
+        let end_of_month = NaiveDate::from_ymd_opt(year, month + 1, 1)
+            .unwrap_or(NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap())
+            .pred_opt().unwrap(); // last day of month
+        if start_of_month < overall_start {
+            overall_start = start_of_month;
+        }
+        if end_of_month > overall_end {
+            overall_end = end_of_month;
+        }
+    }
+    let all_events = app.get_all_events_for_range(overall_start, overall_end);
+
     let mut calendars = vec![];
     let mut constraints = vec![];
 
@@ -157,7 +183,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             _ => "",
         };
         constraints.push(Constraint::Length(1)); // title
-        let (calendar, height) = build_calendar_table(year, month, app);
+        let (calendar, height) = build_calendar_table(year, month, &all_events, app.date);
         constraints.push(Constraint::Length(height as u16)); // table
         if i < 2 {
             constraints.push(Constraint::Length(1)); // spacing

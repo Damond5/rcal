@@ -140,8 +140,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                 KeyCode::Char('o') => {
                     app.show_view_events_popup = true;
-                     app.events_to_display_in_popup = app
-                         .events
+                    let all_events = app.get_all_events_for_range(app.date, app.date);
+                     app.events_to_display_in_popup = all_events
                          .iter()
                          .filter(|event| {
                              if let Some(end) = event.end_date {
@@ -270,6 +270,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     };
                     let description = app.popup_event_description.drain(..).collect();
                     let mut event = CalendarEvent {
+                        id: uuid::Uuid::new_v4().to_string(),
                         date: app.current_date_for_new_event,
                         time,
                         title,
@@ -316,12 +317,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     let _ =
                         persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
 
-                    // Generate recurring instances if needed
-                    if event.recurrence != Recurrence::None {
-                        let until = chrono::Local::now().date_naive() + chrono::Duration::days(365);
-                        let instances = persistence::generate_recurring_instances(&event, until);
-                        app.events.extend(instances);
-                    }
+                    // Instances generated lazily
 
                     // Spawn async sync
                     if let Some(provider) = &app.sync_provider {
@@ -346,8 +342,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                     // If we came from the view events popup, refresh it and stay in that mode
                     if app.show_view_events_popup {
-                         app.events_to_display_in_popup = app
-                             .events
+                        let all_events = app.get_all_events_for_range(app.date, app.date);
+                         app.events_to_display_in_popup = all_events
                              .iter()
                              .filter(|event| {
                                  if let Some(end) = event.end_date {

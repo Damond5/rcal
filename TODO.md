@@ -1,5 +1,5 @@
 # TODO
-- fix (or remove?) autocomplete for end date
+- improve autocomplete suggestions for end date
 - implement same format checking as end date for:
   - time
   - end time

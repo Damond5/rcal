@@ -1990,6 +1990,45 @@ fn test_get_all_events_for_range_invalid_dates() {
 }
 
 #[test]
+fn test_end_date_input_validation_and_suggestions() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::EndDate;
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Type invalid date
+    let key_event = KeyEvent::from(KeyCode::Char('a'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('b'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('c'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should have validation error
+    assert!(app.date_input_error.is_some());
+    assert!(app.date_suggestions.is_empty());
+
+    // Clear and type valid date
+    app.popup_event_end_date.clear();
+    app.date_input_error = None;
+    let key_event = KeyEvent::from(KeyCode::Char('2'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('0'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('/'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('1'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('0'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should be valid and no suggestions
+    assert!(app.date_input_error.is_none());
+    assert!(app.date_suggestions.is_empty());
+}
+
+#[test]
 fn test_performance_frequent_invalidations() {
     let (mut app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();

@@ -82,6 +82,9 @@ pub struct App {
     pub calendar_dir: std::path::PathBuf,
     pub error_message: String,
     pub reload_receiver: Option<Receiver<Result<(), String>>>,
+    pub date_input_error: Option<String>,
+    pub date_suggestions: Vec<String>,
+    pub show_date_suggestions: bool,
 }
 
 impl Default for App {
@@ -122,11 +125,14 @@ impl App {
              sync_provider: None,
              sync_status: None,
              sync_message: String::new(),
-             calendar_dir: dirs::home_dir()
-                 .expect("Could not find home directory")
-                 .join("calendar"),
-             error_message: String::new(),
-             reload_receiver: None,
+              calendar_dir: dirs::home_dir()
+                  .expect("Could not find home directory")
+                  .join("calendar"),
+              error_message: String::new(),
+              reload_receiver: None,
+              date_input_error: None,
+              date_suggestions: Vec::new(),
+              show_date_suggestions: false,
         }
     }
 
@@ -161,9 +167,12 @@ impl App {
              sync_provider: None,
              sync_status: None,
              sync_message: String::new(),
-             calendar_dir,
-             error_message: String::new(),
-             reload_receiver: None,
+              calendar_dir,
+              error_message: String::new(),
+              reload_receiver: None,
+              date_input_error: None,
+              date_suggestions: Vec::new(),
+              show_date_suggestions: false,
         }
     }
 

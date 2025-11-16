@@ -9,6 +9,7 @@ use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
+use crate::date_utils;
 
 fn recurrence_str_to_index(s: &str) -> usize {
     match s.to_lowercase().as_str() {
@@ -132,6 +133,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.cursor_position = 0;
                     app.is_editing = false;
                     app.event_being_edited = None;
+                    app.date_input_error = None;
+                    app.date_suggestions.clear();
+                    app.show_date_suggestions = false;
                 }
                 KeyCode::Left | KeyCode::Char('h') => {
                     app.date -= chrono::Duration::days(1);
@@ -362,25 +366,59 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                      // Invalidate cached instances after event modification and UI refresh
                      app.invalidate_instance_cache(None);
                 }
-                 KeyCode::Char(c) => {
-                     if app.selected_input_field == PopupInputField::Recurrence {
-                         return Ok(true);
+                  KeyCode::Char(c) => {
+                      if app.selected_input_field == PopupInputField::Recurrence {
+                          return Ok(true);
+                      }
+                      let cursor_pos = app.cursor_position;
+                      let field = app.get_current_field_mut();
+                      let byte_index = App::char_to_byte_index(field, cursor_pos);
+                      field.insert(byte_index, c);
+                      app.cursor_position += 1;
+
+                      // Real-time validation for end date
+                      if app.selected_input_field == PopupInputField::EndDate {
+                          let start_date = app.current_date_for_new_event;
+                          match date_utils::validate_date_input(&app.popup_event_end_date, start_date) {
+                              Ok(_) => {
+                                  app.date_input_error = None;
+                                  app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
+                                  app.show_date_suggestions = !app.date_suggestions.is_empty();
+                              }
+                              Err(e) => {
+                                  app.date_input_error = Some(e);
+                                  app.date_suggestions.clear();
+                                  app.show_date_suggestions = false;
+                              }
+                          }
+                      }
+                  }
+                 KeyCode::Backspace => {
+                     if app.cursor_position > 0 {
+                         let cursor_pos = app.cursor_position - 1;
+                         let field = app.get_current_field_mut();
+                         let byte_index = App::char_to_byte_index(field, cursor_pos);
+                         field.remove(byte_index);
+                         app.cursor_position -= 1;
+
+                         // Real-time validation for end date
+                         if app.selected_input_field == PopupInputField::EndDate {
+                             let start_date = app.current_date_for_new_event;
+                             match date_utils::validate_date_input(&app.popup_event_end_date, start_date) {
+                                 Ok(_) => {
+                                     app.date_input_error = None;
+                                     app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
+                                     app.show_date_suggestions = !app.date_suggestions.is_empty();
+                                 }
+                                 Err(e) => {
+                                     app.date_input_error = Some(e);
+                                     app.date_suggestions.clear();
+                                     app.show_date_suggestions = false;
+                                 }
+                             }
+                         }
                      }
-                     let cursor_pos = app.cursor_position;
-                     let field = app.get_current_field_mut();
-                     let byte_index = App::char_to_byte_index(field, cursor_pos);
-                     field.insert(byte_index, c);
-                     app.cursor_position += 1;
                  }
-                KeyCode::Backspace => {
-                    if app.cursor_position > 0 {
-                        let cursor_pos = app.cursor_position - 1;
-                        let field = app.get_current_field_mut();
-                        let byte_index = App::char_to_byte_index(field, cursor_pos);
-                        field.remove(byte_index);
-                        app.cursor_position -= 1;
-                    }
-                }
                 KeyCode::Esc => {
                     app.show_add_event_popup = false;
                     app.popup_event_title.clear();
@@ -424,10 +462,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                              app.cursor_position = app.popup_event_time.chars().count();
                              PopupInputField::Time
                          }
-                         PopupInputField::EndTime => {
-                             app.cursor_position = app.popup_event_end_date.chars().count();
-                             PopupInputField::EndDate
-                         }
+                          PopupInputField::EndTime => {
+                              app.cursor_position = app.popup_event_end_date.chars().count();
+                              // Clear suggestions when entering EndDate
+                              app.date_input_error = None;
+                              app.date_suggestions.clear();
+                              app.show_date_suggestions = false;
+                              PopupInputField::EndDate
+                          }
                          PopupInputField::Description => {
                              app.cursor_position = app.popup_event_end_time.chars().count();
                              PopupInputField::EndTime
@@ -449,14 +491,35 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                              app.cursor_position = app.popup_event_time.chars().count();
                              PopupInputField::Time
                          }
-                         PopupInputField::Time => {
-                             app.cursor_position = app.popup_event_end_date.chars().count();
-                             PopupInputField::EndDate
-                         }
-                         PopupInputField::EndDate => {
-                             app.cursor_position = app.popup_event_end_time.chars().count();
-                             PopupInputField::EndTime
-                         }
+                          PopupInputField::Time => {
+                              app.cursor_position = app.popup_event_end_date.chars().count();
+                              // Clear suggestions when entering EndDate
+                              app.date_input_error = None;
+                              app.date_suggestions.clear();
+                              app.show_date_suggestions = false;
+                              PopupInputField::EndDate
+                          }
+                          PopupInputField::EndDate => {
+                              if app.show_date_suggestions && !app.date_suggestions.is_empty() {
+                                  // Cycle through suggestions
+                                  if app.date_suggestions.len() == 1 {
+                                      app.popup_event_end_date = app.date_suggestions[0].clone();
+                                      app.date_input_error = None;
+                                      app.show_date_suggestions = false;
+                                  } else {
+                                      // For multiple suggestions, cycle through them
+                                      // For simplicity, just pick the first one for now
+                                      app.popup_event_end_date = app.date_suggestions[0].clone();
+                                      app.date_input_error = None;
+                                      app.show_date_suggestions = false;
+                                  }
+                                  app.cursor_position = app.popup_event_end_date.chars().count();
+                                  PopupInputField::EndDate
+                              } else {
+                                  app.cursor_position = app.popup_event_end_time.chars().count();
+                                  PopupInputField::EndTime
+                              }
+                          }
                          PopupInputField::EndTime => {
                              app.cursor_position = app.popup_event_description.chars().count();
                              PopupInputField::Description
@@ -584,6 +647,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.cursor_position = 0;
                     app.is_editing = false;
                     app.event_being_edited = None;
+                    app.date_input_error = None;
+                    app.date_suggestions.clear();
+                    app.show_date_suggestions = false;
                 }
 
                 KeyCode::Char('d') | KeyCode::Delete => {

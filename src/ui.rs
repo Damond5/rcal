@@ -443,10 +443,38 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title("Time"));
         f.render_widget(time_input, input_chunks[1]);
 
-        let end_date_input = ratatui::widgets::Paragraph::new(app.popup_event_end_date.as_str())
+        let end_date_block = if app.date_input_error.is_some() {
+            Block::default()
+                .borders(Borders::ALL)
+                .title("End Date")
+                .border_style(Style::default().fg(Color::Red))
+        } else {
+            Block::default().borders(Borders::ALL).title("End Date")
+        };
+        let end_date_text = if let Some(ref error) = app.date_input_error {
+            format!("{}\n{}", app.popup_event_end_date, error)
+        } else {
+            app.popup_event_end_date.clone()
+        };
+        let end_date_input = ratatui::widgets::Paragraph::new(end_date_text)
             .style(end_date_style)
-            .block(Block::default().borders(Borders::ALL).title("End Date"));
+            .block(end_date_block);
         f.render_widget(end_date_input, input_chunks[2]);
+
+        // Render suggestions below the end date input if available
+        if app.show_date_suggestions && !app.date_suggestions.is_empty() {
+            let suggestions_text = app.date_suggestions.join(" | ");
+            let suggestions = ratatui::widgets::Paragraph::new(suggestions_text)
+                .style(Style::default().fg(Color::Yellow))
+                .block(Block::default().borders(Borders::NONE));
+            let suggestion_area = Rect::new(
+                input_chunks[2].x,
+                input_chunks[2].y + input_chunks[2].height,
+                input_chunks[2].width,
+                1,
+            );
+            f.render_widget(suggestions, suggestion_area);
+        }
 
         let end_time_input = ratatui::widgets::Paragraph::new(app.popup_event_end_time.as_str())
             .style(end_time_style)

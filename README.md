@@ -133,6 +133,7 @@ rcal
 ### Event Storage
 Events are stored as individual markdown files in `~/calendar/` directory, one per event with title-based filenames. See EVENT_FORMAT.md for the detailed event format specification.
 - Events include title, start date, start time, end date, end time, and description
+- **Warning**: By default, non-recurring events that finished more than 2 months ago are automatically deleted on application launch to reduce clutter. Recurring events are not cleaned up to preserve ongoing schedules. This can be disabled in the configuration.
 
 ### Notification Settings
 - Daemon checks for events 30 minutes ahead
@@ -146,8 +147,13 @@ Events are stored as individual markdown files in `~/calendar/` directory, one p
 - Automatic pull on launch and push on save/delete happen asynchronously in background threads
 - Conflicts must be resolved manually in the markdown files
 
+### Configuration Options
+Configuration is stored in `~/.config/rcal/config.toml`.
+
+- `auto_cleanup_old_events` (default: true): Enable automatic cleanup of finished events older than 2 months on every launch. Set to false to disable this feature. Note: Deleted events cannot be recovered.
+
 ### Customization
-Currently, rcal uses default settings. Future versions may support configuration files for themes and notification preferences.
+Currently, rcal uses default settings. Future versions may support additional configuration options for themes and notification preferences.
 
 ## Development
 
@@ -179,7 +185,7 @@ CC0 1.0 Universal - see LICENSE file for details.
 
 ## Version
 
-Current version: 1.2.0
+Current version: 1.3.1
 
 ## Demo
 

@@ -45,30 +45,55 @@ fn get_config_path() -> PathBuf {
     path
 }
 
-fn load_remote_url() -> Option<String> {
+fn load_config() -> toml::Value {
     let config_path = get_config_path();
     if config_path.exists() {
-        let content = fs::read_to_string(config_path).ok()?;
-        let config: toml::Value = toml::from_str(&content).ok()?;
-        config
-            .get("sync")?
-            .get("remote")?
-            .as_str()
-            .map(|s| s.to_string())
+        match fs::read_to_string(&config_path) {
+            Ok(content) => match toml::from_str(&content) {
+                Ok(config) => config,
+                Err(e) => {
+                    eprintln!("Warning: Failed to parse config.toml: {e}. Using defaults.");
+                    toml::Value::Table(Default::default())
+                }
+            },
+            Err(e) => {
+                eprintln!("Warning: Failed to read config.toml: {e}. Using defaults.");
+                toml::Value::Table(Default::default())
+            }
+        }
     } else {
-        None
+        toml::Value::Table(Default::default())
     }
 }
 
+fn load_remote_url() -> Option<String> {
+    let config = load_config();
+    config
+        .get("sync")?
+        .get("remote")?
+        .as_str()
+        .map(|s| s.to_string())
+}
+
+fn should_auto_cleanup_old_events() -> bool {
+    let config = load_config();
+    config
+        .get("auto_cleanup_old_events")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(true)
+}
+
 fn save_remote_url(url: &str) -> Result<(), Box<dyn Error>> {
+    let mut config = load_config();
+    if let Some(table) = config.as_table_mut() {
+        table.entry("sync").or_insert_with(|| toml::Value::Table(Default::default()));
+        if let Some(sync_table) = table.get_mut("sync").and_then(|v| v.as_table_mut()) {
+            sync_table.insert("remote".to_string(), toml::Value::String(url.to_string()));
+        }
+    }
+    let config_str = toml::to_string(&config)?;
     let config_path = get_config_path();
-    let config = format!(
-        "
-[sync]
-remote = \"{url}\"
-"
-    );
-    fs::write(config_path, config)?;
+    fs::write(config_path, config_str)?;
     Ok(())
 }
 
@@ -125,6 +150,20 @@ fn main() -> Result<(), Box<dyn Error>> {
         eprintln!("Failed to load events: {e}");
         Vec::new()
     });
+
+    // Auto cleanup old events if enabled
+    if should_auto_cleanup_old_events() {
+        match persistence::cleanup_old_events(&app.calendar_dir, app.sync_provider.as_deref()) {
+            Ok(_) => {
+                // Reload events to reflect deletions
+                app.events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
+                    eprintln!("Failed to reload events after cleanup: {e}");
+                    Vec::new()
+                });
+            }
+            Err(e) => eprintln!("Auto cleanup failed: {e}"),
+        }
+    }
     let (tx, rx) = mpsc::channel::<Result<(), String>>();
     app.reload_receiver = Some(rx);
     if let Some(url) = load_remote_url() {

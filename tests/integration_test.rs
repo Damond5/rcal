@@ -1297,3 +1297,137 @@ fn test_view_boundary_no_shift_within_view() {
     assert_eq!(app.view_start_year, 2025);
     assert_eq!(app.date, NaiveDate::from_ymd_opt(2025, 10, 14).unwrap());
 }
+
+#[test]
+fn test_cleanup_old_events() {
+    let temp_dir = TempDir::new().unwrap();
+    let cutoff = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
+
+    // Create old event (finished before cutoff)
+    let mut old_event = CalendarEvent {
+        date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Old Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        is_all_day: false,
+    };
+    rcal::persistence::save_event_to_path(&mut old_event, temp_dir.path(), None).unwrap();
+
+    // Create recent event (finished after cutoff)
+    let mut recent_event = CalendarEvent {
+        date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Recent Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
+        end_date: Some(NaiveDate::from_ymd_opt(2023, 11, 1).unwrap()),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        is_all_day: false,
+    };
+    rcal::persistence::save_event_to_path(&mut recent_event, temp_dir.path(), None).unwrap();
+
+    // Create multi-day old event
+    let mut multi_day_old = CalendarEvent {
+        date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Multi Day Old".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        end_date: Some(NaiveDate::from_ymd_opt(2023, 7, 5).unwrap()),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        is_all_day: false,
+    };
+    rcal::persistence::save_event_to_path(&mut multi_day_old, temp_dir.path(), None).unwrap();
+
+    // Verify 3 events loaded
+    let events_before = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
+    assert_eq!(events_before.len(), 3);
+
+    // Run cleanup
+    let deleted = rcal::persistence::cleanup_old_events_with_cutoff(temp_dir.path(), None, cutoff).unwrap();
+    assert_eq!(deleted, 2); // Old and multi-day old should be deleted
+
+    // Verify only recent event remains
+    let events_after = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
+    assert_eq!(events_after.len(), 1);
+    assert_eq!(events_after[0].title, "Recent Event");
+}
+
+#[test]
+fn test_cleanup_old_events_preserves_recurring() {
+    let temp_dir = TempDir::new().unwrap();
+    let cutoff = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
+
+    // Create old recurring event (should not be deleted even if base date is old)
+    let mut recurring_event = CalendarEvent {
+        date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Old Recurring".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Weekly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        is_all_day: false,
+    };
+    rcal::persistence::save_event_to_path(&mut recurring_event, temp_dir.path(), None).unwrap();
+
+    // Create old non-recurring event (should be deleted)
+    let mut old_non_recurring = CalendarEvent {
+        date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Old Non-Recurring".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+        is_all_day: false,
+    };
+    rcal::persistence::save_event_to_path(&mut old_non_recurring, temp_dir.path(), None).unwrap();
+
+    // Check number of event files before cleanup
+    let files_before: Vec<_> = std::fs::read_dir(temp_dir.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("md"))
+        .collect();
+    assert_eq!(files_before.len(), 2);
+
+    // Run cleanup
+    let deleted = rcal::persistence::cleanup_old_events_with_cutoff(temp_dir.path(), None, cutoff).unwrap();
+    assert_eq!(deleted, 1); // Only non-recurring should be deleted
+
+    // Check number of event files after cleanup
+    let files_after: Vec<_> = std::fs::read_dir(temp_dir.path())
+        .unwrap()
+        .filter_map(|e| e.ok())
+        .filter(|e| e.path().extension().and_then(|s| s.to_str()) == Some("md"))
+        .collect();
+    assert_eq!(files_after.len(), 1);
+
+    // Verify the remaining file is the recurring event
+    let events_after = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
+    assert!(events_after.iter().any(|e| e.title == "Old Recurring" && e.recurrence == rcal::app::Recurrence::Weekly));
+}

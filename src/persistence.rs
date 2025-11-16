@@ -1,10 +1,66 @@
 use std::path::Path;
 
-use chrono::{Datelike, Duration, NaiveDate, NaiveTime};
+use chrono::{Datelike, Duration, Local, Months, NaiveDate, NaiveTime};
 use dirs;
 
 use crate::app::CalendarEvent;
 use crate::sync::SyncProvider;
+
+pub fn is_finished_before(event: &CalendarEvent, cutoff: NaiveDate) -> bool {
+    // Don't auto-delete recurring events to preserve ongoing schedules
+    if event.recurrence != crate::app::Recurrence::None {
+        return false;
+    }
+    let end_date = event.end_date.unwrap_or(event.start_date);
+    end_date < cutoff
+}
+
+pub fn cleanup_old_events(
+    calendar_dir: &Path,
+    sync_provider: Option<&dyn SyncProvider>,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    cleanup_old_events_with_cutoff(calendar_dir, sync_provider, Local::now().date_naive() - Months::new(2))
+}
+
+pub fn cleanup_old_events_with_cutoff(
+    calendar_dir: &Path,
+    sync_provider: Option<&dyn SyncProvider>,
+    cutoff: NaiveDate,
+) -> Result<usize, Box<dyn std::error::Error>> {
+    let events = load_events_from_path(calendar_dir)?;
+
+    let mut to_delete = Vec::new();
+    for event in events {
+        // Only consider base events for deletion, not generated recurring instances
+        if event.is_recurring_instance {
+            continue;
+        }
+        if is_finished_before(&event, cutoff) {
+            to_delete.push(event);
+        }
+    }
+
+    let mut deleted_count = 0;
+    for event in to_delete {
+        if let Err(e) = delete_event_from_path_without_sync(&event, calendar_dir) {
+            eprintln!("Failed to delete old event '{}': {}", event.title, e);
+        } else {
+            deleted_count += 1;
+        }
+    }
+
+    // Batch sync once after all deletions
+    if deleted_count > 0 {
+        if let Some(provider) = sync_provider {
+            if let Err(e) = provider.push(calendar_dir) {
+                eprintln!("Sync push failed after cleanup: {e}");
+            }
+        }
+        println!("Cleaned up {deleted_count} old events.");
+    }
+
+    Ok(deleted_count)
+}
 
 fn sanitize_title_for_filename(title: &str) -> String {
     let mut sanitized = title
@@ -37,6 +93,34 @@ fn sanitize_title_for_filename(title: &str) -> String {
     } else {
         collapsed
     }
+}
+
+fn find_event_filepath(calendar_dir: &Path, event: &CalendarEvent) -> Result<std::path::PathBuf, std::io::Error> {
+    let entries = std::fs::read_dir(calendar_dir)?;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.ends_with(".md"))
+            .unwrap_or(false)
+        {
+            let content = std::fs::read_to_string(&path)?;
+            for line in content.lines() {
+                if let Some(stripped) = line.strip_prefix("# Event: ") {
+                    let title = stripped.trim();
+                    if title == event.title {
+                        return Ok(path);
+                    }
+                }
+            }
+        }
+    }
+    Err(std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        format!("Event '{}' not found", event.title),
+    ))
 }
 
 pub fn load_events() -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
@@ -298,9 +382,7 @@ pub fn delete_event_from_path_without_sync(
     event: &CalendarEvent,
     calendar_dir: &Path,
 ) -> Result<(), std::io::Error> {
-    let base_name = sanitize_title_for_filename(&event.title);
-    let filename = format!("{base_name}.md");
-    let filepath = calendar_dir.join(filename);
+    let filepath = find_event_filepath(calendar_dir, event)?;
     std::fs::remove_file(filepath)?;
 
     Ok(())
@@ -567,5 +649,43 @@ mod tests {
         assert_eq!(events.len(), 2);
         assert_eq!(events[0].title, "Test Event");
         assert_eq!(events[1].title, "Test Event");
+    }
+
+    #[test]
+    fn test_delete_event_with_duplicate_titles() {
+        let temp_dir = TempDir::new().unwrap();
+        let mut event1 = CalendarEvent {
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Test Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::None,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        };
+        let mut event2 = event1.clone();
+        event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
+        event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
+
+        save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
+        save_event_to_path(&mut event2, temp_dir.path(), None).unwrap();
+
+        // Load events
+        let mut events = load_events_from_path(temp_dir.path()).unwrap();
+        assert_eq!(events.len(), 2);
+
+        // Delete the first event (both have same title, should delete one)
+        let event_to_delete = events.remove(0);
+        delete_event_from_path(&event_to_delete, temp_dir.path(), None).unwrap();
+
+        // Load again, should have one left
+        let events_after_delete = load_events_from_path(temp_dir.path()).unwrap();
+        assert_eq!(events_after_delete.len(), 1);
+        assert_eq!(events_after_delete[0].title, "Test Event");
     }
 }

@@ -47,7 +47,7 @@ Each event file is a Markdown document with the following structure:
 - **Description**: Additional details about the event
 
 ### Recurrence
-- **Format**: `none`, `daily`, `weekly`, or `monthly`
+- **Format**: `none`, `daily`, `weekly`, `monthly`, or `yearly`
 - **Required**: No (defaults to `none`)
 - **Description**: How the event repeats
 

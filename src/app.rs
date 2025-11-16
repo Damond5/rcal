@@ -8,6 +8,7 @@ pub enum Recurrence {
     Daily,
     Weekly,
     Monthly,
+    Yearly,
 }
 
 #[derive(Clone, PartialEq, Debug)]

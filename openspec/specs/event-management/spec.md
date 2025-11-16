@@ -219,10 +219,10 @@ When attempting to delete an event,
 Then logs the error and continues with remaining events.
 
 ### Requirement: Recurring Event Support
-Events MUST support recurring patterns (daily, weekly, monthly) with automatic instance generation.
+Events MUST support recurring patterns (daily, weekly, monthly, yearly) with automatic instance generation.
 
 #### Scenario: Recurrence Pattern Creation
-Given recurrence pattern (daily/weekly/monthly),
+Given recurrence pattern (daily/weekly/monthly/yearly),
 When creating event,
 Then base event is saved with recurrence metadata.
 

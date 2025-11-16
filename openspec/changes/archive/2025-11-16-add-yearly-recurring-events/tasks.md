@@ -1,0 +1,11 @@
+- [x] Update EVENT_FORMAT.md to include "yearly" as a valid recurrence value
+- [x] Add Yearly variant to Recurrence enum in app.rs
+- [x] Update recurrence parsing logic in event_handling.rs to accept "yearly" input
+- [x] Extend generate_recurring_instances function in persistence.rs to handle yearly recurrence
+- [x] Update UI recurrence input validation to accept "yearly"
+- [x] Build the project successfully to ensure no compilation errors
+- [x] Add unit tests for yearly recurring event generation
+- [x] Add integration tests for yearly recurring event creation and display
+- [x] Run full test suite to ensure no regressions
+- [x] Update CHANGELOG.md with the new feature
+- [x] Update README.md to include 'yearly' in the recurring events feature description

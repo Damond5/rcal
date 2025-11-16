@@ -265,6 +265,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         "daily" => crate::app::Recurrence::Daily,
                         "weekly" => crate::app::Recurrence::Weekly,
                         "monthly" => crate::app::Recurrence::Monthly,
+                        "yearly" => crate::app::Recurrence::Yearly,
                         _ => crate::app::Recurrence::None,
                     };
                     let description = app.popup_event_description.drain(..).collect();
@@ -519,6 +520,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             crate::app::Recurrence::Daily => "daily".to_string(),
                             crate::app::Recurrence::Weekly => "weekly".to_string(),
                             crate::app::Recurrence::Monthly => "monthly".to_string(),
+                            crate::app::Recurrence::Yearly => "yearly".to_string(),
                         };
                         app.popup_event_description = base_event.description.clone();
                         app.current_date_for_new_event = base_event.date;

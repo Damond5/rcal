@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Recurring event support (daily, weekly, monthly) with automatic instance generation
+- Recurring event support (daily, weekly, monthly, yearly) with automatic instance generation
 - Automatic cleanup of finished events older than 2 months on launch (configurable via `auto_cleanup_old_events`)
 
 ### Changed

@@ -24,6 +24,9 @@ use crate::persistence;
 use crate::sync::SyncProvider;
 use crate::ui::ui;
 
+/// Normalizes time input to HH:MM format.
+/// Handles inputs like "14", "9", "14:30", returning "HH:MM" or the original if invalid.
+/// Used for consistent time parsing in event creation.
 fn normalize_time_input(input: &str) -> String {
     let trimmed = input.trim();
 
@@ -215,38 +218,33 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
             },
             InputMode::EditingEventPopup => match key.code {
                 KeyCode::Enter => {
-                    if app.popup_event_title.trim().is_empty() {
-                        app.error_message = "Title cannot be empty".to_string();
-                        return Ok(true);
-                    }
-                    let time_str = app.popup_event_time.drain(..).collect::<String>();
-                    let normalized_time_str = normalize_time_input(&time_str);
-                    let is_all_day = normalized_time_str.trim().is_empty();
-                    let time = if is_all_day {
-                        NaiveTime::from_hms_opt(0, 0, 0).unwrap()
-                    } else {
-                        match NaiveTime::parse_from_str(&normalized_time_str, "%H:%M") {
-                            Ok(t) => t,
-                            Err(_) => {
-                                // Invalid time, close popup
-                                app.show_add_event_popup = false;
-                                app.input_mode = if app.show_view_events_popup {
-                                    InputMode::ViewEventsPopup
-                                } else {
-                                    InputMode::Normal
-                                };
-                                app.popup_event_title.clear();
-                                app.popup_event_time.clear();
-                                app.popup_event_end_date.clear();
-                                app.popup_event_end_time.clear();
-                                app.popup_event_description.clear();
-                                app.popup_event_recurrence.clear();
-                                app.is_editing = false;
-                                app.event_being_edited = None;
-                                return Ok(true);
-                            }
-                        }
-                    };
+                     if app.popup_event_title.trim().is_empty() {
+                         app.error_message = "Title cannot be empty".to_string();
+                         return Ok(true);
+                     }
+                     if let Some(ref error) = app.date_input_error {
+                         app.error_message = error.clone();
+                         return Ok(true);
+                     }
+                     // Additional validation for end date on submit
+                     if !app.popup_event_end_date.trim().is_empty() {
+                         if let Err(e) = date_utils::validate_date_input(&app.popup_event_end_date, app.current_date_for_new_event) {
+                             app.error_message = e;
+                             return Ok(true);
+                         }
+                     }
+                     let time_str = app.popup_event_time.clone();
+                     let normalized_time_str = normalize_time_input(&time_str);
+                     let is_all_day = normalized_time_str.trim().is_empty();
+                     if !is_all_day && NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").is_err() {
+                         app.error_message = "Invalid time format. Use HH:MM".to_string();
+                         return Ok(true);
+                     }
+                     let time = if is_all_day {
+                         NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                     } else {
+                         NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").unwrap()
+                     };
                     let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
                     let end_date = if end_date_str.trim().is_empty() {
                         Some(app.current_date_for_new_event)

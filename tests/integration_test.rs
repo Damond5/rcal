@@ -687,7 +687,7 @@ fn test_create_event_success() {
 }
 
 #[test]
-fn test_create_event_invalid_time() {
+fn test_create_event_invalid_time_shows_error() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
@@ -698,8 +698,9 @@ fn test_create_event_invalid_time() {
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
     assert_eq!(app.events.len(), 0); // No event should be created
-    assert!(!app.show_add_event_popup);
-    assert_eq!(app.input_mode, InputMode::Normal);
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.error_message, "Invalid time format. Use HH:MM");
 }
 
 #[test]
@@ -717,6 +718,63 @@ fn test_create_event_empty_title() {
     assert_eq!(app.error_message, "Title cannot be empty");
     assert!(app.show_add_event_popup); // Popup should remain open
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+}
+
+#[test]
+fn test_create_event_invalid_end_date_shows_error() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Meeting".to_string();
+    app.popup_event_time = "14:30".to_string();
+    app.popup_event_end_date = "99/99".to_string(); // Invalid date
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+    // Simulate real-time validation setting the error
+    app.date_input_error = Some("Invalid date".to_string());
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 0); // No event should be created
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.error_message, "Invalid date");
+}
+
+#[test]
+fn test_create_event_invalid_time_24_hour() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Meeting".to_string();
+    app.popup_event_time = "24:00".to_string(); // Invalid hour
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 0); // No event should be created
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.error_message, "Invalid time format. Use HH:MM");
+}
+
+#[test]
+fn test_create_event_malformed_end_date() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Meeting".to_string();
+    app.popup_event_time = "14:30".to_string();
+    app.popup_event_end_date = "abc".to_string(); // Malformed
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.events.len(), 0); // No event should be created
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.error_message, "Invalid format. Use DD/MM");
 }
 
 #[test]
@@ -1072,12 +1130,13 @@ fn test_edit_event_invalid_time() {
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    assert!(!app.show_add_event_popup);
-    assert_eq!(app.input_mode, InputMode::ViewEventsPopup);
+    assert!(app.show_add_event_popup); // Popup should remain open
+    assert_eq!(app.input_mode, InputMode::EditingEventPopup);
+    assert_eq!(app.error_message, "Invalid time format. Use HH:MM");
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0], original_event); // Event unchanged
-    assert!(!app.is_editing);
-    assert!(app.event_being_edited.is_none());
+    assert!(app.is_editing);
+    assert!(app.event_being_edited.is_some());
 }
 
 #[test]

@@ -1,4 +1,9 @@
 # TODO
+- fix (or remove?) autocomplete for end date
+- implement same format checking as end date for:
+  - time
+  - end time
+  - recurrence?
 
 ## Potential Enhancements
 - Calendar import/export features

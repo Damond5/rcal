@@ -22,8 +22,8 @@ Key benefits:
 - Support for multi-day events with start and end dates and times
 - All-day events (leave time field empty when creating)
 - Event details including title, start/end dates, start/end times, recurrence, and description
-- Flexible time input formats (HH:MM, HH, H)
-- End date input with real-time validation and auto-completion: Supports DD/MM format with automatic year assumption, provides immediate feedback for invalid dates, and suggests common patterns like "tomorrow", "next week", "end of month"
+- Flexible time input formats (HH:MM, HH, H) with validation on submission to prevent invalid times
+- End date input with real-time validation and auto-completion: Supports DD/MM format with automatic year assumption, provides immediate feedback for invalid dates, prevents acceptance of invalid dates on submission with error messages, and suggests common patterns like "tomorrow", "next week", "end of month"
 
 ### Advanced Features
 - Daemon mode for background notifications (30 minutes before timed events, midday the day before for all-day events)

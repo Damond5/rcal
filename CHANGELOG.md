@@ -7,7 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.4.0] - 2025-11-16
+
 ### Added
+- Prevent invalid date acceptance: Added validation on event submission to prevent creation of events with invalid dates, displaying error messages for invalid time input and invalid end date input instead of proceeding silently.
 - Recurring event support (daily, weekly, monthly, yearly) with automatic instance generation
 - Automatic cleanup of finished events older than 2 months on launch (configurable via `auto_cleanup_old_events`)
 - Lazy loading for recurring event instances, enabling indefinite display of long-term recurring events

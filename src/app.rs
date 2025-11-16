@@ -239,4 +239,24 @@ impl App {
             }
         }
     }
+
+    /// Invalidates the cached recurring event instances.
+    /// If an event is provided, only instances related to that event are removed (selective invalidation).
+    /// If no event is provided, all cached instances are cleared.
+    /// Call this after events are added, deleted, or edited to ensure
+    /// lazy loading refreshes the display with accurate instances.
+    pub fn invalidate_instance_cache(&mut self, event: Option<&CalendarEvent>) {
+        if let Some(event) = event {
+            // Selective invalidation: remove only instances related to this event
+            self.cached_instances.retain(|instance| {
+                // Keep instances that don't match the event's title and base_date
+                !(instance.title == event.title && instance.base_date == Some(event.start_date))
+            });
+            // Note: cached_range is kept, as other events' instances may still be valid
+        } else {
+            // Full invalidation
+            self.cached_range = None;
+            self.cached_instances.clear();
+        }
+    }
 }

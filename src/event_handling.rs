@@ -84,14 +84,16 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
         if let Some(ref receiver) = app.reload_receiver {
             match receiver.try_recv() {
                 Ok(Ok(_)) => {
-                    // Reload events
-                    app.events = persistence::load_events_from_path(&app.calendar_dir)
-                        .unwrap_or_else(|e| {
-                            eprintln!("Failed to reload events after sync: {e}");
-                            Vec::new()
-                        });
-                    // Update sync status (silently, don't interfere with sync popup)
-                    app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                     // Reload events
+                     app.events = persistence::load_events_from_path(&app.calendar_dir)
+                         .unwrap_or_else(|e| {
+                             eprintln!("Failed to reload events after sync: {e}");
+                             Vec::new()
+                         });
+                     // Invalidate cached instances after reloading events
+                     app.invalidate_instance_cache(None);
+                     // Update sync status (silently, don't interfere with sync popup)
+                     app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
                 }
                 Ok(Err(e)) => {
                     // Update sync status on error (silently, don't interfere with sync popup)
@@ -326,55 +328,39 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                     }
 
-                    app.events.push(event.clone());
-                    let _ =
-                        persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
+                     app.events.push(event.clone());
+                     let _ =
+                         persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
 
-                    // Instances generated lazily
+                     // Reset editing state
+                     app.is_editing = false;
+                     app.event_being_edited = None;
 
-                    // Spawn async sync
-                    if let Some(provider) = &app.sync_provider {
-                        if let Some(git_provider) = provider
-                            .as_any()
-                            .downcast_ref::<crate::sync::GitSyncProvider>()
-                        {
-                            let remote_url = git_provider.remote_url.clone();
-                            let calendar_dir = app.calendar_dir.clone();
-                            thread::spawn(move || {
-                                let provider = crate::sync::GitSyncProvider::new(remote_url);
-                                let _ = provider.push(&calendar_dir);
-                            });
-                        }
-                    }
+                     // If we came from the view events popup, refresh it and stay in that mode
+                     if app.show_view_events_popup {
+                         let all_events = app.get_all_events_for_range(app.date, app.date);
+                          app.events_to_display_in_popup = all_events
+                              .iter()
+                              .filter(|event| {
+                                  if let Some(end) = event.end_date {
+                                      event.start_date <= app.date && end >= app.date
+                                  } else {
+                                      event.start_date == app.date
+                                  }
+                              })
+                              .cloned()
+                              .collect();
+                         app.events_to_display_in_popup
+                             .sort_by_key(|event| event.time);
+                         app.selected_event_index = 0;
+                         app.input_mode = InputMode::ViewEventsPopup;
+                     } else {
+                         app.input_mode = InputMode::Normal;
+                     }
+                     app.show_add_event_popup = false;
 
-                    app.error_message.clear();
-
-                    // Reset editing state
-                    app.is_editing = false;
-                    app.event_being_edited = None;
-
-                    // If we came from the view events popup, refresh it and stay in that mode
-                    if app.show_view_events_popup {
-                        let all_events = app.get_all_events_for_range(app.date, app.date);
-                         app.events_to_display_in_popup = all_events
-                             .iter()
-                             .filter(|event| {
-                                 if let Some(end) = event.end_date {
-                                     event.start_date <= app.date && end >= app.date
-                                 } else {
-                                     event.start_date == app.date
-                                 }
-                             })
-                             .cloned()
-                             .collect();
-                        app.events_to_display_in_popup
-                            .sort_by_key(|event| event.time);
-                        app.selected_event_index = 0;
-                        app.input_mode = InputMode::ViewEventsPopup;
-                    } else {
-                        app.input_mode = InputMode::Normal;
-                    }
-                    app.show_add_event_popup = false;
+                     // Invalidate cached instances after event modification and UI refresh
+                     app.invalidate_instance_cache(None);
                 }
                  KeyCode::Char(c) => {
                      if app.selected_input_field == PopupInputField::Recurrence {
@@ -612,38 +598,42 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Char('y') => {
                     if let Some(index) = app.event_to_delete_index {
                         if index < app.events_to_display_in_popup.len() {
-                             let event_to_delete = &app.events_to_display_in_popup[index];
-                             // Determine if we need to delete a recurring series
-                             let base_to_delete = if event_to_delete.is_recurring_instance {
-                                 find_base_event_for_instance(event_to_delete, &app.events)
-                             } else if event_to_delete.recurrence != Recurrence::None {
-                                 Some(event_to_delete.clone())
-                             } else {
-                                 None
-                             };
+                              let event_to_delete = app.events_to_display_in_popup[index].clone();
+                              // Determine if we need to delete a recurring series
+                              let base_to_delete = if event_to_delete.is_recurring_instance {
+                                  find_base_event_for_instance(&event_to_delete, &app.events)
+                              } else if event_to_delete.recurrence != Recurrence::None {
+                                  Some(event_to_delete.clone())
+                              } else {
+                                  None
+                              };
 
-                             let deleted_title = if let Some(ref base) = base_to_delete {
-                                 // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
-                                 // and delete only the base event file from persistence (instances are in-memory only)
-                                 app.events.retain(|event| !(event.title == base.title && (event.is_recurring_instance || event == base)));
-                                 // Remove base event from persistence
-                                 let _ = persistence::delete_event_from_path_without_sync(
-                                     base,
-                                     &app.calendar_dir,
-                                 );
-                                 Some(base.title.clone())
-                             } else {
-                                 // Delete single non-recurring event
-                                 app.events.retain(|event| event != event_to_delete);
-                                 // Remove from persistence only if not a recurring instance
-                                 if !event_to_delete.is_recurring_instance {
-                                     let _ = persistence::delete_event_from_path_without_sync(
-                                         event_to_delete,
-                                         &app.calendar_dir,
-                                     );
-                                 }
-                                 None
-                             };
+                              let deleted_title = if let Some(ref base) = base_to_delete {
+                                  // Invalidate cached instances before deletion
+                                  app.invalidate_instance_cache(Some(base));
+                                  // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
+                                  // and delete only the base event file from persistence (instances are in-memory only)
+                                  app.events.retain(|event| !(event.title == base.title && (event.is_recurring_instance || event == base)));
+                                  // Remove base event from persistence
+                                  let _ = persistence::delete_event_from_path_without_sync(
+                                      base,
+                                      &app.calendar_dir,
+                                  );
+                                  Some(base.title.clone())
+                              } else {
+                                  // Invalidate cached instances before deletion
+                                  app.invalidate_instance_cache(Some(&event_to_delete.clone()));
+                                  // Delete single non-recurring event
+                                  app.events.retain(|event| event != &event_to_delete);
+                                  // Remove from persistence only if not a recurring instance
+                                  if !event_to_delete.is_recurring_instance {
+                                      let _ = persistence::delete_event_from_path_without_sync(
+                                          &event_to_delete,
+                                          &app.calendar_dir,
+                                      );
+                                  }
+                                  None
+                              };
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {
@@ -694,11 +684,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             Ok(status) => {
                                 app.sync_message = "Pull successful".to_string();
                                 app.sync_status = Some(status);
-                                // Reload events
-                                app.events = persistence::load_events().unwrap_or_else(|e| {
-                                    eprintln!("Failed to reload events after pull: {e}");
-                                    Vec::new()
-                                });
+                                 // Reload events
+                                 app.events = persistence::load_events().unwrap_or_else(|e| {
+                                     eprintln!("Failed to reload events after pull: {e}");
+                                     Vec::new()
+                                 });
+                                 // Invalidate cached instances after reloading events
+                                 app.invalidate_instance_cache(None);
                             }
                             Err(e) => {
                                 app.sync_message = format!("Pull failed: {e}");

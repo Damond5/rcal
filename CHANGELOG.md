@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 - **Breaking Change**: Changed recurring event deletion behavior - deleting any recurring instance now deletes the entire series persistently. Previously, only the specific instance was removed from memory.
+- Enhanced lazy loading to refresh cached recurring event instances after add, edit, or delete operations, ensuring UI accurately reflects changes without manual refresh.
 
 ## [1.3.1] - 2025-11-09
 

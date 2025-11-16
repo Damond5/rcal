@@ -28,6 +28,7 @@ Key benefits:
 ### Advanced Features
 - Daemon mode for background notifications (30 minutes before timed events, midday the day before for all-day events)
 - Real-time file watching for event updates
+- Immediate refresh of recurring event instances after add, edit, or delete operations for accurate and responsive calendar display
 - Unicode support in text input
 - Confirmation dialogs for safe operations
 - Asynchronous Git-based synchronization for cross-device event sharing (auto-sync happens in background)

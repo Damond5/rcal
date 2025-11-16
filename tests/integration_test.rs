@@ -1786,3 +1786,245 @@ fn test_yearly_recurring_event_creation_and_display() {
     // Check that base event has recurrence
     assert!(app.events.iter().any(|e| e.title == "Yearly Anniversary" && e.recurrence == Recurrence::Yearly));
 }
+
+#[test]
+fn test_cache_invalidation_on_event_add() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+
+    // Initially, cache should be empty
+    assert!(app.cached_range.is_none());
+    assert!(app.cached_instances.is_empty());
+
+    // Get events for range (should populate cache)
+    let events = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+    assert_eq!(app.cached_range, Some((start - chrono::Duration::days(365), end + chrono::Duration::days(365))));
+
+    // Add a recurring event
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Weekly Meeting".to_string();
+    app.popup_event_time = "10:00".to_string();
+    app.popup_event_recurrence = "weekly".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 15).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Cache should be invalidated
+    assert!(app.cached_range.is_none());
+    assert!(app.cached_instances.is_empty());
+
+    // Get events again (should regenerate cache)
+    let events_after = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+    // Should have the base event + instances
+    assert!(events_after.len() > events.len());
+    assert!(events_after.iter().any(|e| e.title == "Weekly Meeting"));
+}
+
+#[test]
+fn test_cache_invalidation_on_event_delete() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+
+    // Add a recurring event
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Weekly Meeting".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Weekly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    // Populate cache
+    let _ = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+
+    // Delete the event
+    app.date = NaiveDate::from_ymd_opt(2025, 10, 15).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Char('d'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Char('y'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Cache should be selectively invalidated (range kept, but instances for deleted event removed)
+    assert!(app.cached_range.is_some()); // Range is kept since other events may be cached
+    // Check that no instances of the deleted event remain
+    assert!(!app.cached_instances.iter().any(|e| e.title == "Weekly Meeting"));
+}
+
+#[test]
+fn test_cache_invalidation_on_event_edit() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+
+    // Add an event
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Meeting".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    // Populate cache
+    let _ = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+
+    // Edit the event
+    app.date = NaiveDate::from_ymd_opt(2025, 10, 15).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Char('e'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    app.popup_event_title = "Updated Meeting".to_string();
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Cache should be invalidated
+    assert!(app.cached_range.is_none());
+    assert!(app.cached_instances.is_empty());
+}
+
+#[test]
+fn test_get_all_events_for_range_cache_hit() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+
+    // Add a recurring event
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Weekly Meeting".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Weekly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    // First call should generate cache
+    let events1 = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+    let initial_cache_size = app.cached_instances.len();
+
+    // Second call with same range should hit cache
+    let events2 = app.get_all_events_for_range(start, end);
+    assert_eq!(events1, events2);
+    assert_eq!(app.cached_instances.len(), initial_cache_size);
+}
+
+#[test]
+fn test_get_all_events_for_range_large_range() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2030, 12, 31).unwrap();
+
+    // Add a yearly recurring event
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Yearly Event".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    // Should handle large range without issues
+    let events = app.get_all_events_for_range(start, end);
+    assert!(events.len() > 1); // Base + instances
+    assert!(app.cached_range.is_some());
+}
+
+#[test]
+fn test_get_all_events_for_range_invalid_dates() {
+    let (mut app, _temp_dir) = setup_app();
+    // Invalid range: end before start
+    let start = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+
+    // Should handle gracefully (though chrono might prevent this, but test robustness)
+    let events = app.get_all_events_for_range(start, end);
+    // Should return base events at least
+    assert!(events.len() >= app.events.len());
+}
+
+#[test]
+fn test_performance_frequent_invalidations() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
+
+    // Add 10 recurring events to simulate load
+    for i in 0..10 {
+        app.events.push(CalendarEvent {
+            id: uuid::Uuid::new_v4().to_string(),
+            is_all_day: false,
+            date: NaiveDate::from_ymd_opt(2025, 10, (i % 28) + 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: format!("Meeting {}", i),
+            description: String::new(),
+            recurrence: Recurrence::Weekly,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2025, 10, (i % 28) + 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+        });
+    }
+
+    // Measure time for multiple invalidations and regenerations
+    use std::time::Instant;
+    let mut total_time = std::time::Duration::new(0, 0);
+
+    for _ in 0..5 {
+        let timer = Instant::now();
+        app.invalidate_instance_cache(None);
+        let _ = app.get_all_events_for_range(start, end);
+        total_time += timer.elapsed();
+    }
+
+    // Should complete in reasonable time (less than 1 second total for 5 iterations)
+    assert!(total_time < std::time::Duration::from_secs(1));
+}

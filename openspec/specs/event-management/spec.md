@@ -216,6 +216,34 @@ Then uses existing safe deletion with sync support to maintain consistency.
 #### Scenario: Cleanup Failure Handling
 Given cleanup operation encounters a deletion failure (e.g., file locked),
 When attempting to delete an event,
-Then logs the error and continues with remaining events.</content>
-<parameter name="filePath">openspec/changes/delete-finished-events/specs/event-management/spec.md
+Then logs the error and continues with remaining events.
+
+### Requirement: Recurring Event Support
+Events MUST support recurring patterns (daily, weekly, monthly) with automatic instance generation.
+
+#### Scenario: Recurrence Pattern Creation
+Given recurrence pattern (daily/weekly/monthly),
+When creating event,
+Then base event is saved with recurrence metadata.
+
+### Requirement: In-Memory Instance Generation
+Recurring event instances MUST be generated in memory immediately upon event creation/loading, not persisted to disk.
+
+#### Scenario: Instance Display
+Given recurring event created,
+When viewing future dates,
+Then instances appear without reload.
+
+### Requirement: Instance vs Base Event Deletion
+Deleting a recurring instance MUST not affect the base event file, while deleting the base event removes all instances.
+
+#### Scenario: Instance Deletion
+Given recurring instance,
+When deleting,
+Then base event remains intact.
+
+#### Scenario: Base Event Deletion
+Given base recurring event,
+When deleting,
+Then all instances are removed from memory.
 

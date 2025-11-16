@@ -1431,3 +1431,123 @@ fn test_cleanup_old_events_preserves_recurring() {
     let events_after = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
     assert!(events_after.iter().any(|e| e.title == "Old Recurring" && e.recurrence == rcal::app::Recurrence::Weekly));
 }
+
+#[test]
+fn test_recurring_event_instances_generated() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.popup_event_title = "Weekly Meeting".to_string();
+    app.popup_event_time = "10:00".to_string();
+    app.popup_event_recurrence = "weekly".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Enter);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should have base event + instances
+    assert!(app.events.len() > 1);
+    // Check that base event is saved
+    assert!(app.events.iter().any(|e| e.title == "Weekly Meeting" && !e.is_recurring_instance));
+    // Check that instances are generated
+    assert!(app.events.iter().any(|e| e.title == "Weekly Meeting" && e.is_recurring_instance));
+    // Check that instances have correct base_date
+    let base_date = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+    assert!(app.events.iter().all(|e| e.title != "Weekly Meeting" || e.base_date == Some(base_date) || !e.is_recurring_instance));
+}
+
+#[test]
+fn test_delete_recurring_instance() {
+    let (mut app, _temp_dir) = setup_app();
+    let today = app.date;
+    // Add a recurring event
+    app.events.push(CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Daily Standup".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Daily,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+    // Generate instances
+    let until = today + chrono::Duration::days(5);
+    let instances = rcal::persistence::generate_recurring_instances(&app.events[0], until);
+    app.events.extend(instances);
+
+    let initial_count = app.events.len();
+
+    // Navigate to tomorrow where an instance is
+    app.date = today + chrono::Duration::days(1);
+    app.adjust_view_boundaries();
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Select the instance
+    app.selected_event_index = 0; // Should be the instance on tomorrow
+
+    // Press 'd' to delete
+    let key_event = KeyEvent::from(KeyCode::Char('d'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Confirm
+    let key_event = KeyEvent::from(KeyCode::Char('y'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should have one less event, base should remain
+    assert_eq!(app.events.len(), initial_count - 1);
+    assert!(app.events.iter().any(|e| e.title == "Daily Standup" && !e.is_recurring_instance));
+}
+
+#[test]
+fn test_delete_recurring_base_event() {
+    let (mut app, _temp_dir) = setup_app();
+    let today = app.date;
+    // Add a recurring event
+    app.events.push(CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Daily Standup".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Daily,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+    // Generate instances
+    let until = today + chrono::Duration::days(5);
+    let instances = rcal::persistence::generate_recurring_instances(&app.events[0], until);
+    app.events.extend(instances);
+
+    let initial_count = app.events.len();
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Select the base event (first one)
+    app.selected_event_index = 0;
+
+    // Press 'd' to delete
+    let key_event = KeyEvent::from(KeyCode::Char('d'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Confirm
+    let key_event = KeyEvent::from(KeyCode::Char('y'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should have removed all events with that title
+    assert!(!app.events.iter().any(|e| e.title == "Daily Standup"));
+    assert!(app.events.len() < initial_count);
+}

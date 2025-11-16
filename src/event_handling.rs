@@ -8,7 +8,7 @@ use ratatui::backend::Backend;
 use std::sync::mpsc::TryRecvError;
 use std::thread;
 
-use crate::app::{App, CalendarEvent, InputMode, PopupInputField};
+use crate::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
 use crate::persistence;
 use crate::sync::SyncProvider;
 use crate::ui::ui;
@@ -45,6 +45,8 @@ fn normalize_time_input(input: &str) -> String {
     // Return original if we can't parse it
     trimmed.to_string()
 }
+
+
 
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
@@ -120,15 +122,18 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                 KeyCode::Char('o') => {
                     app.show_view_events_popup = true;
-                    app.events_to_display_in_popup = app
-                        .events
-                        .iter()
-                        .filter(|event| {
-                            event.start_date <= app.date
-                                && event.end_date.is_none_or(|end| end >= app.date)
-                        })
-                        .cloned()
-                        .collect();
+                     app.events_to_display_in_popup = app
+                         .events
+                         .iter()
+                         .filter(|event| {
+                             if let Some(end) = event.end_date {
+                                 event.start_date <= app.date && end >= app.date
+                             } else {
+                                 event.start_date == app.date
+                             }
+                         })
+                         .cloned()
+                         .collect();
                     app.events_to_display_in_popup
                         .sort_by_key(|event| event.time);
                     app.selected_event_index = 0;
@@ -292,6 +297,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     let _ =
                         persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
 
+                    // Generate recurring instances if needed
+                    if event.recurrence != Recurrence::None {
+                        let until = chrono::Local::now().date_naive() + chrono::Duration::days(365);
+                        let instances = persistence::generate_recurring_instances(&event, until);
+                        app.events.extend(instances);
+                    }
+
                     // Spawn async sync
                     if let Some(provider) = &app.sync_provider {
                         if let Some(git_provider) = provider
@@ -315,15 +327,18 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                     // If we came from the view events popup, refresh it and stay in that mode
                     if app.show_view_events_popup {
-                        app.events_to_display_in_popup = app
-                            .events
-                            .iter()
-                            .filter(|event| {
-                                event.start_date <= app.date
-                                    && event.end_date.is_none_or(|end| end >= app.date)
-                            })
-                            .cloned()
-                            .collect();
+                         app.events_to_display_in_popup = app
+                             .events
+                             .iter()
+                             .filter(|event| {
+                                 if let Some(end) = event.end_date {
+                                     event.start_date <= app.date && end >= app.date
+                                 } else {
+                                     event.start_date == app.date
+                                 }
+                             })
+                             .cloned()
+                             .collect();
                         app.events_to_display_in_popup
                             .sort_by_key(|event| event.time);
                         app.selected_event_index = 0;
@@ -539,14 +554,26 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Char('y') => {
                     if let Some(index) = app.event_to_delete_index {
                         if index < app.events_to_display_in_popup.len() {
-                            let event_to_delete = &app.events_to_display_in_popup[index];
-                            // Remove from main events list
-                            app.events.retain(|event| event != event_to_delete);
-                            // Remove from persistence
-                            let _ = persistence::delete_event_from_path_without_sync(
-                                event_to_delete,
-                                &app.calendar_dir,
-                            );
+                             let event_to_delete = &app.events_to_display_in_popup[index];
+                             // If deleting a base recurring event, remove all instances too
+                             if !event_to_delete.is_recurring_instance && event_to_delete.recurrence != Recurrence::None {
+                                 app.events.retain(|event| !(event.title == event_to_delete.title && (event.is_recurring_instance || event == event_to_delete)));
+                                 // Remove from persistence
+                                 let _ = persistence::delete_event_from_path_without_sync(
+                                     event_to_delete,
+                                     &app.calendar_dir,
+                                 );
+                             } else {
+                                 // Remove only this event
+                                 app.events.retain(|event| event != event_to_delete);
+                                 // Remove from persistence only if not a recurring instance
+                                 if !event_to_delete.is_recurring_instance {
+                                     let _ = persistence::delete_event_from_path_without_sync(
+                                         event_to_delete,
+                                         &app.calendar_dir,
+                                     );
+                                 }
+                             }
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {

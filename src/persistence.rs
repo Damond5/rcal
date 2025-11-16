@@ -225,7 +225,7 @@ pub fn load_events_from_path(
     Ok(all_events)
 }
 
-fn generate_recurring_instances(
+pub fn generate_recurring_instances(
     base_event: &CalendarEvent,
     until: NaiveDate,
 ) -> Vec<CalendarEvent> {
@@ -234,6 +234,10 @@ fn generate_recurring_instances(
 
     while current_date <= until {
         if current_date != base_event.date {
+            let end_date = base_event.end_date.map(|end| {
+                let duration = end - base_event.start_date;
+                current_date + duration
+            });
             instances.push(CalendarEvent {
                 date: current_date,
                 time: base_event.time,
@@ -243,7 +247,7 @@ fn generate_recurring_instances(
                 is_recurring_instance: true,
                 base_date: Some(base_event.date),
                 start_date: current_date,
-                end_date: base_event.end_date,
+                end_date,
                 start_time: base_event.start_time,
                 end_time: base_event.end_time,
                 is_all_day: base_event.is_all_day,
@@ -254,6 +258,7 @@ fn generate_recurring_instances(
             crate::app::Recurrence::Daily => current_date += Duration::days(1),
             crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
             crate::app::Recurrence::Monthly => {
+                // Handle invalid dates (e.g., Feb 31) by stopping generation to avoid errors
                 if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
                     current_date = new_date;
                 } else {
@@ -687,5 +692,52 @@ mod tests {
         let events_after_delete = load_events_from_path(temp_dir.path()).unwrap();
         assert_eq!(events_after_delete.len(), 1);
         assert_eq!(events_after_delete[0].title, "Test Event");
+    }
+
+    #[test]
+    fn test_generate_recurring_instances_daily() {
+        let base_event = CalendarEvent {
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Daily Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::Daily,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        };
+        let until = NaiveDate::from_ymd_opt(2023, 10, 5).unwrap();
+        let instances = generate_recurring_instances(&base_event, until);
+        assert_eq!(instances.len(), 4); // 2,3,4,5
+        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap());
+        assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2023, 10, 3).unwrap());
+        assert!(instances.iter().all(|i| i.is_recurring_instance));
+        assert!(instances.iter().all(|i| i.base_date == Some(base_event.date)));
+    }
+
+    #[test]
+    fn test_generate_recurring_instances_weekly() {
+        let base_event = CalendarEvent {
+            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            title: "Weekly Event".to_string(),
+            description: String::new(),
+            recurrence: crate::app::Recurrence::Weekly,
+            is_recurring_instance: false,
+            base_date: None,
+            start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
+            end_date: None,
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            end_time: None,
+            is_all_day: false,
+        };
+        let until = NaiveDate::from_ymd_opt(2023, 10, 22).unwrap();
+        let instances = generate_recurring_instances(&base_event, until);
+        assert_eq!(instances.len(), 3); // 8,15,22
+        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2023, 10, 8).unwrap());
     }
 }

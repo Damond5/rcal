@@ -16,9 +16,10 @@ Key benefits:
 ### Core Functionality
 - Interactive three-month calendar view with day/week/month navigation
 - Add, view, edit, and delete events
+- Support for recurring events (daily, weekly, monthly) with automatic instance display
 - Support for multi-day events with start and end dates and times
 - All-day events (leave time field empty when creating)
-- Event details including title, start/end dates, start/end times, and description
+- Event details including title, start/end dates, start/end times, recurrence, and description
 - Flexible time input formats (HH:MM, HH, H)
 - End date input format: DD/MM with automatic year assumption
 

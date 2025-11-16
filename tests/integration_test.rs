@@ -4,6 +4,7 @@ use rcal::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
 use rcal::event_handling::handle_event;
 use std::sync::mpsc;
 use tempfile::TempDir;
+use uuid;
 
 fn setup_app() -> (App, TempDir) {
     let temp_dir = TempDir::new().unwrap();
@@ -470,6 +471,7 @@ fn test_delete_event_from_view_popup() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Delete".to_string(),
@@ -484,6 +486,7 @@ fn test_delete_event_from_view_popup() {
         is_all_day: false,
     });
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
@@ -557,7 +560,7 @@ fn test_cancel_delete_event_confirmation() {
 
     assert_eq!(app.input_mode, InputMode::ViewEventsPopup);
     assert_eq!(app.events.len(), 1); // Event should still exist
-    assert_eq!(app.events[0].title, "Event to Keep");
+    assert_eq!(app.events[0].title, "Daily Event");
 }
 
 #[test]
@@ -604,6 +607,7 @@ fn test_navigate_events_in_view_popup() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -618,6 +622,7 @@ fn test_navigate_events_in_view_popup() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: today,
         time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Second Event".to_string(),
@@ -792,6 +797,7 @@ fn test_view_events_popup_with_events() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -806,6 +812,7 @@ fn test_view_events_popup_with_events() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
@@ -850,6 +857,7 @@ fn test_view_events_popup_filters_by_date() {
     let tomorrow = today + chrono::Duration::days(1);
 
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -864,6 +872,7 @@ fn test_view_events_popup_filters_by_date() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: tomorrow,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -901,6 +910,7 @@ fn test_open_edit_event_popup() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -937,6 +947,7 @@ fn test_edit_event_success() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -986,6 +997,7 @@ fn test_cancel_edit_event() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1029,6 +1041,7 @@ fn test_edit_event_invalid_time() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1072,6 +1085,7 @@ fn test_edit_event_empty_title() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     let original_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1116,6 +1130,7 @@ fn test_edit_event_change_time_sorting() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
@@ -1130,6 +1145,7 @@ fn test_edit_event_change_time_sorting() {
         end_time: None,
     });
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1176,6 +1192,7 @@ fn test_edit_event_persistence() {
     let (mut app, _temp_dir) = setup_app();
     let today = app.date;
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1306,6 +1323,7 @@ fn test_cleanup_old_events() {
 
     // Create old event (finished before cutoff)
     let mut old_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Event".to_string(),
@@ -1323,6 +1341,7 @@ fn test_cleanup_old_events() {
 
     // Create recent event (finished after cutoff)
     let mut recent_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Recent Event".to_string(),
@@ -1340,6 +1359,7 @@ fn test_cleanup_old_events() {
 
     // Create multi-day old event
     let mut multi_day_old = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Multi Day Old".to_string(),
@@ -1376,6 +1396,7 @@ fn test_cleanup_old_events_preserves_recurring() {
 
     // Create old recurring event (should not be deleted even if base date is old)
     let mut recurring_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Recurring".to_string(),
@@ -1393,6 +1414,7 @@ fn test_cleanup_old_events_preserves_recurring() {
 
     // Create old non-recurring event (should be deleted)
     let mut old_non_recurring = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Non-Recurring".to_string(),
@@ -1460,6 +1482,7 @@ fn test_delete_recurring_instance() {
     let today = app.date;
     // Add a recurring event
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1510,6 +1533,7 @@ fn test_delete_recurring_base_event() {
     let today = app.date;
     // Add a recurring event
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1554,6 +1578,7 @@ fn test_delete_recurring_base_event() {
 fn test_find_base_event_for_instance() {
     let today = chrono::Local::now().date_naive();
     let base_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1568,6 +1593,7 @@ fn test_find_base_event_for_instance() {
         end_time: None,
     };
     let instance = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today + chrono::Duration::days(1),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1591,6 +1617,7 @@ fn test_find_base_event_for_instance() {
 fn test_find_base_event_for_non_instance() {
     let today = chrono::Local::now().date_naive();
     let event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1614,6 +1641,7 @@ fn test_find_base_event_for_non_instance() {
 fn test_find_base_event_no_match() {
     let today = chrono::Local::now().date_naive();
     let instance = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today + chrono::Duration::days(1),
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1639,6 +1667,7 @@ fn test_delete_recurring_instance_deletes_series() {
     let today = app.date;
     // Add a recurring event
     app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
@@ -1690,6 +1719,7 @@ fn test_delete_recurring_series_persistence() {
     let today = app.date;
     // Create and save a recurring event
     let mut recurring_event = CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
         date: today,
         time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),

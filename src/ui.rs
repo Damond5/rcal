@@ -465,31 +465,32 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 .block(Block::default().borders(Borders::ALL).title("Recurrence"));
         f.render_widget(recurrence_input, input_chunks[5]);
 
-        match app.selected_input_field {
-            PopupInputField::Title => {
-                f.set_cursor(
-                    input_chunks[0].x + app.cursor_position as u16 + 1,
-                    input_chunks[0].y + 1,
-                );
-            }
-            PopupInputField::Time => {
-                f.set_cursor(
-                    input_chunks[1].x + app.cursor_position as u16 + 1,
-                    input_chunks[1].y + 1,
-                );
-            }
-            PopupInputField::EndDate => {
-                f.set_cursor(
-                    input_chunks[2].x + app.cursor_position as u16 + 1,
-                    input_chunks[2].y + 1,
-                );
-            }
-            PopupInputField::EndTime => {
-                f.set_cursor(
-                    input_chunks[3].x + app.cursor_position as u16 + 1,
-                    input_chunks[3].y + 1,
-                );
-            }
+        if app.input_mode == InputMode::EditingEventPopup {
+            match app.selected_input_field {
+                PopupInputField::Title => {
+                    f.set_cursor(
+                        input_chunks[0].x + app.cursor_position as u16 + 1,
+                        input_chunks[0].y + 1,
+                    );
+                }
+                PopupInputField::Time => {
+                    f.set_cursor(
+                        input_chunks[1].x + app.cursor_position as u16 + 1,
+                        input_chunks[1].y + 1,
+                    );
+                }
+                PopupInputField::EndDate => {
+                    f.set_cursor(
+                        input_chunks[2].x + app.cursor_position as u16 + 1,
+                        input_chunks[2].y + 1,
+                    );
+                }
+                PopupInputField::EndTime => {
+                    f.set_cursor(
+                        input_chunks[3].x + app.cursor_position as u16 + 1,
+                        input_chunks[3].y + 1,
+                    );
+                }
             PopupInputField::Description => {
                 f.set_cursor(
                     input_chunks[4].x + app.cursor_position as u16 + 1,
@@ -497,10 +498,9 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 );
             }
             PopupInputField::Recurrence => {
-                f.set_cursor(
-                    input_chunks[5].x + app.cursor_position as u16 + 1,
-                    input_chunks[5].y + 1,
-                );
+                // No cursor for recurrence field as input is disabled
+            }
+
             }
         }
 
@@ -512,9 +512,50 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         }
 
         // Render hints
-        let hints = Paragraph::new("Tab/Shift+Tab: switch field, Enter: save, Esc: cancel")
+        let hints_text = if app.input_mode == InputMode::SelectingRecurrence {
+            "j/k: navigate, Enter: select, Esc: cancel"
+        } else {
+            "Tab/Shift+Tab: switch field, Enter: save, Esc: cancel"
+        };
+        let hints = Paragraph::new(hints_text)
             .style(Style::default().fg(Color::Gray));
         f.render_widget(hints, hints_area);
+    }
+
+    if app.input_mode == InputMode::SelectingRecurrence {
+        let popup_block = Block::default()
+            .title("Select Recurrence")
+            .borders(Borders::ALL)
+            .style(Style::default().fg(Color::LightCyan));
+
+        let area = {
+            let size = f.size();
+            let popup_width = 20;
+            let popup_height = 7;
+            Rect::new(
+                (size.width - popup_width) / 2,
+                (size.height - popup_height) / 2,
+                popup_width,
+                popup_height,
+            )
+        };
+
+        let inner_area = popup_block.inner(area);
+        f.render_widget(Clear, area);
+        f.render_widget(popup_block, area);
+
+        let recurrence_options: Vec<ListItem> = [
+            "none", "daily", "weekly", "monthly", "yearly"
+        ].iter().enumerate().map(|(i, &opt)| {
+            if i == app.selected_recurrence_index {
+                ListItem::new(opt).style(Style::default().fg(Color::Black).bg(Color::LightBlue))
+            } else {
+                ListItem::new(opt)
+            }
+        }).collect();
+
+        let recurrence_list = List::new(recurrence_options);
+        f.render_widget(recurrence_list, inner_area);
     }
 
     if app.input_mode == InputMode::Sync {

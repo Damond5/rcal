@@ -16,6 +16,7 @@ Key benefits:
 ### Core Functionality
 - Interactive three-month calendar view with day/week/month navigation
 - Add, view, edit, and delete events
+- Recurrence options can be selected from a popup overlay that appears when navigating to the recurrence field in the event creation and editing popups, instead of typing them, guiding users and preventing errors
 - Support for recurring events (daily, weekly, monthly, yearly) with automatic instance display for indefinite periods
 - Deleting any recurring event instance deletes the entire series persistently
 - Support for multi-day events with start and end dates and times
@@ -100,6 +101,7 @@ cargo install --path .
 - **Cursor Movement**: Left/Right arrows
 - **Delete Character**: Backspace
 - **Confirm Delete**: `y` or `Y` (in confirmation dialog)
+- **Recurrence Selection**: When navigating to the recurrence field, a popup overlay appears; use j/k to navigate options, Enter to select, Esc to cancel
 
 ### Examples
 ```bash

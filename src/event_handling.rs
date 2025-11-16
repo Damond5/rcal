@@ -9,6 +9,16 @@ use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
+
+fn recurrence_str_to_index(s: &str) -> usize {
+    match s.to_lowercase().as_str() {
+        "daily" => 1,
+        "weekly" => 2,
+        "monthly" => 3,
+        "yearly" => 4,
+        _ => 0, // Default to "none" for invalid recurrence strings
+    }
+}
 use crate::persistence;
 use crate::sync::SyncProvider;
 use crate::ui::ui;
@@ -179,10 +189,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                         }
                                         crate::sync::SyncStatus::Error(e) => {
                                             format!("Status error: {e}")
-                                        }
-                                    };
-                                    app.sync_status = Some(status);
-                                }
+                         }
+                     };
+                     if app.selected_input_field == PopupInputField::Recurrence {
+                         app.input_mode = InputMode::SelectingRecurrence;
+                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
+                     }
+                 }
                                 Err(e) => {
                                     app.sync_message = format!("Status failed: {e}");
                                     app.sync_status =
@@ -363,13 +376,16 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     }
                     app.show_add_event_popup = false;
                 }
-                KeyCode::Char(c) => {
-                    let cursor_pos = app.cursor_position;
-                    let field = app.get_current_field_mut();
-                    let byte_index = App::char_to_byte_index(field, cursor_pos);
-                    field.insert(byte_index, c);
-                    app.cursor_position += 1;
-                }
+                 KeyCode::Char(c) => {
+                     if app.selected_input_field == PopupInputField::Recurrence {
+                         return Ok(true);
+                     }
+                     let cursor_pos = app.cursor_position;
+                     let field = app.get_current_field_mut();
+                     let byte_index = App::char_to_byte_index(field, cursor_pos);
+                     field.insert(byte_index, c);
+                     app.cursor_position += 1;
+                 }
                 KeyCode::Backspace => {
                     if app.cursor_position > 0 {
                         let cursor_pos = app.cursor_position - 1;
@@ -408,65 +424,104 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         app.cursor_position += 1;
                     }
                 }
-                KeyCode::BackTab => {
-                    app.selected_input_field = match app.selected_input_field {
-                        PopupInputField::Title => {
-                            app.cursor_position = app.popup_event_recurrence.chars().count();
-                            PopupInputField::Recurrence
-                        }
-                        PopupInputField::Time => {
-                            app.cursor_position = app.popup_event_title.chars().count();
-                            PopupInputField::Title
-                        }
-                        PopupInputField::EndDate => {
-                            app.cursor_position = app.popup_event_time.chars().count();
-                            PopupInputField::Time
-                        }
-                        PopupInputField::EndTime => {
-                            app.cursor_position = app.popup_event_end_date.chars().count();
-                            PopupInputField::EndDate
-                        }
-                        PopupInputField::Description => {
-                            app.cursor_position = app.popup_event_end_time.chars().count();
-                            PopupInputField::EndTime
-                        }
-                        PopupInputField::Recurrence => {
-                            app.cursor_position = app.popup_event_description.chars().count();
-                            PopupInputField::Description
-                        }
-                    };
-                }
-                KeyCode::Tab => {
-                    app.selected_input_field = match app.selected_input_field {
-                        PopupInputField::Title => {
-                            app.cursor_position = app.popup_event_time.chars().count();
-                            PopupInputField::Time
-                        }
-                        PopupInputField::Time => {
-                            app.cursor_position = app.popup_event_end_date.chars().count();
-                            PopupInputField::EndDate
-                        }
-                        PopupInputField::EndDate => {
-                            app.cursor_position = app.popup_event_end_time.chars().count();
-                            PopupInputField::EndTime
-                        }
-                        PopupInputField::EndTime => {
-                            app.cursor_position = app.popup_event_description.chars().count();
-                            PopupInputField::Description
-                        }
-                        PopupInputField::Description => {
-                            app.cursor_position = app.popup_event_recurrence.chars().count();
-                            PopupInputField::Recurrence
-                        }
-                        PopupInputField::Recurrence => {
-                            app.cursor_position = app.popup_event_title.chars().count();
-                            PopupInputField::Title
-                        }
-                    };
-                }
-                _ => {}
-            },
-            InputMode::ViewEventsPopup => match key.code {
+                 KeyCode::BackTab => {
+                     app.selected_input_field = match app.selected_input_field {
+                         PopupInputField::Title => {
+                             app.cursor_position = app.popup_event_recurrence.chars().count();
+                             PopupInputField::Recurrence
+                         }
+                         PopupInputField::Time => {
+                             app.cursor_position = app.popup_event_title.chars().count();
+                             PopupInputField::Title
+                         }
+                         PopupInputField::EndDate => {
+                             app.cursor_position = app.popup_event_time.chars().count();
+                             PopupInputField::Time
+                         }
+                         PopupInputField::EndTime => {
+                             app.cursor_position = app.popup_event_end_date.chars().count();
+                             PopupInputField::EndDate
+                         }
+                         PopupInputField::Description => {
+                             app.cursor_position = app.popup_event_end_time.chars().count();
+                             PopupInputField::EndTime
+                         }
+                         PopupInputField::Recurrence => {
+                             app.cursor_position = app.popup_event_description.chars().count();
+                             PopupInputField::Description
+                          }
+                     };
+                     if app.selected_input_field == PopupInputField::Recurrence {
+                         app.input_mode = InputMode::SelectingRecurrence;
+                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
+                     }
+                 }
+
+                 KeyCode::Tab => {
+                     app.selected_input_field = match app.selected_input_field {
+                         PopupInputField::Title => {
+                             app.cursor_position = app.popup_event_time.chars().count();
+                             PopupInputField::Time
+                         }
+                         PopupInputField::Time => {
+                             app.cursor_position = app.popup_event_end_date.chars().count();
+                             PopupInputField::EndDate
+                         }
+                         PopupInputField::EndDate => {
+                             app.cursor_position = app.popup_event_end_time.chars().count();
+                             PopupInputField::EndTime
+                         }
+                         PopupInputField::EndTime => {
+                             app.cursor_position = app.popup_event_description.chars().count();
+                             PopupInputField::Description
+                         }
+                         PopupInputField::Description => {
+                             app.cursor_position = app.popup_event_recurrence.chars().count();
+                             PopupInputField::Recurrence
+                         }
+                         PopupInputField::Recurrence => {
+                             app.cursor_position = app.popup_event_title.chars().count();
+                             PopupInputField::Title
+                         }
+                     };
+                     if app.selected_input_field == PopupInputField::Recurrence {
+                         app.input_mode = InputMode::SelectingRecurrence;
+                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
+                     }
+                 }
+                 _ => {}
+             },
+             InputMode::SelectingRecurrence => match key.code {
+                 KeyCode::Up | KeyCode::Char('k') => {
+                     if app.selected_recurrence_index > 0 {
+                         app.selected_recurrence_index -= 1;
+                     }
+                 }
+                 KeyCode::Down | KeyCode::Char('j') => {
+                     if app.selected_recurrence_index < 4 {
+                         app.selected_recurrence_index += 1;
+                     }
+                 }
+                 KeyCode::Enter => {
+                     let recurrence_str = match app.selected_recurrence_index {
+                         0 => "none",
+                         1 => "daily",
+                         2 => "weekly",
+                         3 => "monthly",
+                         4 => "yearly",
+                         _ => "none",
+                     };
+                     app.popup_event_recurrence = recurrence_str.to_string();
+                     app.input_mode = InputMode::EditingEventPopup;
+                     app.selected_input_field = PopupInputField::Recurrence;
+                 }
+                 KeyCode::Esc => {
+                     app.input_mode = InputMode::EditingEventPopup;
+                     app.selected_input_field = PopupInputField::Recurrence;
+                 }
+                 _ => {}
+             },
+             InputMode::ViewEventsPopup => match key.code {
                 KeyCode::Esc => {
                     app.show_view_events_popup = false;
                     app.events_to_display_in_popup.clear();

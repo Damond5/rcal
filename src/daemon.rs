@@ -185,7 +185,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(30);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),
@@ -217,7 +217,7 @@ mod tests {
         let past_time = now.time() - Duration::minutes(15);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             is_all_day: false,
             date: today,
             time: past_time,
@@ -245,7 +245,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(15);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             is_all_day: false,
             date: today,
             time: future_time,
@@ -280,7 +280,7 @@ mod tests {
         let now_before_midday = today.and_time(before_midday);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             date: tomorrow,
             time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             title: "All Day Event".to_string(),
@@ -310,7 +310,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(30);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             is_all_day: false,
             date: today,
             time: future_time,
@@ -343,7 +343,7 @@ mod tests {
 
         let events = vec![
             CalendarEvent {
-                id: uuid::uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4().to_string(),
                 is_all_day: false,
                 date: today,
                 time: time1,
@@ -358,7 +358,7 @@ mod tests {
                 end_time: None,
             },
             CalendarEvent {
-                id: uuid::uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4().to_string(),
                 is_all_day: false,
                 date: today,
                 time: time2,
@@ -373,7 +373,7 @@ mod tests {
                 end_time: None,
             },
             CalendarEvent {
-                id: uuid::uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4().to_string(),
                 is_all_day: false,
                 date: today,
                 time: time3,
@@ -406,7 +406,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(31);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             is_all_day: false,
             date: today,
             time: future_time,
@@ -435,7 +435,7 @@ mod tests {
 
         let events = vec![
             CalendarEvent {
-                id: uuid::uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4().to_string(),
                 is_all_day: false,
                 date: today,
                 time: same_time,
@@ -450,7 +450,7 @@ mod tests {
                 end_time: None,
             },
             CalendarEvent {
-                id: uuid::uuid::Uuid::new_v4().to_string(),
+                id: uuid::Uuid::new_v4().to_string(),
                 is_all_day: false,
                 date: today,
                 time: same_time,
@@ -481,7 +481,7 @@ mod tests {
         let future_time = now.time() + Duration::minutes(30);
 
         let events = vec![CalendarEvent {
-            id: uuid::uuid::Uuid::new_v4().to_string(),
+            id: uuid::Uuid::new_v4().to_string(),
             date: today,
             time: future_time,
             title: "Test Event".to_string(),

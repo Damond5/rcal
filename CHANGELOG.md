@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recurring event support (daily, weekly, monthly, yearly) with automatic instance generation
 - Automatic cleanup of finished events older than 2 months on launch (configurable via `auto_cleanup_old_events`)
 - Lazy loading for recurring event instances, enabling indefinite display of long-term recurring events
+- Recurrence dropdown for event creation/editing implemented as a popup overlay instead of inline to prevent invalid syntax and improve usability
 
 ### Changed
 - **Breaking Change**: Changed recurring event deletion behavior - deleting any recurring instance now deletes the entire series persistently. Previously, only the specific instance was removed from memory.

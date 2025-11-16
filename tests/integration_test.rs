@@ -1501,9 +1501,9 @@ fn test_delete_recurring_instance() {
     let key_event = KeyEvent::from(KeyCode::Char('y'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    // Should have one less event, base should remain
-    assert_eq!(app.events.len(), initial_count - 1);
-    assert!(app.events.iter().any(|e| e.title == "Daily Standup" && !e.is_recurring_instance));
+    // Should have removed all events with that title (entire series)
+    assert!(!app.events.iter().any(|e| e.title == "Daily Standup"));
+    assert!(app.events.len() < initial_count);
 }
 
 #[test]
@@ -1550,4 +1550,190 @@ fn test_delete_recurring_base_event() {
     // Should have removed all events with that title
     assert!(!app.events.iter().any(|e| e.title == "Daily Standup"));
     assert!(app.events.len() < initial_count);
+}
+
+#[test]
+fn test_find_base_event_for_instance() {
+    let today = chrono::Local::now().date_naive();
+    let base_event = CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Base Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Daily,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    let instance = CalendarEvent {
+        is_all_day: false,
+        date: today + chrono::Duration::days(1),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Base Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: true,
+        base_date: Some(today),
+        start_date: today + chrono::Duration::days(1),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    let events = vec![base_event.clone(), instance.clone()];
+
+    let found = rcal::event_handling::find_base_event_for_instance(&instance, &events);
+    assert_eq!(found, Some(base_event));
+}
+
+#[test]
+fn test_find_base_event_for_non_instance() {
+    let today = chrono::Local::now().date_naive();
+    let event = CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Event".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    let events = vec![event.clone()];
+
+    let found = rcal::event_handling::find_base_event_for_instance(&event, &events);
+    assert_eq!(found, None);
+}
+
+#[test]
+fn test_find_base_event_no_match() {
+    let today = chrono::Local::now().date_naive();
+    let instance = CalendarEvent {
+        is_all_day: false,
+        date: today + chrono::Duration::days(1),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Instance".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::None,
+        is_recurring_instance: true,
+        base_date: Some(today),
+        start_date: today + chrono::Duration::days(1),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    let events = vec![]; // No base event
+
+    let found = rcal::event_handling::find_base_event_for_instance(&instance, &events);
+    assert_eq!(found, None);
+}
+
+#[test]
+fn test_delete_recurring_instance_deletes_series() {
+    let (mut app, _temp_dir) = setup_app();
+    let today = app.date;
+    // Add a recurring event
+    app.events.push(CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Weekly Meeting".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Weekly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+    // Generate instances
+    let until = today + chrono::Duration::weeks(4);
+    let instances = rcal::persistence::generate_recurring_instances(&app.events[0], until);
+    app.events.extend(instances);
+
+    let initial_count = app.events.len();
+    assert!(initial_count > 1); // Should have base + instances
+
+    // Navigate to a future week where an instance is
+    app.date = today + chrono::Duration::weeks(1);
+    app.adjust_view_boundaries();
+
+    // Open view events popup
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Select the instance
+    app.selected_event_index = 0; // Should be the instance
+
+    // Press 'd' to delete
+    let key_event = KeyEvent::from(KeyCode::Char('d'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Confirm
+    let key_event = KeyEvent::from(KeyCode::Char('y'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should have removed all events with that title (entire series)
+    assert!(!app.events.iter().any(|e| e.title == "Weekly Meeting"));
+    assert!(app.events.is_empty() || app.events.len() < initial_count);
+}
+
+#[test]
+fn test_delete_recurring_series_persistence() {
+    let (mut app, temp_dir) = setup_app();
+    let today = app.date;
+    // Create and save a recurring event
+    let mut recurring_event = CalendarEvent {
+        is_all_day: false,
+        date: today,
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Persistent Recurring".to_string(),
+        description: String::new(),
+        recurrence: rcal::app::Recurrence::Weekly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: today,
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    };
+    rcal::persistence::save_event_to_path(&mut recurring_event, temp_dir.path(), None).unwrap();
+
+    // Reload events to simulate app restart
+    app.events = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
+    // Generate instances
+    let until = today + chrono::Duration::weeks(4);
+    let instances = rcal::persistence::generate_recurring_instances(&app.events[0], until);
+    app.events.extend(instances);
+
+    assert!(app.events.iter().any(|e| e.title == "Persistent Recurring"));
+
+    // Delete an instance
+    app.date = today + chrono::Duration::weeks(1);
+    app.adjust_view_boundaries();
+
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    app.selected_event_index = 0;
+    let key_event = KeyEvent::from(KeyCode::Char('d'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    let key_event = KeyEvent::from(KeyCode::Char('y'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Series should be deleted from memory
+    assert!(!app.events.iter().any(|e| e.title == "Persistent Recurring"));
+
+    // Reload events to simulate restart - should not come back
+    app.events = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
+    assert!(!app.events.iter().any(|e| e.title == "Persistent Recurring"));
 }

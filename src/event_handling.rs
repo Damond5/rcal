@@ -46,6 +46,24 @@ fn normalize_time_input(input: &str) -> String {
     trimmed.to_string()
 }
 
+pub fn find_base_event_for_instance(instance: &CalendarEvent, events: &[CalendarEvent]) -> Option<CalendarEvent> {
+    if !instance.is_recurring_instance {
+        return None;
+    }
+    if let Some(base_date) = instance.base_date {
+        events.iter().find(|e| {
+            e.date == base_date
+                && e.title == instance.title
+                && e.time == instance.time
+                && e.description == instance.description
+                && !e.is_recurring_instance
+        }).cloned()
+    } else {
+        eprintln!("Warning: Recurring instance lacks base_date: {}", instance.title);
+        None
+    }
+}
+
 
 
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
@@ -483,23 +501,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     if !app.events_to_display_in_popup.is_empty() {
                         let selected_event =
                             &app.events_to_display_in_popup[app.selected_event_index];
-                        let (base_event, _is_instance) = if selected_event.is_recurring_instance {
-                            if let Some(base_date) = selected_event.base_date {
-                                if let Some(be) = app.events.iter().find(|e| {
-                                    e.date == base_date
-                                        && e.title == selected_event.title
-                                        && e.time == selected_event.time
-                                        && e.description == selected_event.description
-                                }) {
-                                    (be.clone(), true)
-                                } else {
-                                    (selected_event.clone(), false)
-                                }
-                            } else {
-                                (selected_event.clone(), false)
-                            }
+                        let base_event = if let Some(base) = find_base_event_for_instance(selected_event, &app.events) {
+                            base
                         } else {
-                            (selected_event.clone(), false)
+                            selected_event.clone()
                         };
                         app.popup_event_title = base_event.title.clone();
                         app.popup_event_time = base_event.time.format("%H:%M").to_string();
@@ -555,16 +560,27 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     if let Some(index) = app.event_to_delete_index {
                         if index < app.events_to_display_in_popup.len() {
                              let event_to_delete = &app.events_to_display_in_popup[index];
-                             // If deleting a base recurring event, remove all instances too
-                             if !event_to_delete.is_recurring_instance && event_to_delete.recurrence != Recurrence::None {
-                                 app.events.retain(|event| !(event.title == event_to_delete.title && (event.is_recurring_instance || event == event_to_delete)));
-                                 // Remove from persistence
+                             // Determine if we need to delete a recurring series
+                             let base_to_delete = if event_to_delete.is_recurring_instance {
+                                 find_base_event_for_instance(event_to_delete, &app.events)
+                             } else if event_to_delete.recurrence != Recurrence::None {
+                                 Some(event_to_delete.clone())
+                             } else {
+                                 None
+                             };
+
+                             let deleted_title = if let Some(ref base) = base_to_delete {
+                                 // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
+                                 // and delete only the base event file from persistence (instances are in-memory only)
+                                 app.events.retain(|event| !(event.title == base.title && (event.is_recurring_instance || event == base)));
+                                 // Remove base event from persistence
                                  let _ = persistence::delete_event_from_path_without_sync(
-                                     event_to_delete,
+                                     base,
                                      &app.calendar_dir,
                                  );
+                                 Some(base.title.clone())
                              } else {
-                                 // Remove only this event
+                                 // Delete single non-recurring event
                                  app.events.retain(|event| event != event_to_delete);
                                  // Remove from persistence only if not a recurring instance
                                  if !event_to_delete.is_recurring_instance {
@@ -573,7 +589,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                          &app.calendar_dir,
                                      );
                                  }
-                             }
+                                 None
+                             };
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {
@@ -590,13 +607,19 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                     });
                                 }
                             }
-                            // Update display list
-                            app.events_to_display_in_popup.remove(index);
+                            // Update display list - remove all matching events from popup
+                            if let Some(title) = deleted_title {
+                                app.events_to_display_in_popup.retain(|event| event.title != title);
+                            } else {
+                                app.events_to_display_in_popup.remove(index);
+                            }
                             // Adjust selection if necessary
-                            if app.selected_event_index >= app.events_to_display_in_popup.len()
-                                && app.selected_event_index > 0
-                            {
-                                app.selected_event_index -= 1;
+                            if app.selected_event_index >= app.events_to_display_in_popup.len() {
+                                if app.events_to_display_in_popup.is_empty() {
+                                    app.selected_event_index = 0;
+                                } else {
+                                    app.selected_event_index = app.events_to_display_in_popup.len() - 1;
+                                }
                             }
                         }
                     }

@@ -244,7 +244,7 @@ When attempting to delete an event,
 Then logs the error and continues with remaining events.
 
 ### Requirement: Recurring Event Support
-Events MUST support recurring patterns (daily, weekly, monthly, yearly) with automatic instance generation.
+Events MUST support recurring patterns (daily, weekly, monthly, yearly) with automatic instance generation for indefinite periods.
 
 #### Scenario: Recurrence Pattern Creation
 Given recurrence pattern (daily/weekly/monthly/yearly),
@@ -252,33 +252,28 @@ When creating event,
 Then base event is saved with recurrence metadata.
 
 ### Requirement: Lazy Instance Generation
-Recurring event instances MUST be generated in memory on-demand when viewing date ranges or when events are modified, not persisted to disk. Instances are cached per session to avoid regeneration but invalidated when events change.
+Recurring event instances MUST be generated in memory on-demand when viewing date ranges, not persisted to disk. Instances are cached per session to avoid regeneration.
 
-#### Scenario: Instance Display on View
+#### Scenario: Instance Display
 Given recurring event created,
 When viewing future dates,
 Then instances are generated and displayed for that range.
 
-#### Scenario: Cache Invalidation on Event Change
-Given cached recurring instances,
-When event is added, deleted, or edited,
-Then affected cached instances are invalidated and refreshed on next display.
+#### Scenario: Memory Efficiency
+Given many recurring events,
+When viewing limited date range,
+Then only instances for visible dates are generated.
 
-#### Scenario: UI Update After Operations
-Given event modification operation,
-When operation completes,
-Then lazy loading triggers to update displayed events accurately.
+#### Scenario: Cache Reuse
+Given previously generated instances,
+When revisiting the same date range,
+Then cached instances are reused without regeneration.
 
-#### Scenario: Selective Invalidation
-Given multiple recurring events,
-When one event is modified,
-Then only instances for that event within cached date ranges are invalidated, not all cached instances.
-
-#### Scenario: Error Handling on Invalidation Failure
-Given cache invalidation attempt,
-When it fails (e.g., due to I/O error),
-Then log error and trigger full refresh on next UI render.</content>
-<parameter name="filePath">openspec/changes/extend-lazy-loading-event-triggers/specs/event-management/spec.md
+#### Scenario: Notification Integration
+Given lazy loading,
+When daemon checks for upcoming events,
+Then instances are generated for relevant notification periods without pre-loading all events.</content>
+<parameter name="filePath">openspec/changes/implement-lazy-loading-recurring-events/specs/event-management/spec.md
 
 ### Requirement: Instance vs Base Event Deletion
 Deleting any recurring instance MUST delete the entire recurring series persistently by removing the base event file, ensuring the deletion persists across application restarts.

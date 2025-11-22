@@ -725,7 +725,98 @@ fn test_suggestions_overlay_appears_when_typing_end_date() {
     let manual_suggestions = rcal::date_utils::get_date_suggestions(&app.popup_event_end_date, app.current_date_for_new_event);
     assert!(!manual_suggestions.is_empty());
     // Note: The integration with event handling is tested separately; here we verify suggestions generation
-    assert!(manual_suggestions.iter().any(|s| s == "20/10"));
+    assert!(manual_suggestions.iter().any(|(s, _)| s.contains("20/10")));
+}
+
+#[test]
+fn test_suggestions_fuzzy_matching() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::Title;
+    app.popup_event_title = "Meeting".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Tab to end date field
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_input_field, PopupInputField::EndDate);
+
+    // Type 'tomorow' (typo)
+    let key_event = KeyEvent::from(KeyCode::Char('t'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('m'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('r'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('o'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    let key_event = KeyEvent::from(KeyCode::Char('w'));
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    assert_eq!(app.popup_event_end_date, "tomorow");
+
+    // Check suggestions include fuzzy match
+    let suggestions = rcal::date_utils::get_date_suggestions(&app.popup_event_end_date, app.current_date_for_new_event);
+    assert!(!suggestions.is_empty());
+    assert!(suggestions.iter().any(|(s, _)| s.contains("Tomorrow")));
+}
+
+#[test]
+fn test_suggestions_arrow_navigation() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::EndDate;
+    app.popup_event_end_date = "next".to_string(); // Should have multiple suggestions
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Simulate suggestions being set
+    app.date_suggestions = rcal::date_utils::get_date_suggestions(&app.popup_event_end_date, app.current_date_for_new_event);
+    app.show_date_suggestions = true;
+    app.selected_suggestion_index = 0;
+
+    // Check we have multiple suggestions
+    assert!(app.date_suggestions.len() > 1);
+
+    // Down arrow to select next
+    let key_event = KeyEvent::from(KeyCode::Down);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_suggestion_index, 1);
+
+    // Up arrow to select previous
+    let key_event = KeyEvent::from(KeyCode::Up);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_suggestion_index, 0);
+}
+
+#[test]
+fn test_suggestions_tab_accepts_selected() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::EndDate;
+    app.popup_event_end_date = "tom".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Simulate suggestions
+    app.date_suggestions = rcal::date_utils::get_date_suggestions(&app.popup_event_end_date, app.current_date_for_new_event);
+    app.show_date_suggestions = true;
+    app.selected_suggestion_index = 0;
+
+    // Tab to accept
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+
+    // Should accept the selected suggestion
+    assert_eq!(app.popup_event_end_date, "20/10"); // Extracted date
+    assert!(!app.show_date_suggestions);
 }
 
 #[test]

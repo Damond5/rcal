@@ -9,6 +9,16 @@ use std::sync::mpsc::TryRecvError;
 use std::thread;
 
 use crate::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
+
+fn extract_date_from_suggestion(suggestion: &(String, bool)) -> String {
+    let s = &suggestion.0;
+    if let Some(start) = s.find('(') {
+        if let Some(end) = s.find(')') {
+            return s[start + 1..end].to_string();
+        }
+    }
+    s.to_string()
+}
 use crate::date_utils;
 
 fn recurrence_str_to_index(s: &str) -> usize {
@@ -271,12 +281,21 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     };
                     let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
                     let normalized_end_time_str = normalize_time_input(&end_time_str);
-                    let end_time = if normalized_end_time_str.trim().is_empty() {
-                        Some(time)
-                    } else {
-                        NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
-                    };
-                    let title = app.popup_event_title.drain(..).collect();
+                     let end_time = if normalized_end_time_str.trim().is_empty() {
+                         Some(time)
+                     } else {
+                         NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
+                     };
+
+                     // Validate date range
+                     if let Some(ed) = end_date {
+                         if ed < app.current_date_for_new_event {
+                             app.error_message = "End date cannot be before start date".to_string();
+                             return Ok(true);
+                         }
+                     }
+
+                     let title = app.popup_event_title.drain(..).collect();
                     let recurrence_str = app.popup_event_recurrence.drain(..).collect::<String>();
                     let recurrence = match recurrence_str.trim().to_lowercase().as_str() {
                         "daily" => crate::app::Recurrence::Daily,
@@ -380,8 +399,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                           match date_utils::validate_date_input(&app.popup_event_end_date, start_date) {
                               Ok(_) => {
                                   app.date_input_error = None;
-                                  app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
-                                  app.show_date_suggestions = !app.date_suggestions.is_empty();
+                                      app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
+                                      app.show_date_suggestions = !app.date_suggestions.is_empty();
+                                      app.selected_suggestion_index = 0;
+                                   app.selected_suggestion_index = 0;
                               }
                               Err(e) => {
                                   app.date_input_error = Some(e);
@@ -415,9 +436,23 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                  }
                              }
                          }
-                     }
-                 }
-                KeyCode::Esc => {
+                      }
+                  }
+                  KeyCode::Up => {
+                      if app.selected_input_field == PopupInputField::EndDate && app.show_date_suggestions && !app.date_suggestions.is_empty() {
+                          if app.selected_suggestion_index > 0 {
+                              app.selected_suggestion_index -= 1;
+                          }
+                      }
+                  }
+                  KeyCode::Down => {
+                      if app.selected_input_field == PopupInputField::EndDate && app.show_date_suggestions && !app.date_suggestions.is_empty() {
+                          if app.selected_suggestion_index < app.date_suggestions.len() - 1 {
+                              app.selected_suggestion_index += 1;
+                          }
+                      }
+                  }
+                 KeyCode::Esc => {
                     app.show_add_event_popup = false;
                     app.popup_event_title.clear();
                     app.popup_event_time.clear();
@@ -498,21 +533,12 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                               PopupInputField::EndDate
                           }
                           PopupInputField::EndDate => {
-                              if app.show_date_suggestions && !app.date_suggestions.is_empty() {
-                                  // Cycle through suggestions
-                                  if app.date_suggestions.len() == 1 {
-                                      app.popup_event_end_date = app.date_suggestions[0].clone();
-                                      app.date_input_error = None;
-                                      app.show_date_suggestions = false;
-                                  } else {
-                                      // For multiple suggestions, cycle through them
-                                      // For simplicity, just pick the first one for now
-                                      app.popup_event_end_date = app.date_suggestions[0].clone();
-                                      app.date_input_error = None;
-                                      app.show_date_suggestions = false;
-                                  }
-                                  app.cursor_position = app.popup_event_end_date.chars().count();
-                                  PopupInputField::EndDate
+                               if app.show_date_suggestions && !app.date_suggestions.is_empty() {
+                                   app.popup_event_end_date = extract_date_from_suggestion(&app.date_suggestions[app.selected_suggestion_index]);
+                                   app.date_input_error = None;
+                                   app.show_date_suggestions = false;
+                                   app.cursor_position = app.popup_event_end_date.chars().count();
+                                   PopupInputField::EndDate
                               } else {
                                   app.cursor_position = app.popup_event_end_time.chars().count();
                                   PopupInputField::EndTime

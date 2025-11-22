@@ -2,7 +2,7 @@ use chrono::{Datelike, Local, NaiveDate};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout, Rect},
-    style::{Color, Style},
+    style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table},
 };
 
@@ -21,7 +21,7 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
     }
 
     let overlay_width = input_chunks[2].width.max(MIN_OVERLAY_WIDTH);
-    let overlay_height = (app.date_suggestions.iter().filter(|s| !s.is_empty()).count() as u16).min(MAX_OVERLAY_HEIGHT);
+    let overlay_height = (app.date_suggestions.iter().filter(|(s, _)| !s.is_empty()).count() as u16).min(MAX_OVERLAY_HEIGHT);
     let overlay_x = input_chunks[2].x;
     let mut overlay_y = input_chunks[2].y + input_chunks[2].height;
 
@@ -58,8 +58,19 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
     let suggestions_list: Vec<ListItem> = app
         .date_suggestions
         .iter()
-        .filter(|s| !s.is_empty())
-        .map(|s| ListItem::new(s.as_str()))
+        .enumerate()
+        .filter(|(_, (s, _))| !s.is_empty())
+        .map(|(i, (s, is_valid))| {
+            let mut style = if i == app.selected_suggestion_index {
+                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+            } else {
+                Style::default()
+            };
+            if !is_valid {
+                style = style.fg(Color::Gray);
+            }
+            ListItem::new(s.as_str()).style(style)
+        })
         .collect();
     let suggestions_list_widget = List::new(suggestions_list);
     f.render_widget(suggestions_list_widget, inner_area);

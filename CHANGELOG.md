@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling.
+
 ## [1.4.0] - 2025-11-16
 
 ### Added

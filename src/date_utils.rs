@@ -37,9 +37,10 @@ pub fn validate_date_input(input: &str, start_date: NaiveDate) -> Result<NaiveDa
 }
 
 /// Generates date suggestions based on input prefix.
+/// Returns (suggestion_text, is_valid) pairs.
 /// Supports common relative dates like "tomorrow", "next week", "end of month",
 /// and partial inputs like single digits for day completion.
-pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<String> {
+pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, bool)> {
     let mut suggestions = Vec::new();
     let input_lower = input.to_lowercase();
 
@@ -54,35 +55,138 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<String> {
         }
         date - chrono::Duration::days(1)
     };
+    let next_month = {
+        let mut date = start_date;
+        let current_month = date.format("%m").to_string().parse::<u32>().unwrap();
+        while date.format("%m").to_string().parse::<u32>().unwrap() == current_month {
+            date += chrono::Duration::days(1);
+        }
+        date
+    };
+    let end_of_year = {
+        let year = start_date.format("%Y").to_string().parse::<i32>().unwrap();
+        NaiveDate::from_ymd_opt(year, 12, 31).unwrap()
+    };
 
-    if "tomorrow".starts_with(&input_lower) || input_lower.starts_with("tom") {
-        let day = tomorrow.format("%d").to_string().parse::<u32>().unwrap();
-        let month = tomorrow.format("%m").to_string().parse::<u32>().unwrap();
-        suggestions.push(format!("{:02}/{:02}", day, month));
-    }
-    if "next week".starts_with(&input_lower) || input_lower.starts_with("next") {
-        let day = next_week.format("%d").to_string().parse::<u32>().unwrap();
-        let month = next_week.format("%m").to_string().parse::<u32>().unwrap();
-        suggestions.push(format!("{:02}/{:02}", day, month));
-    }
-    if "end of month".starts_with(&input_lower) || input_lower.starts_with("end") {
-        let day = end_of_month.format("%d").to_string().parse::<u32>().unwrap();
-        let month = end_of_month.format("%m").to_string().parse::<u32>().unwrap();
-        suggestions.push(format!("{:02}/{:02}", day, month));
+    // Duration-based suggestions
+    let one_day = start_date + chrono::Duration::days(1);
+    let one_week = start_date + chrono::Duration::weeks(1);
+    let two_weeks = start_date + chrono::Duration::weeks(2);
+    let one_month = next_month;
+
+    // Weekday suggestions
+    let weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    let weekday_nums = [1, 2, 3, 4, 5, 6, 7]; // 1=Mon, 7=Sun
+    let mut next_weekdays = Vec::new();
+    for (&weekday, &target_num) in weekdays.iter().zip(weekday_nums.iter()) {
+        let current_num = start_date.format("%u").to_string().parse::<u32>().unwrap();
+        let days_ahead = if target_num > current_num { target_num - current_num } else { 7 - current_num + target_num };
+        let date = start_date + chrono::Duration::days(days_ahead as i64);
+        next_weekdays.push((weekday, date));
     }
 
-    // If input looks like partial DD/MM, suggest completion
+    // Define suggestions with their possible input matches
+    let suggestion_matches = vec![
+        (tomorrow, vec!["tomorrow", "tom", "tomorow"]),
+        (next_week, vec!["next week", "nextweek"]),
+        (end_of_month, vec!["end of month", "endofmonth", "end month"]),
+        (next_month, vec!["next month", "nextmonth"]),
+        (end_of_year, vec!["end of year", "endofyear", "end year"]),
+        (start_date, vec!["same day", "sameday"]),
+        (one_day, vec!["1 day", "1day"]),
+        (one_week, vec!["1 week", "1week"]),
+        (two_weeks, vec!["2 weeks", "2weeks"]),
+        (one_month, vec!["1 month", "1month"]),
+    ];
+
+    // Check relative and duration matches
+    let descriptions = ["Tomorrow", "Next week", "End of month", "Next month", "End of year", "Same day", "1 day", "1 week", "2 weeks", "1 month"];
+    for i in 0..suggestion_matches.len() {
+        let (date, possible_inputs) = &suggestion_matches[i];
+        let desc = descriptions[i];
+        for &possible in possible_inputs {
+            if possible.starts_with(&input_lower) || input_lower.starts_with(possible) || possible.contains(&input_lower) || input_lower.contains(possible) {
+                let day = date.format("%d").to_string().parse::<u32>().unwrap();
+                let month = date.format("%m").to_string().parse::<u32>().unwrap();
+                suggestions.push((format!("{} ({:02}/{:02})", desc, day, month), true));
+                break; // Only add once per date
+            }
+        }
+    }
+
+    // Next weekday suggestions
+    for (weekday, date) in &next_weekdays {
+        let possible = format!("next {}", weekday);
+        let short = format!("next {}", &weekday[..3]);
+        if possible.starts_with(&input_lower) || input_lower.starts_with(&possible) || short.starts_with(&input_lower) || input_lower.starts_with(&short) || possible.contains(&input_lower) || input_lower.contains(&possible) {
+            let day = date.format("%d").to_string().parse::<u32>().unwrap();
+            let month = date.format("%m").to_string().parse::<u32>().unwrap();
+            suggestions.push((format!("Next {} ({:02}/{:02})", weekday, day, month), true));
+            break; // Only one weekday suggestion
+        }
+    }
+
+    // Enhanced partial input completion
     if input.contains('/') {
         let parts: Vec<&str> = input.split('/').collect();
         if parts.len() == 2 {
-            if parts[0].len() == 1 && parts[1].is_empty() {
-                // Single digit day, suggest current month
-                suggestions.push(format!("{}0/{}", parts[0], start_date.format("%m").to_string()));
+            let day_part = parts[0].trim();
+            let month_part = parts[1].trim();
+            if !day_part.is_empty() && month_part.is_empty() {
+                // "15/" -> complete with current month
+                if let Ok(day) = day_part.parse::<u32>() {
+                    if day >= 1 && day <= 31 {
+                        let month = start_date.format("%m").to_string();
+                        let date_str = format!("{:02}/{}", day, month);
+                        let is_valid = validate_date_input(&date_str, start_date).is_ok();
+                        suggestions.push((date_str, is_valid));
+                    }
+                }
+            } else if day_part.is_empty() && !month_part.is_empty() {
+                // " /10" -> complete with appropriate day (start_date day if valid, else 1)
+                if let Ok(month) = month_part.parse::<u32>() {
+                    if month >= 1 && month <= 12 {
+                        let day = start_date.format("%d").to_string();
+                        let date_str = format!("{}/{}", day, month_part);
+                        let is_valid = validate_date_input(&date_str, start_date).is_ok();
+                        suggestions.push((date_str, is_valid));
+                    }
+                }
+            } else if !day_part.is_empty() && !month_part.is_empty() && (day_part.len() < 2 || month_part.len() < 2) {
+                // Partial, show full format if matches and not full
+                if let (Ok(day), Ok(month)) = (day_part.parse::<u32>(), month_part.parse::<u32>()) {
+                    if day >= 1 && day <= 31 && month >= 1 && month <= 12 {
+                        let date_str = format!("{:02}/{:02}", day, month);
+                        let is_valid = validate_date_input(&date_str, start_date).is_ok();
+                        suggestions.push((date_str, is_valid));
+                    }
+                }
             }
         }
-    } else if input.len() == 1 && input.chars().all(|c| c.is_ascii_digit()) {
-        // Single digit, assume day, suggest with current month
-        suggestions.push(format!("{}0/{}", input, start_date.format("%m").to_string()));
+    } else if input.chars().all(|c| c.is_ascii_digit()) {
+        if let Ok(num) = input.parse::<u32>() {
+            if num >= 1 && num <= 31 {
+                // Single or multi digit day, suggest with current month
+                let month = start_date.format("%m").to_string();
+                let date_str = format!("{:02}/{}", num, month);
+                let is_valid = validate_date_input(&date_str, start_date).is_ok();
+                suggestions.push((date_str, is_valid));
+            }
+        }
+    }
+
+    // Common date patterns
+    if input_lower.contains("last day") || input_lower.contains("lastday") {
+        let day = end_of_month.format("%d").to_string().parse::<u32>().unwrap();
+        let month = end_of_month.format("%m").to_string().parse::<u32>().unwrap();
+        let date_str = format!("Last day of month ({:02}/{:02})", day, month);
+        suggestions.push((date_str, true));
+    }
+    if input_lower.contains("first of next") || input_lower.contains("firstofnext") {
+        let day = next_month.format("%d").to_string().parse::<u32>().unwrap();
+        let month = next_month.format("%m").to_string().parse::<u32>().unwrap();
+        let date_str = format!("First of next month ({:02}/{:02})", day, month);
+        suggestions.push((date_str, true));
     }
 
     suggestions
@@ -142,15 +246,48 @@ use chrono::prelude::*;
 
     #[test]
     fn test_get_date_suggestions() {
-        let start_date = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap();
+        let start_date = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(); // Sunday
         let suggestions = get_date_suggestions("tom", start_date);
         assert!(!suggestions.is_empty());
-        assert!(suggestions[0].contains("02/10")); // Tomorrow
+        assert!(suggestions[0].0.contains("Tomorrow"));
+        assert!(suggestions[0].0.contains("02/10")); // Tomorrow
+        assert!(suggestions[0].1); // Valid
 
         let suggestions = get_date_suggestions("next", start_date);
         assert!(!suggestions.is_empty());
 
         let suggestions = get_date_suggestions("end", start_date);
         assert!(!suggestions.is_empty());
+
+        // Test new relative suggestions
+        let suggestions = get_date_suggestions("next monday", start_date);
+        assert!(!suggestions.is_empty());
+        // Next Monday from Oct 1 (Sunday) is Oct 2
+        assert!(suggestions[0].0.contains("02/10"));
+
+        let suggestions = get_date_suggestions("1 day", start_date);
+        assert!(!suggestions.is_empty());
+        assert!(suggestions[0].0.contains("02/10"));
+
+        let suggestions = get_date_suggestions("next month", start_date);
+        assert!(!suggestions.is_empty());
+        assert!(suggestions[0].0.contains("01/11")); // First of next month
+
+        let suggestions = get_date_suggestions("same day", start_date);
+        assert!(!suggestions.is_empty());
+        assert!(suggestions[0].0.contains("01/10"));
+
+        // Test fuzzy matching
+        let suggestions = get_date_suggestions("tomorow", start_date);
+        assert!(!suggestions.is_empty());
+        assert!(suggestions[0].0.contains("02/10"));
+
+        let suggestions = get_date_suggestions("endofmonth", start_date);
+        assert!(!suggestions.is_empty());
+
+        // Test partial
+        let suggestions = get_date_suggestions("15/", start_date);
+        assert!(!suggestions.is_empty());
+        assert!(suggestions[0].0.contains("15/10"));
     }
 }

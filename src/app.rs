@@ -83,8 +83,9 @@ pub struct App {
     pub error_message: String,
     pub reload_receiver: Option<Receiver<Result<(), String>>>,
     pub date_input_error: Option<String>,
-    pub date_suggestions: Vec<String>,
+    pub date_suggestions: Vec<(String, bool)>,
     pub show_date_suggestions: bool,
+    pub selected_suggestion_index: usize,
 }
 
 impl Default for App {
@@ -129,14 +130,15 @@ impl App {
                   .expect("Could not find home directory")
                   .join("calendar"),
               error_message: String::new(),
-              reload_receiver: None,
-              date_input_error: None,
-              date_suggestions: Vec::new(),
-              show_date_suggestions: false,
-        }
-    }
-
-    pub fn new_with_calendar_dir(calendar_dir: std::path::PathBuf) -> App {
+               reload_receiver: None,
+               date_input_error: None,
+               date_suggestions: Vec::new(),
+               show_date_suggestions: false,
+               selected_suggestion_index: 0,
+         }
+     }
+ 
+     pub fn new_with_calendar_dir(calendar_dir: std::path::PathBuf) -> App {
         let date = Local::now().date_naive();
         App {
             date,
@@ -169,12 +171,13 @@ impl App {
              sync_message: String::new(),
               calendar_dir,
               error_message: String::new(),
-              reload_receiver: None,
-              date_input_error: None,
-              date_suggestions: Vec::new(),
-              show_date_suggestions: false,
-        }
-    }
+               reload_receiver: None,
+               date_input_error: None,
+               date_suggestions: Vec::new(),
+               show_date_suggestions: false,
+               selected_suggestion_index: 0,
+         }
+     }
 
     // Helper functions for Unicode-safe cursor handling
     pub fn char_to_byte_index(s: &str, char_index: usize) -> usize {

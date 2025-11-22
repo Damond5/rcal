@@ -1,5 +1,7 @@
 # TODO
 - improve autocomplete suggestions for end date
+  - should pop up when enterting text field
+  - should update whenever text is entered
 - implement same format checking as end date for:
   - time
   - end time

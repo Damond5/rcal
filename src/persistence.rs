@@ -237,6 +237,24 @@ pub fn generate_instances_for_range(
     instances
 }
 
+// Helper function to advance year for yearly recurring events with Feb 29th fallback.
+// If the date is Feb 29 and the target year is not a leap year, fall back to Feb 28.
+// This ensures yearly events like birthdays occur annually even in non-leap years.
+fn advance_year_with_feb29_fallback(current_date: NaiveDate) -> NaiveDate {
+    let next_year = current_date.year() + 1;
+    if let Some(new_date) = current_date.with_year(next_year) {
+        new_date
+    } else if current_date.month() == 2 && current_date.day() == 29 {
+        NaiveDate::from_ymd_opt(next_year, 2, 28).unwrap_or_else(|| {
+            eprintln!("Warning: Could not create Feb 28 for year {}", next_year);
+            current_date
+        })
+    } else {
+        eprintln!("Warning: Could not advance year from {:?}", current_date);
+        current_date
+    }
+}
+
 fn generate_recurring_instances_in_range(
     base_event: &CalendarEvent,
     range_start: NaiveDate,
@@ -258,11 +276,7 @@ fn generate_recurring_instances_in_range(
                 }
             }
             crate::app::Recurrence::Yearly => {
-                if let Some(new_date) = current_date.with_year(current_date.year() + 1) {
-                    current_date = new_date;
-                } else {
-                    return instances; // Stop if invalid
-                }
+                current_date = advance_year_with_feb29_fallback(current_date);
             }
             crate::app::Recurrence::None => return instances,
         }
@@ -304,12 +318,7 @@ fn generate_recurring_instances_in_range(
                 }
             }
             crate::app::Recurrence::Yearly => {
-                if let Some(new_date) = current_date.with_year(current_date.year() + 1) {
-                    current_date = new_date;
-                } else {
-                    eprintln!("Warning: Invalid date for recurring event '{}': {:?}", base_event.title, current_date);
-                    break;
-                }
+                current_date = advance_year_with_feb29_fallback(current_date);
             }
             crate::app::Recurrence::None => break,
         }

@@ -1,0 +1,14 @@
+- [x] Modify `generate_recurring_instances_in_range()` function in `src/persistence.rs` to implement February 29th fallback logic in both the skip loop (around line 253-269) and the generation loop (around line 295-313)
+- [x] Handle multi-day February 29th events by preserving duration when both start_date and end_date fall back
+- [x] Add unit test for February 29th fallback to February 28th behavior in tests/integration_test.rs
+- [x] Add unit test for century year transitions (1899→1900, 1999→2000, 2099→2100)
+- [x] Add unit test for multi-day February 29th events with duration preservation
+- [x] Add unit test to verify February 28th base events do NOT fall forward to February 29th in leap years
+- [x] Add integration test to verify yearly February 29th events display correctly in UI across multiple years
+- [x] Add integration test for cache invalidation with February 29th events
+- [x] Add inline code comments explaining February 29th fallback logic for maintainability
+- [x] Update EVENT_FORMAT.md to document February 29th fallback behavior in recurrence field description and notes section
+- [x] Update CHANGELOG.md with bug fix entry
+- [x] Update README.md with notes about February 29th behavior if applicable
+- [x] Run full test suite to ensure no regressions
+- [x] Build project successfully to ensure no compilation errors

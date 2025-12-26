@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling.
 
+### Fixed
+- February 29th leap year fallback for yearly recurring events: Yearly events on February 29th now automatically fall back to February 28th in non-leap years, ensuring birthdays, anniversaries, and other annual events continue occurring annually without being skipped.
+
 ## [1.4.0] - 2025-11-16
 
 ### Added

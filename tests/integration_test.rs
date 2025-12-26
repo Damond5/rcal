@@ -2259,3 +2259,160 @@ fn test_performance_frequent_invalidations() {
     // Should complete in reasonable time (less than 1 second total for 5 iterations)
     assert!(total_time < std::time::Duration::from_secs(1));
 }
+
+#[test]
+fn test_feb29_yearly_fallback_to_feb28() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2027, 12, 31).unwrap();
+
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Leap Day Birthday".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    let events = app.get_all_events_for_range(start, end);
+
+    assert!(events.iter().any(|e| e.title == "Leap Day Birthday" && e.start_date == NaiveDate::from_ymd_opt(2024, 2, 29).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Leap Day Birthday" && e.start_date == NaiveDate::from_ymd_opt(2025, 2, 28).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Leap Day Birthday" && e.start_date == NaiveDate::from_ymd_opt(2026, 2, 28).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Leap Day Birthday" && e.start_date == NaiveDate::from_ymd_opt(2027, 2, 28).unwrap()));
+}
+
+#[test]
+fn test_feb29_century_year_transitions() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(1899, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(1901, 12, 31).unwrap();
+
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(1896, 2, 29).unwrap(),
+        time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        title: "Century Test Event".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(1896, 2, 29).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    let events = app.get_all_events_for_range(start, end);
+
+    assert!(events.iter().any(|e| e.title == "Century Test Event" && e.start_date == NaiveDate::from_ymd_opt(1899, 2, 28).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Century Test Event" && e.start_date == NaiveDate::from_ymd_opt(1900, 2, 28).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Century Test Event" && e.start_date == NaiveDate::from_ymd_opt(1901, 2, 28).unwrap()));
+}
+
+#[test]
+fn test_feb29_multiday_event_duration_preservation() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
+
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+        title: "Multi-Day Conference".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        end_date: Some(NaiveDate::from_ymd_opt(2024, 3, 2).unwrap()),
+        start_time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+        end_time: Some(NaiveTime::from_hms_opt(17, 0, 0).unwrap()),
+    });
+
+    let events = app.get_all_events_for_range(start, end);
+
+    let feb29_2024 = events.iter().find(|e| e.title == "Multi-Day Conference" && e.start_date == NaiveDate::from_ymd_opt(2024, 2, 29).unwrap());
+    let feb28_2025 = events.iter().find(|e| e.title == "Multi-Day Conference" && e.start_date == NaiveDate::from_ymd_opt(2025, 2, 28).unwrap());
+
+    assert!(feb29_2024.is_some());
+    assert_eq!(feb29_2024.unwrap().end_date, Some(NaiveDate::from_ymd_opt(2024, 3, 2).unwrap()));
+
+    assert!(feb28_2025.is_some());
+    assert_eq!(feb28_2025.unwrap().end_date, Some(NaiveDate::from_ymd_opt(2025, 3, 2).unwrap()));
+}
+
+#[test]
+fn test_feb28_yearly_no_fallback() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2025, 12, 31).unwrap();
+
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2024, 2, 28).unwrap(),
+        time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        title: "Feb 28 Event".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 28).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    let events = app.get_all_events_for_range(start, end);
+
+    assert!(events.iter().any(|e| e.title == "Feb 28 Event" && e.start_date == NaiveDate::from_ymd_opt(2024, 2, 28).unwrap()));
+    assert!(events.iter().any(|e| e.title == "Feb 28 Event" && e.start_date == NaiveDate::from_ymd_opt(2025, 2, 28).unwrap()));
+}
+
+#[test]
+fn test_feb29_event_cache_invalidation() {
+    let (mut app, _temp_dir) = setup_app();
+    let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
+    let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
+
+    app.events.push(CalendarEvent {
+        id: uuid::Uuid::new_v4().to_string(),
+        is_all_day: false,
+        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        title: "Cached Leap Event".to_string(),
+        description: String::new(),
+        recurrence: Recurrence::Yearly,
+        is_recurring_instance: false,
+        base_date: None,
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        end_date: None,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        end_time: None,
+    });
+
+    let events1 = app.get_all_events_for_range(start, end);
+    assert!(app.cached_range.is_some());
+    let initial_cache_size = app.cached_instances.len();
+    assert!(initial_cache_size > 0);
+
+    app.invalidate_instance_cache(None);
+    assert!(app.cached_instances.is_empty());
+
+    let events2 = app.get_all_events_for_range(start, end);
+    assert_eq!(events1.len(), events2.len());
+    assert!(events1.iter().all(|e1| events2.iter().any(|e2| e1.title == e2.title && e1.start_date == e2.start_date)));
+    assert!(app.cached_instances.len() > 0);
+}

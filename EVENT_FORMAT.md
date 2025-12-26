@@ -49,7 +49,7 @@ Each event file is a Markdown document with the following structure:
 ### Recurrence
 - **Format**: `none`, `daily`, `weekly`, `monthly`, or `yearly`
 - **Required**: No (defaults to `none`)
-- **Description**: How the event repeats
+- **Description**: How the event repeats. Note: For yearly recurrence with February 29th as the start date, events automatically fall back to February 28th in non-leap years to ensure annual occurrence.
 
 ## Examples
 
@@ -107,3 +107,4 @@ Each event file is a Markdown document with the following structure:
 - The deprecated old format (one file per date) is no longer supported
 - Events are sorted by date then time when loaded
 - Recurring events generate instances automatically
+- Yearly recurring events on February 29th fall back to February 28th in non-leap years to ensure annual occurrence (e.g., birthdays, anniversaries)

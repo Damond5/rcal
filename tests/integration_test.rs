@@ -2258,6 +2258,40 @@ fn test_end_date_input_validation_and_suggestions() {
 }
 
 #[test]
+fn test_suggestions_appear_on_end_date_field_entry() {
+    let (mut app, _temp_dir) = setup_app();
+    app.show_add_event_popup = true;
+    app.input_mode = InputMode::EditingEventPopup;
+    app.selected_input_field = PopupInputField::Title;
+    app.popup_event_title = "Meeting".to_string();
+    app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
+
+    // Tab to Time field
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_input_field, PopupInputField::Time);
+
+    // Tab to EndDate field - should show suggestions immediately
+    let key_event = KeyEvent::from(KeyCode::Tab);
+    handle_event(&mut app, Event::Key(key_event)).unwrap();
+    assert_eq!(app.selected_input_field, PopupInputField::EndDate);
+
+    // Verify suggestions appear immediately (top 5 common suggestions)
+    assert!(app.show_date_suggestions);
+    assert_eq!(app.date_suggestions.len(), 5);
+
+    // Check the suggestions are in the correct priority order
+    assert!(app.date_suggestions[0].0.contains("Tomorrow"));
+    assert!(app.date_suggestions[1].0.contains("Next week"));
+    assert!(app.date_suggestions[2].0.contains("End of month"));
+    assert!(app.date_suggestions[3].0.contains("Next month"));
+    assert!(app.date_suggestions[4].0.contains("Same day"));
+
+    // All suggestions should be valid
+    assert!(app.date_suggestions.iter().all(|(_, is_valid)| *is_valid));
+}
+
+#[test]
 fn test_performance_frequent_invalidations() {
     let (mut app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();

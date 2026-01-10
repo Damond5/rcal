@@ -47,6 +47,44 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
     let mut suggestions = Vec::new();
     let input_lower = input.to_lowercase();
 
+    // Handle empty input - show top 5 common suggestions
+    if input.trim().is_empty() {
+        let tomorrow = start_date + chrono::Duration::days(1);
+        let next_week = start_date + chrono::Duration::weeks(1);
+        let start_month = start_date.format("%m").to_string().parse::<u32>().unwrap();
+        let end_of_month = {
+            let mut date = start_date;
+            while date.format("%m").to_string().parse::<u32>().unwrap() == start_month {
+                date += chrono::Duration::days(1);
+            }
+            date - chrono::Duration::days(1)
+        };
+        let next_month = {
+            let mut date = start_date;
+            let current_month = date.format("%m").to_string().parse::<u32>().unwrap();
+            while date.format("%m").to_string().parse::<u32>().unwrap() == current_month {
+                date += chrono::Duration::days(1);
+            }
+            date
+        };
+
+        let top_suggestions = vec![
+            (tomorrow, "Tomorrow"),
+            (next_week, "Next week"),
+            (end_of_month, "End of month"),
+            (next_month, "Next month"),
+            (start_date, "Same day"),
+        ];
+
+        for (date, desc) in top_suggestions {
+            let day = date.format("%d").to_string().parse::<u32>().unwrap();
+            let month = date.format("%m").to_string().parse::<u32>().unwrap();
+            suggestions.push((format!("{} ({:02}/{:02})", desc, day, month), true));
+        }
+
+        return suggestions;
+    }
+
     // Common relative dates
     let tomorrow = start_date + chrono::Duration::days(1);
     let next_week = start_date + chrono::Duration::weeks(1);
@@ -338,5 +376,33 @@ mod tests {
         let suggestions = get_date_suggestions("15/", start_date);
         assert!(!suggestions.is_empty());
         assert!(suggestions[0].0.contains("15/10"));
+    }
+
+    #[test]
+    fn test_get_date_suggestions_empty_input() {
+        let start_date = NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(); // Sunday
+        let suggestions = get_date_suggestions("", start_date);
+        assert_eq!(suggestions.len(), 5);
+
+        // Check the top 5 suggestions in priority order
+        assert!(suggestions[0].0.contains("Tomorrow"));
+        assert!(suggestions[0].0.contains("02/10"));
+        assert!(suggestions[0].1); // Valid
+
+        assert!(suggestions[1].0.contains("Next week"));
+        assert!(suggestions[1].0.contains("08/10"));
+        assert!(suggestions[1].1); // Valid
+
+        assert!(suggestions[2].0.contains("End of month"));
+        assert!(suggestions[2].0.contains("31/10"));
+        assert!(suggestions[2].1); // Valid
+
+        assert!(suggestions[3].0.contains("Next month"));
+        assert!(suggestions[3].0.contains("01/11"));
+        assert!(suggestions[3].1); // Valid
+
+        assert!(suggestions[4].0.contains("Same day"));
+        assert!(suggestions[4].0.contains("01/10"));
+        assert!(suggestions[4].1); // Valid
     }
 }

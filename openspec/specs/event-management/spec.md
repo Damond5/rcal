@@ -12,27 +12,22 @@ When parsing,
 Then all valid formats are accepted and normalized.
 
 ### Requirement: End Date Format Handling
-End date inputs MUST use DD/MM format with automatic year assumption and provide comprehensive real-time validation, auto-completion suggestions, and visual feedback while maintaining the required DD/MM format. Suggestions MUST include expanded relative dates, fuzzy matching, enhanced partial completion, user experience improvements, validation feedback, and performance optimizations.
+End date inputs MUST use DD/MM format with automatic year assumption and provide comprehensive real-time validation, auto-completion suggestions, and visual feedback while maintaining the required DD/MM format. Suggestions MUST include expanded relative dates, fuzzy matching, enhanced partial completion, user experience improvements, validation feedback, and performance optimizations. Suggestions MUST appear immediately when entering the end date field, showing common relative date options even when the field is empty.
 
-#### Scenario: Date Input Parsing
-Given DD/MM date,
-When assuming current/next year,
-Then date is correctly interpreted.
-
-#### Scenario: Invalid Format Detection
+#### Scenario: Suggestion Display on Field Entry
 Given end date input field,
-When user enters invalid format (not DD/MM),
-Then shows red error message below field.
-
-#### Scenario: Valid Date Confirmation
-Given end date input field,
-When user enters valid DD/MM date,
-Then clears any previous error messages.
+When user enters the field via Tab navigation,
+Then shows top 5 common date suggestions below field including tomorrow, next week, end of month, next month, and same day.
 
 #### Scenario: Comprehensive Suggestion Display
 Given end date input field,
 When user starts typing,
 Then shows relevant date suggestions below field including relative dates, fuzzy matches, and partial completions.
+
+#### Scenario: Suggestion Display on Field Entry
+Given end date input field,
+When user enters the field via Tab navigation,
+Then shows top 5 common date suggestions below field including Tomorrow, Next week, End of month, Next month, and Same day.
 
 #### Scenario: Enhanced Suggestion Selection
 Given displayed suggestions,
@@ -68,7 +63,7 @@ Then shows validation feedback and suggests corrections for invalid inputs.
 Given suggestion generation,
 When processing,
 Then limits to reasonable number of suggestions and handles edge cases efficiently.</content>
-<parameter name="filePath">openspec/changes/enhance-end-date-autocomplete-suggestions/specs/event-management/spec.md
+<parameter name="filePath">openspec/changes/2026-01-10-show-end-date-suggestions-on-field-entry/specs/event-management/spec.md
 
 ### Requirement: Safe Event Deletion
 Event deletion MUST require confirmation to prevent accidental data loss.

@@ -556,10 +556,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                         PopupInputField::Time => {
                             app.cursor_position = app.popup_event_end_date.chars().count();
-                            // Clear suggestions when entering EndDate
+                            // Show suggestions when entering EndDate field
                             app.date_input_error = None;
-                            app.date_suggestions.clear();
-                            app.show_date_suggestions = false;
+                            app.date_suggestions = date_utils::get_date_suggestions(
+                                &app.popup_event_end_date,
+                                app.current_date_for_new_event,
+                            );
+                            app.show_date_suggestions = !app.date_suggestions.is_empty();
+                            app.selected_suggestion_index = 0;
                             PopupInputField::EndDate
                         }
                         PopupInputField::EndDate => {

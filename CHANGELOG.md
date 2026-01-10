@@ -8,7 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling.
+- Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling. Suggestions now appear immediately when entering the end date field (even when empty), showing the top 5 most common date suggestions (Tomorrow, Next week, End of month, Next month, Same day) to improve discoverability.
 
 ### Changed
 - Restructured README Installation section into two targeted subsections to improve accessibility: "For humans" provides quick installation with 1-3 commands per method, while "For LLM Agents" includes comprehensive guidance with prerequisites, configuration details, verification steps using exit codes, and troubleshooting for installation, service, and sync issues in collapsible details format. This follows oh-my-opencode documentation standards to reduce time-to-first-run for human users while maintaining detailed automation documentation. All installation methods (AUR, source build, cargo install) are preserved with enhanced clarity.

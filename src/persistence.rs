@@ -255,11 +255,11 @@ fn advance_year_with_feb29_fallback(current_date: NaiveDate) -> NaiveDate {
         new_date
     } else if current_date.month() == 2 && current_date.day() == 29 {
         NaiveDate::from_ymd_opt(next_year, 2, 28).unwrap_or_else(|| {
-            eprintln!("Warning: Could not create Feb 28 for year {}", next_year);
+            eprintln!("Warning: Could not create Feb 28 for year {next_year}");
             current_date
         })
     } else {
-        eprintln!("Warning: Could not advance year from {:?}", current_date);
+        eprintln!("Warning: Could not advance year from {current_date:?}");
         current_date
     }
 }

@@ -1,6 +1,6 @@
 use std::io;
 
-use chrono::{Datelike, NaiveDate, NaiveTime};
+use chrono::{Datelike, NaiveDate, NaiveTime, Utc};
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
 use ratatui::backend::Backend;
@@ -409,22 +409,20 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     // Real-time validation for end date
                     if app.selected_input_field == PopupInputField::EndDate {
                         let start_date = app.current_date_for_new_event;
+                        app.date_suggestions = date_utils::get_date_suggestions(
+                            &app.popup_event_end_date,
+                            start_date,
+                            chrono::Utc::now().date_naive(),
+                        );
+                        app.show_date_suggestions = !app.date_suggestions.is_empty();
+                        app.selected_suggestion_index = 0;
                         match date_utils::validate_date_input(&app.popup_event_end_date, start_date)
                         {
                             Ok(_) => {
                                 app.date_input_error = None;
-                                app.date_suggestions = date_utils::get_date_suggestions(
-                                    &app.popup_event_end_date,
-                                    start_date,
-                                );
-                                app.show_date_suggestions = !app.date_suggestions.is_empty();
-                                app.selected_suggestion_index = 0;
-                                app.selected_suggestion_index = 0;
                             }
                             Err(e) => {
                                 app.date_input_error = Some(e);
-                                app.date_suggestions.clear();
-                                app.show_date_suggestions = false;
                             }
                         }
                     }
@@ -440,22 +438,22 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         // Real-time validation for end date
                         if app.selected_input_field == PopupInputField::EndDate {
                             let start_date = app.current_date_for_new_event;
+                            app.date_suggestions = date_utils::get_date_suggestions(
+                                &app.popup_event_end_date,
+                                start_date,
+                                Utc::now().date_naive(),
+                            );
+                            app.show_date_suggestions = !app.date_suggestions.is_empty();
+                            app.selected_suggestion_index = 0;
                             match date_utils::validate_date_input(
                                 &app.popup_event_end_date,
                                 start_date,
                             ) {
                                 Ok(_) => {
                                     app.date_input_error = None;
-                                    app.date_suggestions = date_utils::get_date_suggestions(
-                                        &app.popup_event_end_date,
-                                        start_date,
-                                    );
-                                    app.show_date_suggestions = !app.date_suggestions.is_empty();
                                 }
                                 Err(e) => {
                                     app.date_input_error = Some(e);
-                                    app.date_suggestions.clear();
-                                    app.show_date_suggestions = false;
                                 }
                             }
                         }
@@ -465,20 +463,18 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     if app.selected_input_field == PopupInputField::EndDate
                         && app.show_date_suggestions
                         && !app.date_suggestions.is_empty()
+                        && app.selected_suggestion_index > 0
                     {
-                        if app.selected_suggestion_index > 0 {
-                            app.selected_suggestion_index -= 1;
-                        }
+                        app.selected_suggestion_index -= 1;
                     }
                 }
                 KeyCode::Down => {
                     if app.selected_input_field == PopupInputField::EndDate
                         && app.show_date_suggestions
                         && !app.date_suggestions.is_empty()
+                        && app.selected_suggestion_index < app.date_suggestions.len() - 1
                     {
-                        if app.selected_suggestion_index < app.date_suggestions.len() - 1 {
-                            app.selected_suggestion_index += 1;
-                        }
+                        app.selected_suggestion_index += 1;
                     }
                 }
                 KeyCode::Esc => {
@@ -561,6 +557,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             app.date_suggestions = date_utils::get_date_suggestions(
                                 &app.popup_event_end_date,
                                 app.current_date_for_new_event,
+                                Utc::now().date_naive(),
                             );
                             app.show_date_suggestions = !app.date_suggestions.is_empty();
                             app.selected_suggestion_index = 0;

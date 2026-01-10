@@ -12,7 +12,7 @@ When parsing,
 Then all valid formats are accepted and normalized.
 
 ### Requirement: End Date Format Handling
-End date inputs MUST use DD/MM format with automatic year assumption and provide comprehensive real-time validation, auto-completion suggestions, and visual feedback while maintaining the required DD/MM format. Suggestions MUST include expanded relative dates, fuzzy matching, enhanced partial completion, user experience improvements, validation feedback, and performance optimizations. Suggestions MUST appear immediately when entering the end date field, showing common relative date options even when the field is empty.
+End date inputs MUST use DD/MM format with automatic year assumption and provide comprehensive real-time validation, auto-completion suggestions, and visual feedback while maintaining the required DD/MM format. Suggestions MUST include expanded relative dates, fuzzy matching, enhanced partial completion, user experience improvements, validation feedback, and performance optimizations. Suggestions MUST appear immediately when entering the end date field, showing common relative date options even when the field is empty. Digit-based inputs MUST suggest dates using the current month, and edge cases around end of month MUST be handled by providing valid alternatives or adjustments.
 
 #### Scenario: Suggestion Display on Field Entry
 Given end date input field,
@@ -62,8 +62,22 @@ Then shows validation feedback and suggests corrections for invalid inputs.
 #### Scenario: Performance Optimization
 Given suggestion generation,
 When processing,
-Then limits to reasonable number of suggestions and handles edge cases efficiently.</content>
-<parameter name="filePath">openspec/changes/2026-01-10-show-end-date-suggestions-on-field-entry/specs/event-management/spec.md
+Then limits to reasonable number of suggestions and handles edge cases efficiently.
+
+#### Scenario: Digit Input Completion with Multiple Months
+Given end date input field,
+When user types digits representing a day (e.g., "12"),
+Then suggests the date for current month, next month, and month after next (e.g., "12/01", "12/02", "12/03" if current month is January).
+
+#### Scenario: Edge Case Handling for Invalid Day Numbers
+Given end date input field,
+When user types a day number that would make an invalid date for the current month (e.g., "32" in January),
+Then provides valid alternatives, such as the last day of the current month or the equivalent day in the next month if applicable.
+
+#### Scenario: Real-Time Suggestion Updates on Each Character
+Given end date input field,
+When user types or deletes characters,
+Then suggestions update immediately after each input change, ensuring responsiveness.
 
 ### Requirement: Safe Event Deletion
 Event deletion MUST require confirmation to prevent accidental data loss.

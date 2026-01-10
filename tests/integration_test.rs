@@ -1,3 +1,4 @@
+use chrono::Utc;
 use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
 use rcal::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
@@ -725,6 +726,7 @@ fn test_suggestions_overlay_appears_when_typing_end_date() {
     let manual_suggestions = rcal::date_utils::get_date_suggestions(
         &app.popup_event_end_date,
         app.current_date_for_new_event,
+        Utc::now().date_naive(),
     );
     assert!(!manual_suggestions.is_empty());
     // Note: The integration with event handling is tested separately; here we verify suggestions generation
@@ -769,6 +771,7 @@ fn test_suggestions_fuzzy_matching() {
     let suggestions = rcal::date_utils::get_date_suggestions(
         &app.popup_event_end_date,
         app.current_date_for_new_event,
+        Utc::now().date_naive(),
     );
     assert!(!suggestions.is_empty());
     assert!(suggestions.iter().any(|(s, _)| s.contains("Tomorrow")));
@@ -787,6 +790,7 @@ fn test_suggestions_arrow_navigation() {
     app.date_suggestions = rcal::date_utils::get_date_suggestions(
         &app.popup_event_end_date,
         app.current_date_for_new_event,
+        Utc::now().date_naive(),
     );
     app.show_date_suggestions = true;
     app.selected_suggestion_index = 0;
@@ -818,6 +822,7 @@ fn test_suggestions_tab_accepts_selected() {
     app.date_suggestions = rcal::date_utils::get_date_suggestions(
         &app.popup_event_end_date,
         app.current_date_for_new_event,
+        Utc::now().date_naive(),
     );
     app.show_date_suggestions = true;
     app.selected_suggestion_index = 0;

@@ -32,20 +32,26 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
 
     // Handle boundary constraints
     let frame_size = f.size();
-    if overlay_y + overlay_height > frame_size.height {
-        // Try positioning above
+    let space_below = frame_size.height.saturating_sub(overlay_y);
+    let space_above = input_chunks[2].y;
+
+    // Prefer below if it has space for at least 3 suggestions, otherwise try above
+    if space_below < 3 && space_above >= 3 {
         overlay_y = input_chunks[2].y.saturating_sub(overlay_height);
-        if overlay_y == 0 && overlay_height > input_chunks[2].y {
-            // If still doesn't fit, reduce height
+    } else if space_below < overlay_height {
+        // If below doesn't have full height, try above
+        overlay_y = input_chunks[2].y.saturating_sub(overlay_height);
+        if overlay_y == 0 || overlay_height > space_above {
+            // If above doesn't fit, go back to below and reduce height
             overlay_y = input_chunks[2].y + input_chunks[2].height;
-            // But since it's under, perhaps just reduce
         }
     }
+
     // Ensure height fits
     let adjusted_height = frame_size.height.saturating_sub(overlay_y);
     let overlay_height = overlay_height.min(adjusted_height);
-    if overlay_height == 0 {
-        return; // Skip if no height
+    if overlay_height < 3 {
+        return; // Skip if can't show at least 3 suggestions
     }
     if overlay_height == 0 {
         return; // Skip if no height

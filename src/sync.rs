@@ -146,7 +146,7 @@ impl SyncProvider for GitSyncProvider {
 
         // Push
         let output = Command::new("git")
-            .args(["push", "origin", &self.branch])
+            .args(["push", "-u", "origin", &self.branch])
             .current_dir(path)
             .stdout(Stdio::null())
             .output()?;

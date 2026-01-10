@@ -15,8 +15,12 @@ pub fn validate_date_input(input: &str, start_date: NaiveDate) -> Result<NaiveDa
         return Err("Invalid format. Use DD/MM".to_string());
     }
 
-    let day = parts[0].parse::<u32>().map_err(|_| "Invalid day".to_string())?;
-    let month = parts[1].parse::<u32>().map_err(|_| "Invalid month".to_string())?;
+    let day = parts[0]
+        .parse::<u32>()
+        .map_err(|_| "Invalid day".to_string())?;
+    let month = parts[1]
+        .parse::<u32>()
+        .map_err(|_| "Invalid month".to_string())?;
 
     if day == 0 || day > 31 {
         return Err("Day must be between 1 and 31".to_string());
@@ -32,8 +36,7 @@ pub fn validate_date_input(input: &str, start_date: NaiveDate) -> Result<NaiveDa
         year += 1;
     }
 
-    NaiveDate::from_ymd_opt(year, month, day)
-        .ok_or_else(|| "Invalid date".to_string())
+    NaiveDate::from_ymd_opt(year, month, day).ok_or_else(|| "Invalid date".to_string())
 }
 
 /// Generates date suggestions based on input prefix.
@@ -75,12 +78,24 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
     let one_month = next_month;
 
     // Weekday suggestions
-    let weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"];
+    let weekdays = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+        "sunday",
+    ];
     let weekday_nums = [1, 2, 3, 4, 5, 6, 7]; // 1=Mon, 7=Sun
     let mut next_weekdays = Vec::new();
     for (&weekday, &target_num) in weekdays.iter().zip(weekday_nums.iter()) {
         let current_num = start_date.format("%u").to_string().parse::<u32>().unwrap();
-        let days_ahead = if target_num > current_num { target_num - current_num } else { 7 - current_num + target_num };
+        let days_ahead = if target_num > current_num {
+            target_num - current_num
+        } else {
+            7 - current_num + target_num
+        };
         let date = start_date + chrono::Duration::days(days_ahead as i64);
         next_weekdays.push((weekday, date));
     }
@@ -89,7 +104,10 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
     let suggestion_matches = vec![
         (tomorrow, vec!["tomorrow", "tom", "tomorow"]),
         (next_week, vec!["next week", "nextweek"]),
-        (end_of_month, vec!["end of month", "endofmonth", "end month"]),
+        (
+            end_of_month,
+            vec!["end of month", "endofmonth", "end month"],
+        ),
         (next_month, vec!["next month", "nextmonth"]),
         (end_of_year, vec!["end of year", "endofyear", "end year"]),
         (start_date, vec!["same day", "sameday"]),
@@ -100,12 +118,27 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
     ];
 
     // Check relative and duration matches
-    let descriptions = ["Tomorrow", "Next week", "End of month", "Next month", "End of year", "Same day", "1 day", "1 week", "2 weeks", "1 month"];
+    let descriptions = [
+        "Tomorrow",
+        "Next week",
+        "End of month",
+        "Next month",
+        "End of year",
+        "Same day",
+        "1 day",
+        "1 week",
+        "2 weeks",
+        "1 month",
+    ];
     for i in 0..suggestion_matches.len() {
         let (date, possible_inputs) = &suggestion_matches[i];
         let desc = descriptions[i];
         for &possible in possible_inputs {
-            if possible.starts_with(&input_lower) || input_lower.starts_with(possible) || possible.contains(&input_lower) || input_lower.contains(possible) {
+            if possible.starts_with(&input_lower)
+                || input_lower.starts_with(possible)
+                || possible.contains(&input_lower)
+                || input_lower.contains(possible)
+            {
                 let day = date.format("%d").to_string().parse::<u32>().unwrap();
                 let month = date.format("%m").to_string().parse::<u32>().unwrap();
                 suggestions.push((format!("{} ({:02}/{:02})", desc, day, month), true));
@@ -118,7 +151,13 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
     for (weekday, date) in &next_weekdays {
         let possible = format!("next {}", weekday);
         let short = format!("next {}", &weekday[..3]);
-        if possible.starts_with(&input_lower) || input_lower.starts_with(&possible) || short.starts_with(&input_lower) || input_lower.starts_with(&short) || possible.contains(&input_lower) || input_lower.contains(&possible) {
+        if possible.starts_with(&input_lower)
+            || input_lower.starts_with(&possible)
+            || short.starts_with(&input_lower)
+            || input_lower.starts_with(&short)
+            || possible.contains(&input_lower)
+            || input_lower.contains(&possible)
+        {
             let day = date.format("%d").to_string().parse::<u32>().unwrap();
             let month = date.format("%m").to_string().parse::<u32>().unwrap();
             suggestions.push((format!("Next {} ({:02}/{:02})", weekday, day, month), true));
@@ -152,7 +191,10 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
                         suggestions.push((date_str, is_valid));
                     }
                 }
-            } else if !day_part.is_empty() && !month_part.is_empty() && (day_part.len() < 2 || month_part.len() < 2) {
+            } else if !day_part.is_empty()
+                && !month_part.is_empty()
+                && (day_part.len() < 2 || month_part.len() < 2)
+            {
                 // Partial, show full format if matches and not full
                 if let (Ok(day), Ok(month)) = (day_part.parse::<u32>(), month_part.parse::<u32>()) {
                     if day >= 1 && day <= 31 && month >= 1 && month <= 12 {
@@ -177,8 +219,16 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
 
     // Common date patterns
     if input_lower.contains("last day") || input_lower.contains("lastday") {
-        let day = end_of_month.format("%d").to_string().parse::<u32>().unwrap();
-        let month = end_of_month.format("%m").to_string().parse::<u32>().unwrap();
+        let day = end_of_month
+            .format("%d")
+            .to_string()
+            .parse::<u32>()
+            .unwrap();
+        let month = end_of_month
+            .format("%m")
+            .to_string()
+            .parse::<u32>()
+            .unwrap();
         let date_str = format!("Last day of month ({:02}/{:02})", day, month);
         suggestions.push((date_str, true));
     }
@@ -195,7 +245,6 @@ pub fn get_date_suggestions(input: &str, start_date: NaiveDate) -> Vec<(String, 
 #[cfg(test)]
 mod tests {
     use super::*;
-use chrono::prelude::*;
 
     #[test]
     fn test_validate_date_input_valid() {

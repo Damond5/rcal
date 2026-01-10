@@ -3,8 +3,8 @@ use std::io;
 use chrono::{Datelike, NaiveDate, NaiveTime};
 use crossterm::event::{self, Event as CrosstermEvent, KeyCode};
 use dirs;
-use ratatui::Terminal;
 use ratatui::backend::Backend;
+use ratatui::Terminal;
 use std::sync::mpsc::TryRecvError;
 use std::thread;
 
@@ -70,25 +70,32 @@ fn normalize_time_input(input: &str) -> String {
     trimmed.to_string()
 }
 
-pub fn find_base_event_for_instance(instance: &CalendarEvent, events: &[CalendarEvent]) -> Option<CalendarEvent> {
+pub fn find_base_event_for_instance(
+    instance: &CalendarEvent,
+    events: &[CalendarEvent],
+) -> Option<CalendarEvent> {
     if !instance.is_recurring_instance {
         return None;
     }
     if let Some(base_date) = instance.base_date {
-        events.iter().find(|e| {
-            e.date == base_date
-                && e.title == instance.title
-                && e.time == instance.time
-                && e.description == instance.description
-                && !e.is_recurring_instance
-        }).cloned()
+        events
+            .iter()
+            .find(|e| {
+                e.date == base_date
+                    && e.title == instance.title
+                    && e.time == instance.time
+                    && e.description == instance.description
+                    && !e.is_recurring_instance
+            })
+            .cloned()
     } else {
-        eprintln!("Warning: Recurring instance lacks base_date: {}", instance.title);
+        eprintln!(
+            "Warning: Recurring instance lacks base_date: {}",
+            instance.title
+        );
         None
     }
 }
-
-
 
 pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
     loop {
@@ -98,16 +105,16 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
         if let Some(ref receiver) = app.reload_receiver {
             match receiver.try_recv() {
                 Ok(Ok(_)) => {
-                     // Reload events
-                     app.events = persistence::load_events_from_path(&app.calendar_dir)
-                         .unwrap_or_else(|e| {
-                             eprintln!("Failed to reload events after sync: {e}");
-                             Vec::new()
-                         });
-                     // Invalidate cached instances after reloading events
-                     app.invalidate_instance_cache(None);
-                     // Update sync status (silently, don't interfere with sync popup)
-                     app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                    // Reload events
+                    app.events = persistence::load_events_from_path(&app.calendar_dir)
+                        .unwrap_or_else(|e| {
+                            eprintln!("Failed to reload events after sync: {e}");
+                            Vec::new()
+                        });
+                    // Invalidate cached instances after reloading events
+                    app.invalidate_instance_cache(None);
+                    // Update sync status (silently, don't interfere with sync popup)
+                    app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
                 }
                 Ok(Err(e)) => {
                     // Update sync status on error (silently, don't interfere with sync popup)
@@ -170,17 +177,17 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Char('o') => {
                     app.show_view_events_popup = true;
                     let all_events = app.get_all_events_for_range(app.date, app.date);
-                     app.events_to_display_in_popup = all_events
-                         .iter()
-                         .filter(|event| {
-                             if let Some(end) = event.end_date {
-                                 event.start_date <= app.date && end >= app.date
-                             } else {
-                                 event.start_date == app.date
-                             }
-                         })
-                         .cloned()
-                         .collect();
+                    app.events_to_display_in_popup = all_events
+                        .iter()
+                        .filter(|event| {
+                            if let Some(end) = event.end_date {
+                                event.start_date <= app.date && end >= app.date
+                            } else {
+                                event.start_date == app.date
+                            }
+                        })
+                        .cloned()
+                        .collect();
                     app.events_to_display_in_popup
                         .sort_by_key(|event| event.time);
                     app.selected_event_index = 0;
@@ -208,13 +215,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                         }
                                         crate::sync::SyncStatus::Error(e) => {
                                             format!("Status error: {e}")
-                         }
-                     };
-                     if app.selected_input_field == PopupInputField::Recurrence {
-                         app.input_mode = InputMode::SelectingRecurrence;
-                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
-                     }
-                 }
+                                        }
+                                    };
+                                    if app.selected_input_field == PopupInputField::Recurrence {
+                                        app.input_mode = InputMode::SelectingRecurrence;
+                                        app.selected_recurrence_index =
+                                            recurrence_str_to_index(&app.popup_event_recurrence);
+                                    }
+                                }
                                 Err(e) => {
                                     app.sync_message = format!("Status failed: {e}");
                                     app.sync_status =
@@ -228,33 +236,38 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
             },
             InputMode::EditingEventPopup => match key.code {
                 KeyCode::Enter => {
-                     if app.popup_event_title.trim().is_empty() {
-                         app.error_message = "Title cannot be empty".to_string();
-                         return Ok(true);
-                     }
-                     if let Some(ref error) = app.date_input_error {
-                         app.error_message = error.clone();
-                         return Ok(true);
-                     }
-                     // Additional validation for end date on submit
-                     if !app.popup_event_end_date.trim().is_empty() {
-                         if let Err(e) = date_utils::validate_date_input(&app.popup_event_end_date, app.current_date_for_new_event) {
-                             app.error_message = e;
-                             return Ok(true);
-                         }
-                     }
-                     let time_str = app.popup_event_time.clone();
-                     let normalized_time_str = normalize_time_input(&time_str);
-                     let is_all_day = normalized_time_str.trim().is_empty();
-                     if !is_all_day && NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").is_err() {
-                         app.error_message = "Invalid time format. Use HH:MM".to_string();
-                         return Ok(true);
-                     }
-                     let time = if is_all_day {
-                         NaiveTime::from_hms_opt(0, 0, 0).unwrap()
-                     } else {
-                         NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").unwrap()
-                     };
+                    if app.popup_event_title.trim().is_empty() {
+                        app.error_message = "Title cannot be empty".to_string();
+                        return Ok(true);
+                    }
+                    if let Some(ref error) = app.date_input_error {
+                        app.error_message = error.clone();
+                        return Ok(true);
+                    }
+                    // Additional validation for end date on submit
+                    if !app.popup_event_end_date.trim().is_empty() {
+                        if let Err(e) = date_utils::validate_date_input(
+                            &app.popup_event_end_date,
+                            app.current_date_for_new_event,
+                        ) {
+                            app.error_message = e;
+                            return Ok(true);
+                        }
+                    }
+                    let time_str = app.popup_event_time.clone();
+                    let normalized_time_str = normalize_time_input(&time_str);
+                    let is_all_day = normalized_time_str.trim().is_empty();
+                    if !is_all_day
+                        && NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").is_err()
+                    {
+                        app.error_message = "Invalid time format. Use HH:MM".to_string();
+                        return Ok(true);
+                    }
+                    let time = if is_all_day {
+                        NaiveTime::from_hms_opt(0, 0, 0).unwrap()
+                    } else {
+                        NaiveTime::parse_from_str(&normalized_time_str, "%H:%M").unwrap()
+                    };
                     let end_date_str = app.popup_event_end_date.drain(..).collect::<String>();
                     let end_date = if end_date_str.trim().is_empty() {
                         Some(app.current_date_for_new_event)
@@ -281,21 +294,21 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     };
                     let end_time_str = app.popup_event_end_time.drain(..).collect::<String>();
                     let normalized_end_time_str = normalize_time_input(&end_time_str);
-                     let end_time = if normalized_end_time_str.trim().is_empty() {
-                         Some(time)
-                     } else {
-                         NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
-                     };
+                    let end_time = if normalized_end_time_str.trim().is_empty() {
+                        Some(time)
+                    } else {
+                        NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
+                    };
 
-                     // Validate date range
-                     if let Some(ed) = end_date {
-                         if ed < app.current_date_for_new_event {
-                             app.error_message = "End date cannot be before start date".to_string();
-                             return Ok(true);
-                         }
-                     }
+                    // Validate date range
+                    if let Some(ed) = end_date {
+                        if ed < app.current_date_for_new_event {
+                            app.error_message = "End date cannot be before start date".to_string();
+                            return Ok(true);
+                        }
+                    }
 
-                     let title = app.popup_event_title.drain(..).collect();
+                    let title = app.popup_event_title.drain(..).collect();
                     let recurrence_str = app.popup_event_recurrence.drain(..).collect::<String>();
                     let recurrence = match recurrence_str.trim().to_lowercase().as_str() {
                         "daily" => crate::app::Recurrence::Daily,
@@ -349,110 +362,126 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                     }
 
-                     app.events.push(event.clone());
-                     let _ =
-                         persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
+                    app.events.push(event.clone());
+                    let _ =
+                        persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
 
-                     // Reset editing state
-                     app.is_editing = false;
-                     app.event_being_edited = None;
+                    // Reset editing state
+                    app.is_editing = false;
+                    app.event_being_edited = None;
 
-                     // If we came from the view events popup, refresh it and stay in that mode
-                     if app.show_view_events_popup {
-                         let all_events = app.get_all_events_for_range(app.date, app.date);
-                          app.events_to_display_in_popup = all_events
-                              .iter()
-                              .filter(|event| {
-                                  if let Some(end) = event.end_date {
-                                      event.start_date <= app.date && end >= app.date
-                                  } else {
-                                      event.start_date == app.date
-                                  }
-                              })
-                              .cloned()
-                              .collect();
-                         app.events_to_display_in_popup
-                             .sort_by_key(|event| event.time);
-                         app.selected_event_index = 0;
-                         app.input_mode = InputMode::ViewEventsPopup;
-                     } else {
-                         app.input_mode = InputMode::Normal;
-                     }
-                     app.show_add_event_popup = false;
+                    // If we came from the view events popup, refresh it and stay in that mode
+                    if app.show_view_events_popup {
+                        let all_events = app.get_all_events_for_range(app.date, app.date);
+                        app.events_to_display_in_popup = all_events
+                            .iter()
+                            .filter(|event| {
+                                if let Some(end) = event.end_date {
+                                    event.start_date <= app.date && end >= app.date
+                                } else {
+                                    event.start_date == app.date
+                                }
+                            })
+                            .cloned()
+                            .collect();
+                        app.events_to_display_in_popup
+                            .sort_by_key(|event| event.time);
+                        app.selected_event_index = 0;
+                        app.input_mode = InputMode::ViewEventsPopup;
+                    } else {
+                        app.input_mode = InputMode::Normal;
+                    }
+                    app.show_add_event_popup = false;
 
-                     // Invalidate cached instances after event modification and UI refresh
-                     app.invalidate_instance_cache(None);
+                    // Invalidate cached instances after event modification and UI refresh
+                    app.invalidate_instance_cache(None);
                 }
-                  KeyCode::Char(c) => {
-                      if app.selected_input_field == PopupInputField::Recurrence {
-                          return Ok(true);
-                      }
-                      let cursor_pos = app.cursor_position;
-                      let field = app.get_current_field_mut();
-                      let byte_index = App::char_to_byte_index(field, cursor_pos);
-                      field.insert(byte_index, c);
-                      app.cursor_position += 1;
+                KeyCode::Char(c) => {
+                    if app.selected_input_field == PopupInputField::Recurrence {
+                        return Ok(true);
+                    }
+                    let cursor_pos = app.cursor_position;
+                    let field = app.get_current_field_mut();
+                    let byte_index = App::char_to_byte_index(field, cursor_pos);
+                    field.insert(byte_index, c);
+                    app.cursor_position += 1;
 
-                      // Real-time validation for end date
-                      if app.selected_input_field == PopupInputField::EndDate {
-                          let start_date = app.current_date_for_new_event;
-                          match date_utils::validate_date_input(&app.popup_event_end_date, start_date) {
-                              Ok(_) => {
-                                  app.date_input_error = None;
-                                      app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
-                                      app.show_date_suggestions = !app.date_suggestions.is_empty();
-                                      app.selected_suggestion_index = 0;
-                                   app.selected_suggestion_index = 0;
-                              }
-                              Err(e) => {
-                                  app.date_input_error = Some(e);
-                                  app.date_suggestions.clear();
-                                  app.show_date_suggestions = false;
-                              }
-                          }
-                      }
-                  }
-                 KeyCode::Backspace => {
-                     if app.cursor_position > 0 {
-                         let cursor_pos = app.cursor_position - 1;
-                         let field = app.get_current_field_mut();
-                         let byte_index = App::char_to_byte_index(field, cursor_pos);
-                         field.remove(byte_index);
-                         app.cursor_position -= 1;
+                    // Real-time validation for end date
+                    if app.selected_input_field == PopupInputField::EndDate {
+                        let start_date = app.current_date_for_new_event;
+                        match date_utils::validate_date_input(&app.popup_event_end_date, start_date)
+                        {
+                            Ok(_) => {
+                                app.date_input_error = None;
+                                app.date_suggestions = date_utils::get_date_suggestions(
+                                    &app.popup_event_end_date,
+                                    start_date,
+                                );
+                                app.show_date_suggestions = !app.date_suggestions.is_empty();
+                                app.selected_suggestion_index = 0;
+                                app.selected_suggestion_index = 0;
+                            }
+                            Err(e) => {
+                                app.date_input_error = Some(e);
+                                app.date_suggestions.clear();
+                                app.show_date_suggestions = false;
+                            }
+                        }
+                    }
+                }
+                KeyCode::Backspace => {
+                    if app.cursor_position > 0 {
+                        let cursor_pos = app.cursor_position - 1;
+                        let field = app.get_current_field_mut();
+                        let byte_index = App::char_to_byte_index(field, cursor_pos);
+                        field.remove(byte_index);
+                        app.cursor_position -= 1;
 
-                         // Real-time validation for end date
-                         if app.selected_input_field == PopupInputField::EndDate {
-                             let start_date = app.current_date_for_new_event;
-                             match date_utils::validate_date_input(&app.popup_event_end_date, start_date) {
-                                 Ok(_) => {
-                                     app.date_input_error = None;
-                                     app.date_suggestions = date_utils::get_date_suggestions(&app.popup_event_end_date, start_date);
-                                     app.show_date_suggestions = !app.date_suggestions.is_empty();
-                                 }
-                                 Err(e) => {
-                                     app.date_input_error = Some(e);
-                                     app.date_suggestions.clear();
-                                     app.show_date_suggestions = false;
-                                 }
-                             }
-                         }
-                      }
-                  }
-                  KeyCode::Up => {
-                      if app.selected_input_field == PopupInputField::EndDate && app.show_date_suggestions && !app.date_suggestions.is_empty() {
-                          if app.selected_suggestion_index > 0 {
-                              app.selected_suggestion_index -= 1;
-                          }
-                      }
-                  }
-                  KeyCode::Down => {
-                      if app.selected_input_field == PopupInputField::EndDate && app.show_date_suggestions && !app.date_suggestions.is_empty() {
-                          if app.selected_suggestion_index < app.date_suggestions.len() - 1 {
-                              app.selected_suggestion_index += 1;
-                          }
-                      }
-                  }
-                 KeyCode::Esc => {
+                        // Real-time validation for end date
+                        if app.selected_input_field == PopupInputField::EndDate {
+                            let start_date = app.current_date_for_new_event;
+                            match date_utils::validate_date_input(
+                                &app.popup_event_end_date,
+                                start_date,
+                            ) {
+                                Ok(_) => {
+                                    app.date_input_error = None;
+                                    app.date_suggestions = date_utils::get_date_suggestions(
+                                        &app.popup_event_end_date,
+                                        start_date,
+                                    );
+                                    app.show_date_suggestions = !app.date_suggestions.is_empty();
+                                }
+                                Err(e) => {
+                                    app.date_input_error = Some(e);
+                                    app.date_suggestions.clear();
+                                    app.show_date_suggestions = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                KeyCode::Up => {
+                    if app.selected_input_field == PopupInputField::EndDate
+                        && app.show_date_suggestions
+                        && !app.date_suggestions.is_empty()
+                    {
+                        if app.selected_suggestion_index > 0 {
+                            app.selected_suggestion_index -= 1;
+                        }
+                    }
+                }
+                KeyCode::Down => {
+                    if app.selected_input_field == PopupInputField::EndDate
+                        && app.show_date_suggestions
+                        && !app.date_suggestions.is_empty()
+                    {
+                        if app.selected_suggestion_index < app.date_suggestions.len() - 1 {
+                            app.selected_suggestion_index += 1;
+                        }
+                    }
+                }
+                KeyCode::Esc => {
                     app.show_add_event_popup = false;
                     app.popup_event_title.clear();
                     app.popup_event_time.clear();
@@ -481,120 +510,124 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         app.cursor_position += 1;
                     }
                 }
-                 KeyCode::BackTab => {
-                     app.selected_input_field = match app.selected_input_field {
-                         PopupInputField::Title => {
-                             app.cursor_position = app.popup_event_recurrence.chars().count();
-                             PopupInputField::Recurrence
-                         }
-                         PopupInputField::Time => {
-                             app.cursor_position = app.popup_event_title.chars().count();
-                             PopupInputField::Title
-                         }
-                         PopupInputField::EndDate => {
-                             app.cursor_position = app.popup_event_time.chars().count();
-                             PopupInputField::Time
-                         }
-                          PopupInputField::EndTime => {
-                              app.cursor_position = app.popup_event_end_date.chars().count();
-                              // Clear suggestions when entering EndDate
-                              app.date_input_error = None;
-                              app.date_suggestions.clear();
-                              app.show_date_suggestions = false;
-                              PopupInputField::EndDate
-                          }
-                         PopupInputField::Description => {
-                             app.cursor_position = app.popup_event_end_time.chars().count();
-                             PopupInputField::EndTime
-                         }
-                         PopupInputField::Recurrence => {
-                             app.cursor_position = app.popup_event_description.chars().count();
-                             PopupInputField::Description
-                          }
-                     };
-                     if app.selected_input_field == PopupInputField::Recurrence {
-                         app.input_mode = InputMode::SelectingRecurrence;
-                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
-                     }
-                 }
+                KeyCode::BackTab => {
+                    app.selected_input_field = match app.selected_input_field {
+                        PopupInputField::Title => {
+                            app.cursor_position = app.popup_event_recurrence.chars().count();
+                            PopupInputField::Recurrence
+                        }
+                        PopupInputField::Time => {
+                            app.cursor_position = app.popup_event_title.chars().count();
+                            PopupInputField::Title
+                        }
+                        PopupInputField::EndDate => {
+                            app.cursor_position = app.popup_event_time.chars().count();
+                            PopupInputField::Time
+                        }
+                        PopupInputField::EndTime => {
+                            app.cursor_position = app.popup_event_end_date.chars().count();
+                            // Clear suggestions when entering EndDate
+                            app.date_input_error = None;
+                            app.date_suggestions.clear();
+                            app.show_date_suggestions = false;
+                            PopupInputField::EndDate
+                        }
+                        PopupInputField::Description => {
+                            app.cursor_position = app.popup_event_end_time.chars().count();
+                            PopupInputField::EndTime
+                        }
+                        PopupInputField::Recurrence => {
+                            app.cursor_position = app.popup_event_description.chars().count();
+                            PopupInputField::Description
+                        }
+                    };
+                    if app.selected_input_field == PopupInputField::Recurrence {
+                        app.input_mode = InputMode::SelectingRecurrence;
+                        app.selected_recurrence_index =
+                            recurrence_str_to_index(&app.popup_event_recurrence);
+                    }
+                }
 
-                 KeyCode::Tab => {
-                     app.selected_input_field = match app.selected_input_field {
-                         PopupInputField::Title => {
-                             app.cursor_position = app.popup_event_time.chars().count();
-                             PopupInputField::Time
-                         }
-                          PopupInputField::Time => {
-                              app.cursor_position = app.popup_event_end_date.chars().count();
-                              // Clear suggestions when entering EndDate
-                              app.date_input_error = None;
-                              app.date_suggestions.clear();
-                              app.show_date_suggestions = false;
-                              PopupInputField::EndDate
-                          }
-                          PopupInputField::EndDate => {
-                               if app.show_date_suggestions && !app.date_suggestions.is_empty() {
-                                   app.popup_event_end_date = extract_date_from_suggestion(&app.date_suggestions[app.selected_suggestion_index]);
-                                   app.date_input_error = None;
-                                   app.show_date_suggestions = false;
-                                   app.cursor_position = app.popup_event_end_date.chars().count();
-                                   PopupInputField::EndDate
-                              } else {
-                                  app.cursor_position = app.popup_event_end_time.chars().count();
-                                  PopupInputField::EndTime
-                              }
-                          }
-                         PopupInputField::EndTime => {
-                             app.cursor_position = app.popup_event_description.chars().count();
-                             PopupInputField::Description
-                         }
-                         PopupInputField::Description => {
-                             app.cursor_position = app.popup_event_recurrence.chars().count();
-                             PopupInputField::Recurrence
-                         }
-                         PopupInputField::Recurrence => {
-                             app.cursor_position = app.popup_event_title.chars().count();
-                             PopupInputField::Title
-                         }
-                     };
-                     if app.selected_input_field == PopupInputField::Recurrence {
-                         app.input_mode = InputMode::SelectingRecurrence;
-                         app.selected_recurrence_index = recurrence_str_to_index(&app.popup_event_recurrence);
-                     }
-                 }
-                 _ => {}
-             },
-             InputMode::SelectingRecurrence => match key.code {
-                 KeyCode::Up | KeyCode::Char('k') => {
-                     if app.selected_recurrence_index > 0 {
-                         app.selected_recurrence_index -= 1;
-                     }
-                 }
-                 KeyCode::Down | KeyCode::Char('j') => {
-                     if app.selected_recurrence_index < 4 {
-                         app.selected_recurrence_index += 1;
-                     }
-                 }
-                 KeyCode::Enter => {
-                     let recurrence_str = match app.selected_recurrence_index {
-                         0 => "none",
-                         1 => "daily",
-                         2 => "weekly",
-                         3 => "monthly",
-                         4 => "yearly",
-                         _ => "none",
-                     };
-                     app.popup_event_recurrence = recurrence_str.to_string();
-                     app.input_mode = InputMode::EditingEventPopup;
-                     app.selected_input_field = PopupInputField::Recurrence;
-                 }
-                 KeyCode::Esc => {
-                     app.input_mode = InputMode::EditingEventPopup;
-                     app.selected_input_field = PopupInputField::Recurrence;
-                 }
-                 _ => {}
-             },
-             InputMode::ViewEventsPopup => match key.code {
+                KeyCode::Tab => {
+                    app.selected_input_field = match app.selected_input_field {
+                        PopupInputField::Title => {
+                            app.cursor_position = app.popup_event_time.chars().count();
+                            PopupInputField::Time
+                        }
+                        PopupInputField::Time => {
+                            app.cursor_position = app.popup_event_end_date.chars().count();
+                            // Clear suggestions when entering EndDate
+                            app.date_input_error = None;
+                            app.date_suggestions.clear();
+                            app.show_date_suggestions = false;
+                            PopupInputField::EndDate
+                        }
+                        PopupInputField::EndDate => {
+                            if app.show_date_suggestions && !app.date_suggestions.is_empty() {
+                                app.popup_event_end_date = extract_date_from_suggestion(
+                                    &app.date_suggestions[app.selected_suggestion_index],
+                                );
+                                app.date_input_error = None;
+                                app.show_date_suggestions = false;
+                                app.cursor_position = app.popup_event_end_date.chars().count();
+                                PopupInputField::EndDate
+                            } else {
+                                app.cursor_position = app.popup_event_end_time.chars().count();
+                                PopupInputField::EndTime
+                            }
+                        }
+                        PopupInputField::EndTime => {
+                            app.cursor_position = app.popup_event_description.chars().count();
+                            PopupInputField::Description
+                        }
+                        PopupInputField::Description => {
+                            app.cursor_position = app.popup_event_recurrence.chars().count();
+                            PopupInputField::Recurrence
+                        }
+                        PopupInputField::Recurrence => {
+                            app.cursor_position = app.popup_event_title.chars().count();
+                            PopupInputField::Title
+                        }
+                    };
+                    if app.selected_input_field == PopupInputField::Recurrence {
+                        app.input_mode = InputMode::SelectingRecurrence;
+                        app.selected_recurrence_index =
+                            recurrence_str_to_index(&app.popup_event_recurrence);
+                    }
+                }
+                _ => {}
+            },
+            InputMode::SelectingRecurrence => match key.code {
+                KeyCode::Up | KeyCode::Char('k') => {
+                    if app.selected_recurrence_index > 0 {
+                        app.selected_recurrence_index -= 1;
+                    }
+                }
+                KeyCode::Down | KeyCode::Char('j') => {
+                    if app.selected_recurrence_index < 4 {
+                        app.selected_recurrence_index += 1;
+                    }
+                }
+                KeyCode::Enter => {
+                    let recurrence_str = match app.selected_recurrence_index {
+                        0 => "none",
+                        1 => "daily",
+                        2 => "weekly",
+                        3 => "monthly",
+                        4 => "yearly",
+                        _ => "none",
+                    };
+                    app.popup_event_recurrence = recurrence_str.to_string();
+                    app.input_mode = InputMode::EditingEventPopup;
+                    app.selected_input_field = PopupInputField::Recurrence;
+                }
+                KeyCode::Esc => {
+                    app.input_mode = InputMode::EditingEventPopup;
+                    app.selected_input_field = PopupInputField::Recurrence;
+                }
+                _ => {}
+            },
+            InputMode::ViewEventsPopup => match key.code {
                 KeyCode::Esc => {
                     app.show_view_events_popup = false;
                     app.events_to_display_in_popup.clear();
@@ -626,7 +659,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     if !app.events_to_display_in_popup.is_empty() {
                         let selected_event =
                             &app.events_to_display_in_popup[app.selected_event_index];
-                        let base_event = if let Some(base) = find_base_event_for_instance(selected_event, &app.events) {
+                        let base_event = if let Some(base) =
+                            find_base_event_for_instance(selected_event, &app.events)
+                        {
                             base
                         } else {
                             selected_event.clone()
@@ -688,42 +723,45 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Char('y') => {
                     if let Some(index) = app.event_to_delete_index {
                         if index < app.events_to_display_in_popup.len() {
-                              let event_to_delete = app.events_to_display_in_popup[index].clone();
-                              // Determine if we need to delete a recurring series
-                              let base_to_delete = if event_to_delete.is_recurring_instance {
-                                  find_base_event_for_instance(&event_to_delete, &app.events)
-                              } else if event_to_delete.recurrence != Recurrence::None {
-                                  Some(event_to_delete.clone())
-                              } else {
-                                  None
-                              };
+                            let event_to_delete = app.events_to_display_in_popup[index].clone();
+                            // Determine if we need to delete a recurring series
+                            let base_to_delete = if event_to_delete.is_recurring_instance {
+                                find_base_event_for_instance(&event_to_delete, &app.events)
+                            } else if event_to_delete.recurrence != Recurrence::None {
+                                Some(event_to_delete.clone())
+                            } else {
+                                None
+                            };
 
-                              let deleted_title = if let Some(ref base) = base_to_delete {
-                                  // Invalidate cached instances before deletion
-                                  app.invalidate_instance_cache(Some(base));
-                                  // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
-                                  // and delete only the base event file from persistence (instances are in-memory only)
-                                  app.events.retain(|event| !(event.title == base.title && (event.is_recurring_instance || event == base)));
-                                  // Remove base event from persistence
-                                  let _ = persistence::delete_event_from_path_without_sync(
-                                      base,
-                                      &app.calendar_dir,
-                                  );
-                                  Some(base.title.clone())
-                              } else {
-                                  // Invalidate cached instances before deletion
-                                  app.invalidate_instance_cache(Some(&event_to_delete.clone()));
-                                  // Delete single non-recurring event
-                                  app.events.retain(|event| event != &event_to_delete);
-                                  // Remove from persistence only if not a recurring instance
-                                  if !event_to_delete.is_recurring_instance {
-                                      let _ = persistence::delete_event_from_path_without_sync(
-                                          &event_to_delete,
-                                          &app.calendar_dir,
-                                      );
-                                  }
-                                  None
-                              };
+                            let deleted_title = if let Some(ref base) = base_to_delete {
+                                // Invalidate cached instances before deletion
+                                app.invalidate_instance_cache(Some(base));
+                                // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
+                                // and delete only the base event file from persistence (instances are in-memory only)
+                                app.events.retain(|event| {
+                                    !(event.title == base.title
+                                        && (event.is_recurring_instance || event == base))
+                                });
+                                // Remove base event from persistence
+                                let _ = persistence::delete_event_from_path_without_sync(
+                                    base,
+                                    &app.calendar_dir,
+                                );
+                                Some(base.title.clone())
+                            } else {
+                                // Invalidate cached instances before deletion
+                                app.invalidate_instance_cache(Some(&event_to_delete.clone()));
+                                // Delete single non-recurring event
+                                app.events.retain(|event| event != &event_to_delete);
+                                // Remove from persistence only if not a recurring instance
+                                if !event_to_delete.is_recurring_instance {
+                                    let _ = persistence::delete_event_from_path_without_sync(
+                                        &event_to_delete,
+                                        &app.calendar_dir,
+                                    );
+                                }
+                                None
+                            };
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {
@@ -742,7 +780,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             }
                             // Update display list - remove all matching events from popup
                             if let Some(title) = deleted_title {
-                                app.events_to_display_in_popup.retain(|event| event.title != title);
+                                app.events_to_display_in_popup
+                                    .retain(|event| event.title != title);
                             } else {
                                 app.events_to_display_in_popup.remove(index);
                             }
@@ -751,7 +790,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 if app.events_to_display_in_popup.is_empty() {
                                     app.selected_event_index = 0;
                                 } else {
-                                    app.selected_event_index = app.events_to_display_in_popup.len() - 1;
+                                    app.selected_event_index =
+                                        app.events_to_display_in_popup.len() - 1;
                                 }
                             }
                         }
@@ -774,13 +814,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             Ok(status) => {
                                 app.sync_message = "Pull successful".to_string();
                                 app.sync_status = Some(status);
-                                 // Reload events
-                                 app.events = persistence::load_events().unwrap_or_else(|e| {
-                                     eprintln!("Failed to reload events after pull: {e}");
-                                     Vec::new()
-                                 });
-                                 // Invalidate cached instances after reloading events
-                                 app.invalidate_instance_cache(None);
+                                // Reload events
+                                app.events = persistence::load_events().unwrap_or_else(|e| {
+                                    eprintln!("Failed to reload events after pull: {e}");
+                                    Vec::new()
+                                });
+                                // Invalidate cached instances after reloading events
+                                app.invalidate_instance_cache(None);
                             }
                             Err(e) => {
                                 app.sync_message = format!("Pull failed: {e}");

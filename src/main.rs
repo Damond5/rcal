@@ -4,9 +4,9 @@ use clap::Parser;
 use crossterm::{
     event::{DisableMouseCapture, EnableMouseCapture},
     execute,
-    terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
+    terminal::{disable_raw_mode, enable_raw_mode, EnterAlternateScreen, LeaveAlternateScreen},
 };
-use ratatui::{Terminal, backend::CrosstermBackend};
+use ratatui::{backend::CrosstermBackend, Terminal};
 use rcal::app::App;
 use rcal::daemon;
 use rcal::event_handling::run_app;
@@ -86,7 +86,9 @@ fn should_auto_cleanup_old_events() -> bool {
 fn save_remote_url(url: &str) -> Result<(), Box<dyn Error>> {
     let mut config = load_config();
     if let Some(table) = config.as_table_mut() {
-        table.entry("sync").or_insert_with(|| toml::Value::Table(Default::default()));
+        table
+            .entry("sync")
+            .or_insert_with(|| toml::Value::Table(Default::default()));
         if let Some(sync_table) = table.get_mut("sync").and_then(|v| v.as_table_mut()) {
             sync_table.insert("remote".to_string(), toml::Value::String(url.to_string()));
         }
@@ -156,10 +158,11 @@ fn main() -> Result<(), Box<dyn Error>> {
         match persistence::cleanup_old_events(&app.calendar_dir, app.sync_provider.as_deref()) {
             Ok(_) => {
                 // Reload events to reflect deletions
-                app.events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
-                    eprintln!("Failed to reload events after cleanup: {e}");
-                    Vec::new()
-                });
+                app.events =
+                    persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
+                        eprintln!("Failed to reload events after cleanup: {e}");
+                        Vec::new()
+                    });
             }
             Err(e) => eprintln!("Auto cleanup failed: {e}"),
         }

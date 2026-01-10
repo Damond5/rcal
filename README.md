@@ -2,6 +2,9 @@
 
 A terminal-based calendar application built with Rust and Ratatui.
 
+[![Test Coverage](https://img.shields.io/badge/coverage-57.5%25-yellow)](coverage-report/html/index.html)
+[![Tests](https://img.shields.io/badge/tests-127_passed-green)](coverage.sh)
+
 ## Description
 
 rcal is a simple yet powerful calendar application that runs entirely in your terminal. It provides an intuitive text-based user interface for managing events, with support for notifications and persistent storage.
@@ -512,6 +515,27 @@ Follow standard Rust conventions enforced by `cargo fmt` and `cargo clippy`:
 - `snake_case` for functions and variables
 - `PascalCase` for types
 - Comprehensive test coverage for all features
+
+### Testing
+
+rcal has comprehensive test coverage with 127 automated tests (34 unit tests + 93 integration tests).
+
+#### Running Tests
+```bash
+cargo test                    # Run all tests
+cargo test --test integration_test  # Run only integration tests
+./coverage.sh                 # Generate coverage report
+```
+
+#### Coverage
+- **Core Logic** (persistence, date utilities, daemon): 80%+ coverage
+- **TUI/UI Code**: 60%+ coverage (challenging due to terminal I/O)
+- **Current Coverage**: 57.5% overall (HTML report: `coverage-report/html/index.html`)
+
+#### Test Types
+- **Unit Tests**: Test individual functions and modules
+- **Integration Tests**: Test complete workflows including TUI interactions, sync operations, and daemon functionality
+- **Coverage Tooling**: Uses `cargo-llvm-cov` for accurate coverage measurement
 
 ### Contributing
 1. Fork the repository

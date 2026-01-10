@@ -454,3 +454,27 @@ openspec archive <change-id> [--yes|-y]  # Mark complete (add --yes for automati
 ```
 
 Remember: Specs are truth. Changes are proposals. Keep them in sync.
+
+## Testing and Coverage Standards
+
+### Coverage Targets
+- **Core Logic** (persistence.rs, date_utils.rs, daemon.rs, sync.rs): 80% line coverage minimum
+- **TUI/UI Code** (main.rs, ui.rs, app.rs): 60% line coverage minimum
+- **Overall Project**: Track trends and ensure no regressions
+
+### Coverage Measurement
+Use `cargo llvm-cov` for accurate coverage reporting:
+```bash
+# Generate HTML report
+cargo llvm-cov --html --output-dir coverage-report
+
+# Get summary only
+cargo llvm-cov --summary-only
+```
+
+### Testing Guidelines
+- Integration tests in `tests/` directory simulate full user workflows
+- Unit tests embedded in source files test individual functions
+- Use `tempfile` for isolated file system operations
+- Mock external dependencies (D-Bus notifications) when necessary
+- Test error paths and edge cases thoroughly

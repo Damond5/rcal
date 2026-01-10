@@ -20,7 +20,11 @@ pub fn cleanup_old_events(
     calendar_dir: &Path,
     sync_provider: Option<&dyn SyncProvider>,
 ) -> Result<usize, Box<dyn std::error::Error>> {
-    cleanup_old_events_with_cutoff(calendar_dir, sync_provider, Local::now().date_naive() - Months::new(2))
+    cleanup_old_events_with_cutoff(
+        calendar_dir,
+        sync_provider,
+        Local::now().date_naive() - Months::new(2),
+    )
 }
 
 pub fn cleanup_old_events_with_cutoff(
@@ -96,7 +100,10 @@ fn sanitize_title_for_filename(title: &str) -> String {
     }
 }
 
-fn find_event_filepath(calendar_dir: &Path, event: &CalendarEvent) -> Result<std::path::PathBuf, std::io::Error> {
+fn find_event_filepath(
+    calendar_dir: &Path,
+    event: &CalendarEvent,
+) -> Result<std::path::PathBuf, std::io::Error> {
     let entries = std::fs::read_dir(calendar_dir)?;
     for entry in entries {
         let entry = entry?;
@@ -183,33 +190,33 @@ pub fn load_events_from_path(
                     description = stripped.trim().to_string();
                 } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
                     let rec_str = stripped.trim();
-                     recurrence = match rec_str {
-                         "daily" => crate::app::Recurrence::Daily,
-                         "weekly" => crate::app::Recurrence::Weekly,
-                         "monthly" => crate::app::Recurrence::Monthly,
-                         "yearly" => crate::app::Recurrence::Yearly,
-                         _ => crate::app::Recurrence::None,
-                     };
+                    recurrence = match rec_str {
+                        "daily" => crate::app::Recurrence::Daily,
+                        "weekly" => crate::app::Recurrence::Weekly,
+                        "monthly" => crate::app::Recurrence::Monthly,
+                        "yearly" => crate::app::Recurrence::Yearly,
+                        _ => crate::app::Recurrence::None,
+                    };
                 }
             }
             if let Some(sd) = start_date {
-                 let is_all_day = start_time.is_none();
-                 let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-                 events.push(CalendarEvent {
-                     id: Uuid::new_v4().to_string(),
-                     date: sd,
-                     time: st,
-                     title,
-                     description,
-                     recurrence,
-                     is_recurring_instance: false,
-                     base_date: None,
-                     start_date: sd,
-                     end_date: end_date.or(Some(sd)),
-                     start_time: st,
-                     end_time,
-                     is_all_day,
-                 });
+                let is_all_day = start_time.is_none();
+                let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+                events.push(CalendarEvent {
+                    id: Uuid::new_v4().to_string(),
+                    date: sd,
+                    time: st,
+                    title,
+                    description,
+                    recurrence,
+                    is_recurring_instance: false,
+                    base_date: None,
+                    start_date: sd,
+                    end_date: end_date.or(Some(sd)),
+                    start_time: st,
+                    end_time,
+                    is_all_day,
+                });
             }
         }
     }
@@ -231,7 +238,9 @@ pub fn generate_instances_for_range(
     let mut instances = vec![];
     for base_event in base_events {
         if base_event.recurrence != crate::app::Recurrence::None {
-            instances.extend(generate_recurring_instances_in_range(base_event, start_date, end_date));
+            instances.extend(generate_recurring_instances_in_range(
+                base_event, start_date, end_date,
+            ));
         }
     }
     instances
@@ -313,7 +322,10 @@ fn generate_recurring_instances_in_range(
                 if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
                     current_date = new_date;
                 } else {
-                    eprintln!("Warning: Invalid date for recurring event '{}': {:?}", base_event.title, current_date);
+                    eprintln!(
+                        "Warning: Invalid date for recurring event '{}': {:?}",
+                        base_event.title, current_date
+                    );
                     break;
                 }
             }
@@ -788,10 +800,18 @@ mod tests {
         let until = NaiveDate::from_ymd_opt(2023, 10, 5).unwrap();
         let instances = generate_recurring_instances(&base_event, until);
         assert_eq!(instances.len(), 4); // 2,3,4,5
-        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2023, 10, 2).unwrap());
-        assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2023, 10, 3).unwrap());
+        assert_eq!(
+            instances[0].start_date,
+            NaiveDate::from_ymd_opt(2023, 10, 2).unwrap()
+        );
+        assert_eq!(
+            instances[1].start_date,
+            NaiveDate::from_ymd_opt(2023, 10, 3).unwrap()
+        );
         assert!(instances.iter().all(|i| i.is_recurring_instance));
-        assert!(instances.iter().all(|i| i.base_date == Some(base_event.date)));
+        assert!(instances
+            .iter()
+            .all(|i| i.base_date == Some(base_event.date)));
     }
 
     #[test]
@@ -814,7 +834,10 @@ mod tests {
         let until = NaiveDate::from_ymd_opt(2023, 10, 22).unwrap();
         let instances = generate_recurring_instances(&base_event, until);
         assert_eq!(instances.len(), 3); // 8,15,22
-        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2023, 10, 8).unwrap());
+        assert_eq!(
+            instances[0].start_date,
+            NaiveDate::from_ymd_opt(2023, 10, 8).unwrap()
+        );
     }
 
     #[test]
@@ -837,9 +860,18 @@ mod tests {
         let until = NaiveDate::from_ymd_opt(2026, 10, 1).unwrap();
         let instances = generate_recurring_instances(&base_event, until);
         assert_eq!(instances.len(), 3); // 2024, 2025, 2026
-        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
-        assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2025, 10, 1).unwrap());
-        assert_eq!(instances[2].start_date, NaiveDate::from_ymd_opt(2026, 10, 1).unwrap());
+        assert_eq!(
+            instances[0].start_date,
+            NaiveDate::from_ymd_opt(2024, 10, 1).unwrap()
+        );
+        assert_eq!(
+            instances[1].start_date,
+            NaiveDate::from_ymd_opt(2025, 10, 1).unwrap()
+        );
+        assert_eq!(
+            instances[2].start_date,
+            NaiveDate::from_ymd_opt(2026, 10, 1).unwrap()
+        );
     }
 
     #[test]
@@ -863,9 +895,18 @@ mod tests {
         let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
         let instances = generate_instances_for_range(&base_events, start, end);
         assert_eq!(instances.len(), 3); // 2024, 2025, 2026
-        assert_eq!(instances[0].start_date, NaiveDate::from_ymd_opt(2024, 10, 1).unwrap());
-        assert_eq!(instances[1].start_date, NaiveDate::from_ymd_opt(2025, 10, 1).unwrap());
-        assert_eq!(instances[2].start_date, NaiveDate::from_ymd_opt(2026, 10, 1).unwrap());
+        assert_eq!(
+            instances[0].start_date,
+            NaiveDate::from_ymd_opt(2024, 10, 1).unwrap()
+        );
+        assert_eq!(
+            instances[1].start_date,
+            NaiveDate::from_ymd_opt(2025, 10, 1).unwrap()
+        );
+        assert_eq!(
+            instances[2].start_date,
+            NaiveDate::from_ymd_opt(2026, 10, 1).unwrap()
+        );
     }
 
     #[test]

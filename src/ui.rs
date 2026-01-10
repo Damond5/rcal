@@ -1,9 +1,9 @@
 use chrono::{Datelike, Local, NaiveDate};
 use ratatui::{
-    Frame,
     layout::{Constraint, Direction, Layout, Rect},
     style::{Color, Modifier, Style},
     widgets::{Block, Borders, Cell, Clear, List, ListItem, Paragraph, Row, Table},
+    Frame,
 };
 
 use crate::app::{App, InputMode, PopupInputField};
@@ -21,7 +21,12 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
     }
 
     let overlay_width = input_chunks[2].width.max(MIN_OVERLAY_WIDTH);
-    let overlay_height = (app.date_suggestions.iter().filter(|(s, _)| !s.is_empty()).count() as u16).min(MAX_OVERLAY_HEIGHT);
+    let overlay_height = (app
+        .date_suggestions
+        .iter()
+        .filter(|(s, _)| !s.is_empty())
+        .count() as u16)
+        .min(MAX_OVERLAY_HEIGHT);
     let overlay_x = input_chunks[2].x;
     let mut overlay_y = input_chunks[2].y + input_chunks[2].height;
 
@@ -62,7 +67,9 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
         .filter(|(_, (s, _))| !s.is_empty())
         .map(|(i, (s, is_valid))| {
             let mut style = if i == app.selected_suggestion_index {
-                Style::default().fg(Color::Yellow).add_modifier(Modifier::BOLD)
+                Style::default()
+                    .fg(Color::Yellow)
+                    .add_modifier(Modifier::BOLD)
             } else {
                 Style::default()
             };
@@ -76,7 +83,12 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
     f.render_widget(suggestions_list_widget, inner_area);
 }
 
-fn build_calendar_table(year: i32, month: u32, events: &[crate::app::CalendarEvent], selected_date: NaiveDate) -> (Table<'static>, usize) {
+fn build_calendar_table(
+    year: i32,
+    month: u32,
+    events: &[crate::app::CalendarEvent],
+    selected_date: NaiveDate,
+) -> (Table<'static>, usize) {
     let today = Local::now().date_naive();
     let first_day_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
     let weekday_of_first = first_day_of_month.weekday().num_days_from_monday();
@@ -212,7 +224,8 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let start_of_month = NaiveDate::from_ymd_opt(year, month, 1).unwrap();
         let end_of_month = NaiveDate::from_ymd_opt(year, month + 1, 1)
             .unwrap_or(NaiveDate::from_ymd_opt(year + 1, 1, 1).unwrap())
-            .pred_opt().unwrap(); // last day of month
+            .pred_opt()
+            .unwrap(); // last day of month
         if start_of_month < overall_start {
             overall_start = start_of_month;
         }
@@ -529,8 +542,6 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(end_date_block);
         f.render_widget(end_date_input, input_chunks[2]);
 
-
-
         let end_time_input = ratatui::widgets::Paragraph::new(app.popup_event_end_time.as_str())
             .style(end_time_style)
             .block(Block::default().borders(Borders::ALL).title("End Time"));
@@ -574,16 +585,15 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                         input_chunks[3].y + 1,
                     );
                 }
-            PopupInputField::Description => {
-                f.set_cursor(
-                    input_chunks[4].x + app.cursor_position as u16 + 1,
-                    input_chunks[4].y + 1,
-                );
-            }
-            PopupInputField::Recurrence => {
-                // No cursor for recurrence field as input is disabled
-            }
-
+                PopupInputField::Description => {
+                    f.set_cursor(
+                        input_chunks[4].x + app.cursor_position as u16 + 1,
+                        input_chunks[4].y + 1,
+                    );
+                }
+                PopupInputField::Recurrence => {
+                    // No cursor for recurrence field as input is disabled
+                }
             }
         }
 
@@ -600,8 +610,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         } else {
             "Tab/Shift+Tab: switch field, Enter: save, Esc: cancel"
         };
-        let hints = Paragraph::new(hints_text)
-            .style(Style::default().fg(Color::Gray));
+        let hints = Paragraph::new(hints_text).style(Style::default().fg(Color::Gray));
         f.render_widget(hints, hints_area);
 
         // Render suggestions overlay if active
@@ -630,15 +639,17 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         f.render_widget(Clear, area);
         f.render_widget(popup_block, area);
 
-        let recurrence_options: Vec<ListItem> = [
-            "none", "daily", "weekly", "monthly", "yearly"
-        ].iter().enumerate().map(|(i, &opt)| {
-            if i == app.selected_recurrence_index {
-                ListItem::new(opt).style(Style::default().fg(Color::Black).bg(Color::LightBlue))
-            } else {
-                ListItem::new(opt)
-            }
-        }).collect();
+        let recurrence_options: Vec<ListItem> = ["none", "daily", "weekly", "monthly", "yearly"]
+            .iter()
+            .enumerate()
+            .map(|(i, &opt)| {
+                if i == app.selected_recurrence_index {
+                    ListItem::new(opt).style(Style::default().fg(Color::Black).bg(Color::LightBlue))
+                } else {
+                    ListItem::new(opt)
+                }
+            })
+            .collect();
 
         let recurrence_list = List::new(recurrence_options);
         f.render_widget(recurrence_list, inner_area);

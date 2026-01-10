@@ -25,8 +25,8 @@ Key benefits:
 - Support for multi-day events with start and end dates and times
 - All-day events (leave time field empty when creating)
 - Event details including title, start/end dates, start/end times, recurrence, and description
-- Flexible time input formats (HH:MM, HH, H) with validation on submission to prevent invalid times
-- End date input with real-time validation and auto-completion: Supports DD/MM format with automatic year assumption, provides immediate feedback for invalid dates, prevents acceptance of invalid dates on submission with error messages, and displays suggestions immediately when entering the field (even before typing) showing the top 5 most common patterns: Tomorrow, Next week, End of month, Next month, Same day, with additional suggestions like "next monday", "1 day", etc. featuring fuzzy matching for typos, enhanced partial input completion, descriptive suggestions with arrow key navigation in a dedicated overlay popup to avoid overlapping other fields
+- Flexible time input formats (HH:MM, HH, H) with real-time validation and immediate error feedback to prevent invalid times
+- Real-time validation for date and time input fields: End date input with real-time validation and auto-completion, and time input fields with immediate format validation, providing consistent feedback across all date/time fields
 - Note: Yearly recurring events on February 29th automatically fall back to February 28th in non-leap years to ensure annual occurrence (e.g., for birthdays and anniversaries)
 
 ### Advanced Features

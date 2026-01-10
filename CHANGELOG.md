@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- Real-time time format validation: Added real-time format checking for time and end time input fields with immediate error feedback, matching the existing validation behavior for end date fields. Supports HH:MM (e.g., "14:30"), HH (e.g., "14", "9", "0"), and H (single digit) formats with error message: "Invalid time format. Use HH:MM, HH, or H (e.g., 14:30, 14, 9)".
 - Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling. Suggestions now appear immediately when entering the end date field (even when empty), showing the top 5 most common date suggestions (Tomorrow, Next week, End of month, Next month, Same day) to improve discoverability.
 
 ### Changed

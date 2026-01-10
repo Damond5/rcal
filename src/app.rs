@@ -86,6 +86,8 @@ pub struct App {
     pub date_suggestions: Vec<(String, bool)>,
     pub show_date_suggestions: bool,
     pub selected_suggestion_index: usize,
+    pub time_input_error: Option<String>,
+    pub end_time_input_error: Option<String>,
 }
 
 impl Default for App {
@@ -135,6 +137,8 @@ impl App {
             date_suggestions: Vec::new(),
             show_date_suggestions: false,
             selected_suggestion_index: 0,
+            time_input_error: None,
+            end_time_input_error: None,
         }
     }
 
@@ -176,6 +180,8 @@ impl App {
             date_suggestions: Vec::new(),
             show_date_suggestions: false,
             selected_suggestion_index: 0,
+            time_input_error: None,
+            end_time_input_error: None,
         }
     }
 

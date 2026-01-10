@@ -530,6 +530,24 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title("Time"));
         f.render_widget(time_input, input_chunks[1]);
 
+        let time_block = if app.time_input_error.is_some() {
+            Block::default()
+                .borders(Borders::ALL)
+                .title("Time")
+                .border_style(Style::default().fg(Color::Red))
+        } else {
+            Block::default().borders(Borders::ALL).title("Time")
+        };
+        let time_text = if let Some(ref error) = app.time_input_error {
+            format!("{}\n{}", app.popup_event_time, error)
+        } else {
+            app.popup_event_time.clone()
+        };
+        let time_input = ratatui::widgets::Paragraph::new(time_text)
+            .style(time_style)
+            .block(time_block);
+        f.render_widget(time_input, input_chunks[1]);
+
         let end_date_block = if app.date_input_error.is_some() {
             Block::default()
                 .borders(Borders::ALL)
@@ -551,6 +569,24 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         let end_time_input = ratatui::widgets::Paragraph::new(app.popup_event_end_time.as_str())
             .style(end_time_style)
             .block(Block::default().borders(Borders::ALL).title("End Time"));
+        f.render_widget(end_time_input, input_chunks[3]);
+
+        let end_time_block = if app.end_time_input_error.is_some() {
+            Block::default()
+                .borders(Borders::ALL)
+                .title("End Time")
+                .border_style(Style::default().fg(Color::Red))
+        } else {
+            Block::default().borders(Borders::ALL).title("End Time")
+        };
+        let end_time_text = if let Some(ref error) = app.end_time_input_error {
+            format!("{}\n{}", app.popup_event_end_time, error)
+        } else {
+            app.popup_event_end_time.clone()
+        };
+        let end_time_input = ratatui::widgets::Paragraph::new(end_time_text)
+            .style(end_time_style)
+            .block(end_time_block);
         f.render_widget(end_time_input, input_chunks[3]);
 
         let description_input =

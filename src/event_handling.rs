@@ -156,6 +156,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.date_input_error = None;
                     app.date_suggestions.clear();
                     app.show_date_suggestions = false;
+                    app.time_input_error = None;
+                    app.end_time_input_error = None;
                 }
                 KeyCode::Left | KeyCode::Char('h') => {
                     app.date -= chrono::Duration::days(1);
@@ -426,6 +428,30 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             }
                         }
                     }
+
+                    // Real-time validation for time field
+                    if app.selected_input_field == PopupInputField::Time {
+                        match date_utils::validate_time_input(&app.popup_event_time) {
+                            Ok(_) => {
+                                app.time_input_error = None;
+                            }
+                            Err(e) => {
+                                app.time_input_error = Some(e);
+                            }
+                        }
+                    }
+
+                    // Real-time validation for end time field
+                    if app.selected_input_field == PopupInputField::EndTime {
+                        match date_utils::validate_time_input(&app.popup_event_end_time) {
+                            Ok(_) => {
+                                app.end_time_input_error = None;
+                            }
+                            Err(e) => {
+                                app.end_time_input_error = Some(e);
+                            }
+                        }
+                    }
                 }
                 KeyCode::Backspace => {
                     if app.cursor_position > 0 {
@@ -454,6 +480,30 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 }
                                 Err(e) => {
                                     app.date_input_error = Some(e);
+                                }
+                            }
+                        }
+
+                        // Real-time validation for time field
+                        if app.selected_input_field == PopupInputField::Time {
+                            match date_utils::validate_time_input(&app.popup_event_time) {
+                                Ok(_) => {
+                                    app.time_input_error = None;
+                                }
+                                Err(e) => {
+                                    app.time_input_error = Some(e);
+                                }
+                            }
+                        }
+
+                        // Real-time validation for end time field
+                        if app.selected_input_field == PopupInputField::EndTime {
+                            match date_utils::validate_time_input(&app.popup_event_end_time) {
+                                Ok(_) => {
+                                    app.end_time_input_error = None;
+                                }
+                                Err(e) => {
+                                    app.end_time_input_error = Some(e);
                                 }
                             }
                         }
@@ -518,6 +568,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                         PopupInputField::EndDate => {
                             app.cursor_position = app.popup_event_time.chars().count();
+                            // Clear time error when entering Time field
+                            app.time_input_error = None;
                             PopupInputField::Time
                         }
                         PopupInputField::EndTime => {
@@ -530,6 +582,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                         PopupInputField::Description => {
                             app.cursor_position = app.popup_event_end_time.chars().count();
+                            // Clear end time error when entering EndTime field
+                            app.end_time_input_error = None;
                             PopupInputField::EndTime
                         }
                         PopupInputField::Recurrence => {
@@ -574,11 +628,15 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 PopupInputField::EndDate
                             } else {
                                 app.cursor_position = app.popup_event_end_time.chars().count();
+                                // Clear time error when entering EndTime field
+                                app.time_input_error = None;
                                 PopupInputField::EndTime
                             }
                         }
                         PopupInputField::EndTime => {
                             app.cursor_position = app.popup_event_description.chars().count();
+                            // Clear end time error when entering Description field
+                            app.end_time_input_error = None;
                             PopupInputField::Description
                         }
                         PopupInputField::Description => {
@@ -710,6 +768,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.date_input_error = None;
                     app.date_suggestions.clear();
                     app.show_date_suggestions = false;
+                    app.time_input_error = None;
+                    app.end_time_input_error = None;
                 }
 
                 KeyCode::Char('d') | KeyCode::Delete => {

@@ -1,4 +1,44 @@
 use chrono::NaiveDate;
+use lazy_static::lazy_static;
+use regex::Regex;
+
+lazy_static! {
+    static ref TIME_PATTERN: Regex = Regex::new(r"^(?:[01]\d|2[0-3]):[0-5]\d$").unwrap();
+    static ref HOUR_PATTERN: Regex = Regex::new(r"^(?:[01]?\d|2[0-3])$").unwrap();
+    static ref SINGLE_HOUR_PATTERN: Regex = Regex::new(r"^[0-9]$").unwrap();
+}
+
+/// Validates a time input string and returns Ok(()) for valid inputs or Err(message) for invalid.
+/// Supports:
+/// - HH:MM format (e.g., "14:30", "09:05", "00:00")
+/// - HH format (e.g., "14", "9", "23", "0")  
+/// - H format (single digit, e.g., "9", "0")
+/// Empty input is considered valid (for all-day events).
+pub fn validate_time_input(input: &str) -> Result<(), String> {
+    let trimmed = input.trim();
+
+    // Empty input is valid (for all-day events)
+    if trimmed.is_empty() {
+        return Ok(());
+    }
+
+    // Check HH:MM format
+    if TIME_PATTERN.is_match(trimmed) {
+        return Ok(());
+    }
+
+    // Check HH format (2 digits, 0-23)
+    if HOUR_PATTERN.is_match(trimmed) {
+        return Ok(());
+    }
+
+    // Check single digit H format (0-9)
+    if SINGLE_HOUR_PATTERN.is_match(trimmed) {
+        return Ok(());
+    }
+
+    Err("Invalid time format. Use HH:MM, HH, or H (e.g., 14:30, 14, 9)".to_string())
+}
 
 /// Validates a date input string in DD/MM format and returns a NaiveDate.
 /// Automatically assumes the year based on the start_date: if the input date
@@ -379,6 +419,49 @@ pub fn get_date_suggestions(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_validate_time_input_valid_hhmm() {
+        assert!(validate_time_input("00:00").is_ok());
+        assert!(validate_time_input("12:30").is_ok());
+        assert!(validate_time_input("23:59").is_ok());
+        assert!(validate_time_input("09:05").is_ok());
+        assert!(validate_time_input("14:30").is_ok());
+    }
+
+    #[test]
+    fn test_validate_time_input_valid_hh() {
+        assert!(validate_time_input("0").is_ok());
+        assert!(validate_time_input("9").is_ok());
+        assert!(validate_time_input("14").is_ok());
+        assert!(validate_time_input("23").is_ok());
+        assert!(validate_time_input("01").is_ok());
+        assert!(validate_time_input("08").is_ok());
+    }
+
+    #[test]
+    fn test_validate_time_input_invalid() {
+        assert!(validate_time_input("24:00").is_err());
+        assert!(validate_time_input("12:60").is_err());
+        assert!(validate_time_input("abc").is_err());
+        assert!(validate_time_input("12:").is_err());
+        assert!(validate_time_input(":30").is_err());
+        assert!(validate_time_input("12:3").is_err());
+        assert!(validate_time_input("123").is_err()); // Three digits
+    }
+
+    #[test]
+    fn test_validate_time_input_empty() {
+        assert!(validate_time_input("").is_ok()); // Empty is valid for all-day
+        assert!(validate_time_input("   ").is_ok()); // Whitespace is valid
+    }
+
+    #[test]
+    fn test_validate_time_input_single_digit() {
+        assert!(validate_time_input("0").is_ok());
+        assert!(validate_time_input("5").is_ok());
+        assert!(validate_time_input("9").is_ok());
+    }
 
     #[test]
     fn test_validate_date_input_valid() {

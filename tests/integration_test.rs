@@ -148,7 +148,7 @@ fn test_open_add_event_popup() {
     assert_eq!(app.selected_input_field, PopupInputField::Title);
     assert_eq!(app.cursor_position, 0);
     assert!(app.popup_event_title.is_empty());
-    assert!(app.popup_event_time.is_empty());
+    assert!(app.popup_event_start_time.is_empty());
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn test_type_in_time_field() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
-    app.selected_input_field = PopupInputField::Time;
+    app.selected_input_field = PopupInputField::StartTime;
 
     let key_event = KeyEvent::from(KeyCode::Char('1'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -214,7 +214,7 @@ fn test_type_in_time_field() {
     let key_event = KeyEvent::from(KeyCode::Char('0'));
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    assert_eq!(app.popup_event_time, "14:30");
+    assert_eq!(app.popup_event_start_time, "14:30");
     assert_eq!(app.cursor_position, 5);
 }
 
@@ -239,14 +239,14 @@ fn test_backspace_in_time_field() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
-    app.selected_input_field = PopupInputField::Time;
-    app.popup_event_time = "14:30".to_string();
+    app.selected_input_field = PopupInputField::StartTime;
+    app.popup_event_start_time = "14:30".to_string();
     app.cursor_position = 5;
 
     let key_event = KeyEvent::from(KeyCode::Backspace);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    assert_eq!(app.popup_event_time, "14:3");
+    assert_eq!(app.popup_event_start_time, "14:3");
     assert_eq!(app.cursor_position, 4);
 }
 
@@ -332,13 +332,13 @@ fn test_tab_switch_to_time_field() {
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.cursor_position = 7;
 
     let key_event = KeyEvent::from(KeyCode::Tab);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
-    assert_eq!(app.selected_input_field, PopupInputField::Time);
+    assert_eq!(app.selected_input_field, PopupInputField::StartTime);
     assert_eq!(app.cursor_position, 5); // Should be at end of time field
 }
 
@@ -347,9 +347,9 @@ fn test_tab_switch_to_description_field() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
-    app.selected_input_field = PopupInputField::Time;
+    app.selected_input_field = PopupInputField::StartTime;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.cursor_position = 5;
 
     let key_event = KeyEvent::from(KeyCode::Tab);
@@ -366,7 +366,7 @@ fn test_tab_switch_to_title_field_from_description() {
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Description;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.popup_event_description = "Description".to_string();
     app.cursor_position = 11;
 
@@ -416,8 +416,8 @@ fn test_create_event_with_hours_only() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
-    app.selected_input_field = PopupInputField::Time;
-    app.popup_event_time = "14".to_string();
+    app.selected_input_field = PopupInputField::StartTime;
+    app.popup_event_start_time = "14".to_string();
     app.popup_event_title = "Test Event".to_string();
 
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -450,8 +450,8 @@ fn test_create_event_with_single_digit_hour() {
     let (mut app, _temp_dir) = setup_app();
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
-    app.selected_input_field = PopupInputField::Time;
-    app.popup_event_time = "9".to_string();
+    app.selected_input_field = PopupInputField::StartTime;
+    app.popup_event_start_time = "9".to_string();
     app.popup_event_title = "Morning Event".to_string();
 
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -462,7 +462,7 @@ fn test_create_event_with_single_digit_hour() {
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Morning Event");
     assert_eq!(
-        app.events[0].time,
+        app.events[0].start_time,
         NaiveTime::from_hms_opt(9, 0, 0).unwrap()
     );
 }
@@ -584,12 +584,12 @@ fn test_add_event_from_view_popup() {
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
     assert_eq!(app.current_date_for_new_event, today);
     assert!(app.popup_event_title.is_empty());
-    assert!(app.popup_event_time.is_empty());
+    assert!(app.popup_event_start_time.is_empty());
     assert!(app.popup_event_description.is_empty());
 
     // Fill in event details
     app.popup_event_title = "New Event".to_string();
-    app.popup_event_time = "15:30".to_string();
+    app.popup_event_start_time = "15:30".to_string();
 
     // Submit the event
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -667,7 +667,7 @@ fn test_create_event_success() {
     app.input_mode = InputMode::EditingEventPopup;
     app.selected_input_field = PopupInputField::Title;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
 
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -676,7 +676,7 @@ fn test_create_event_success() {
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Meeting");
     assert_eq!(
-        app.events[0].time,
+        app.events[0].start_time,
         NaiveTime::from_hms_opt(14, 30, 0).unwrap()
     );
     assert_eq!(
@@ -699,7 +699,7 @@ fn test_suggestions_overlay_appears_when_typing_end_date() {
     // Tab to time field
     let key_event = KeyEvent::from(KeyCode::Tab);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
-    assert_eq!(app.selected_input_field, PopupInputField::Time);
+    assert_eq!(app.selected_input_field, PopupInputField::StartTime);
 
     // Tab to end date field
     let key_event = KeyEvent::from(KeyCode::Tab);
@@ -842,7 +842,7 @@ fn test_create_event_invalid_time_shows_error() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "invalid".to_string();
+    app.popup_event_start_time = "invalid".to_string();
 
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -859,7 +859,7 @@ fn test_create_event_empty_title() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
 
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -876,7 +876,7 @@ fn test_create_event_invalid_end_date_shows_error() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.popup_event_end_date = "99/99".to_string(); // Invalid date
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
     // Simulate real-time validation setting the error
@@ -897,7 +897,7 @@ fn test_create_event_invalid_time_24_hour() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "24:00".to_string(); // Invalid hour
+    app.popup_event_start_time = "24:00".to_string(); // Invalid hour
 
     let key_event = KeyEvent::from(KeyCode::Enter);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -914,7 +914,7 @@ fn test_create_event_malformed_end_date() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.popup_event_end_date = "abc".to_string(); // Malformed
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
 
@@ -933,7 +933,7 @@ fn test_create_event_empty_end_date_sets_to_start_date() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Single Day Event".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.popup_event_end_date = "".to_string(); // Empty end date
     app.popup_event_end_time = "15:30".to_string();
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
@@ -961,7 +961,7 @@ fn test_create_event_empty_end_time_sets_to_start_time() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Point Event".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
     app.popup_event_end_date = "20/10".to_string();
     app.popup_event_end_time = "".to_string(); // Empty end time
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
@@ -989,7 +989,7 @@ fn test_cancel_add_event_popup() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Meeting".to_string();
-    app.popup_event_time = "14:30".to_string();
+    app.popup_event_start_time = "14:30".to_string();
 
     let key_event = KeyEvent::from(KeyCode::Esc);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
@@ -997,7 +997,7 @@ fn test_cancel_add_event_popup() {
     assert!(!app.show_add_event_popup);
     assert_eq!(app.input_mode, InputMode::Normal);
     assert!(app.popup_event_title.is_empty());
-    assert!(app.popup_event_time.is_empty());
+    assert!(app.popup_event_start_time.is_empty());
 }
 
 #[test]
@@ -1145,7 +1145,7 @@ fn test_open_edit_event_popup() {
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
     assert!(app.is_editing);
     assert_eq!(app.popup_event_title, "Event to Edit");
-    assert_eq!(app.popup_event_time, "10:00");
+    assert_eq!(app.popup_event_start_time, "10:00");
     assert_eq!(app.popup_event_description, "Description");
     assert_eq!(app.cursor_position, "Event to Edit".chars().count());
 }
@@ -1180,7 +1180,7 @@ fn test_edit_event_success() {
 
     // Modify title
     app.popup_event_title = "Edited Title".to_string();
-    app.popup_event_time = "11:30".to_string();
+    app.popup_event_start_time = "11:30".to_string();
     app.popup_event_description = "Edited Description".to_string();
 
     // Save
@@ -1192,7 +1192,7 @@ fn test_edit_event_success() {
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0].title, "Edited Title");
     assert_eq!(
-        app.events[0].time,
+        app.events[0].start_time,
         NaiveTime::from_hms_opt(11, 30, 0).unwrap()
     );
     assert_eq!(app.events[0].description, "Edited Description");
@@ -1274,7 +1274,7 @@ fn test_edit_event_invalid_time() {
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
     // Set invalid time
-    app.popup_event_time = "invalid".to_string();
+    app.popup_event_start_time = "invalid".to_string();
 
     // Try to save
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -1381,7 +1381,7 @@ fn test_edit_event_change_time_sorting() {
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
     // Change time to 14:00
-    app.popup_event_time = "14:00".to_string();
+    app.popup_event_start_time = "14:00".to_string();
 
     // Save
     let key_event = KeyEvent::from(KeyCode::Enter);
@@ -1674,7 +1674,7 @@ fn test_recurring_event_instances_generated() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Weekly Meeting".to_string();
-    app.popup_event_time = "10:00".to_string();
+    app.popup_event_start_time = "10:00".to_string();
     app.popup_event_recurrence = "weekly".to_string();
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
 
@@ -1991,7 +1991,7 @@ fn test_yearly_recurring_event_creation_and_display() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Yearly Anniversary".to_string();
-    app.popup_event_time = "12:00".to_string();
+    app.popup_event_start_time = "12:00".to_string();
     app.popup_event_recurrence = "yearly".to_string();
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 19).unwrap();
 
@@ -2037,7 +2037,7 @@ fn test_cache_invalidation_on_event_add() {
     app.show_add_event_popup = true;
     app.input_mode = InputMode::EditingEventPopup;
     app.popup_event_title = "Weekly Meeting".to_string();
-    app.popup_event_time = "10:00".to_string();
+    app.popup_event_start_time = "10:00".to_string();
     app.popup_event_recurrence = "weekly".to_string();
     app.current_date_for_new_event = NaiveDate::from_ymd_opt(2025, 10, 15).unwrap();
 
@@ -2274,7 +2274,7 @@ fn test_suggestions_appear_on_end_date_field_entry() {
     // Tab to Time field
     let key_event = KeyEvent::from(KeyCode::Tab);
     handle_event(&mut app, Event::Key(key_event)).unwrap();
-    assert_eq!(app.selected_input_field, PopupInputField::Time);
+    assert_eq!(app.selected_input_field, PopupInputField::StartTime);
 
     // Tab to EndDate field - should show suggestions immediately
     let key_event = KeyEvent::from(KeyCode::Tab);

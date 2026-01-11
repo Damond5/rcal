@@ -23,14 +23,14 @@ Key benefits:
 - Support for recurring events (daily, weekly, monthly, yearly) with automatic instance display for indefinite periods
 - Deleting any recurring event instance deletes the entire series persistently
 - Support for multi-day events with start and end dates and times
-- All-day events (leave time field empty when creating)
-- Event details including title, start/end dates, start/end times, recurrence, and description
-- Flexible time input formats (HH:MM, HH, H) with real-time validation and immediate error feedback to prevent invalid times
-- Real-time validation for date and time input fields: End date input with real-time validation and auto-completion, and time input fields with immediate format validation, providing consistent feedback across all date/time fields
+- All-day events (leave Start Time field empty when creating)
+- Event details including title, start date, Start Time, end date, End Time, recurrence, and description
+- Flexible Start Time input formats (HH:MM, HH, H) with real-time validation and immediate error feedback to prevent invalid Start Times
+- Real-time validation for date and Start Time input fields: End date input with real-time validation and auto-completion, and Start Time input fields with immediate format validation
 - Note: Yearly recurring events on February 29th automatically fall back to February 28th in non-leap years to ensure annual occurrence (e.g., for birthdays and anniversaries)
 
 ### Advanced Features
-- Daemon mode for background notifications (30 minutes before timed events, midday the day before for all-day events)
+- Daemon mode for background notifications (30 minutes before events with Start Time, midday the day before for all-day events)
 - Real-time file watching for event updates
 - Immediate refresh of recurring event instances after add, edit, or delete operations for accurate and responsive calendar display
 - Unicode support in text input
@@ -73,7 +73,7 @@ Enable and start background notification service:
 systemctl --user enable --now rcal.service
 ```
 
-> **Pro tip**: The daemon sends notifications 30 minutes before timed events and midday the day before all-day events.
+> **Pro tip**: The daemon sends notifications 30 minutes before events with Start Time and midday the day before all-day events.
 
 > **Note**: On first run, rcal creates `~/.config/rcal/config.toml` and `~/calendar/` automatically.
 
@@ -691,7 +691,7 @@ systemctl --user status rcal.service
 **Expected output:** Service shows "active (running)" status
 
 > **Note:** The daemon service runs in the background and sends notifications for upcoming events:
-> - Timed events: 30 minutes before
+> - Events with Start Time: 30 minutes before
 > - All-day events: Midday the day before
 
 #### Configuration File

@@ -221,7 +221,7 @@ pub fn load_events_from_path(
         }
     }
 
-    events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+    events.sort_by(|a, b| a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time)));
 
     Ok(events)
 }
@@ -301,7 +301,7 @@ fn generate_recurring_instances_in_range(
             instances.push(CalendarEvent {
                 id: Uuid::new_v4().to_string(),
                 date: current_date,
-                time: base_event.time,
+                time: base_event.start_time,
                 title: base_event.title.clone(),
                 description: base_event.description.clone(),
                 recurrence: crate::app::Recurrence::None,
@@ -520,7 +520,7 @@ mod tests {
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
-        assert_eq!(events[0].time, event.time);
+        assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
     }
 
@@ -592,7 +592,7 @@ mod tests {
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
-        assert_eq!(events[0].time, event.time);
+        assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
         assert!(events[0].is_all_day);
     }
@@ -621,7 +621,7 @@ mod tests {
 
         assert_eq!(events.len(), 1);
         assert_eq!(events[0].date, event.date);
-        assert_eq!(events[0].time, event.time);
+        assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
         assert_eq!(events[0].description, event.description);
     }

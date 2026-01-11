@@ -36,7 +36,7 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                         && now.time() < chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
                 };
                 if should_notify {
-                    let key = (event.date, event.time, event.title.clone());
+                    let key = (event.date, event.start_time, event.title.clone());
                     if !notified.contains(&key) {
                         let body = format!("{} (all day)", event.title);
                         if let Err(e) = Notification::new()
@@ -57,7 +57,7 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
         let mut min_diff = i64::MAX;
         for event in &events {
             if !event.is_all_day {
-                let event_datetime = event.date.and_time(event.time);
+                let event_datetime = event.date.and_time(event.start_time);
                 let diff = event_datetime.signed_duration_since(now.naive_local());
                 if diff.num_minutes() <= 30 && diff.num_minutes() > 0 {
                     if diff.num_minutes() < min_diff {
@@ -71,9 +71,9 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
             }
         }
         for event in next_timed_events {
-            let key = (event.date, event.time, event.title.clone());
+            let key = (event.date, event.start_time, event.title.clone());
             if !notified.contains(&key) {
-                let body = format!("{} at {}", event.title, event.time.format("%H:%M"));
+                let body = format!("{} at {}", event.title, event.start_time.format("%H:%M"));
                 if let Err(e) = Notification::new()
                     .summary("Upcoming Event")
                     .body(&body)
@@ -91,10 +91,13 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                 match persistence::load_events() {
                     Ok(mut new_events) => {
                         // Sort both for order-independent comparison
-                        new_events.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+                        new_events.sort_by(|a, b| {
+                            a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time))
+                        });
                         let mut current_sorted = events.clone();
-                        current_sorted
-                            .sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+                        current_sorted.sort_by(|a, b| {
+                            a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time))
+                        });
                         if new_events != current_sorted {
                             events = new_events;
                             // Reset notified to allow re-notifying if events change
@@ -139,7 +142,7 @@ mod tests {
                         && now.time() < chrono::NaiveTime::from_hms_opt(12, 0, 0).unwrap()
                 };
                 if should_notify {
-                    let key = (event.date, event.time, event.title.clone());
+                    let key = (event.date, event.start_time, event.title.clone());
                     if !notified.contains(&key) {
                         let body = format!("{} (all day)", event.title);
                         notifications.push(body);
@@ -154,7 +157,7 @@ mod tests {
         let mut min_diff = i64::MAX;
         for event in events {
             if !event.is_all_day {
-                let event_datetime = event.date.and_time(event.time);
+                let event_datetime = event.date.and_time(event.start_time);
                 let diff = event_datetime.signed_duration_since(now.naive_local());
                 if diff.num_minutes() <= 30 && diff.num_minutes() > 0 {
                     if diff.num_minutes() < min_diff {
@@ -168,9 +171,9 @@ mod tests {
             }
         }
         for event in next_timed_events {
-            let key = (event.date, event.time, event.title.clone());
+            let key = (event.date, event.start_time, event.title.clone());
             if !notified.contains(&key) {
-                let body = format!("{} at {}", event.title, event.time.format("%H:%M"));
+                let body = format!("{} at {}", event.title, event.start_time.format("%H:%M"));
                 notifications.push(body);
                 notified.insert(key);
             }
@@ -505,9 +508,9 @@ mod tests {
         let mut new_events = events.clone();
         new_events.reverse(); // Change order
         let mut new_sorted = new_events.clone();
-        new_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+        new_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time)));
         let mut current_sorted = events.clone();
-        current_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.time.cmp(&b.time)));
+        current_sorted.sort_by(|a, b| a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time)));
 
         // Should be equal after sorting
         assert_eq!(new_sorted, current_sorted);

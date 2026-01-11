@@ -13,6 +13,7 @@ lazy_static! {
 /// - HH:MM format (e.g., "14:30", "09:05", "00:00")
 /// - HH format (e.g., "14", "9", "23", "0")  
 /// - H format (single digit, e.g., "9", "0")
+///
 /// Empty input is considered valid (for all-day events).
 pub fn validate_time_input(input: &str) -> Result<(), String> {
     let trimmed = input.trim();
@@ -104,7 +105,7 @@ pub fn get_date_suggestions(
     // Prioritize digit-based date completion
     if input.chars().all(|c| c.is_ascii_digit()) {
         if let Ok(num) = input.parse::<u32>() {
-            if num >= 1 && num <= 31 {
+            if (1..=31).contains(&num) {
                 // Find the starting month: current month if valid, otherwise next month
                 let mut starting_month = current_month;
                 let last_day_of_current = match current_month {
@@ -133,7 +134,7 @@ pub fn get_date_suggestions(
                     .parse::<i32>()
                     .unwrap();
                 let current_month_date = NaiveDate::from_ymd_opt(current_year, current_month, day);
-                let is_before_current = current_month_date.map_or(false, |d| d < current_date);
+                let is_before_current = current_month_date.is_some_and(|d| d < current_date);
                 if is_before_current && input.len() == 1 {
                     starting_month = (current_month % 12) + 1;
                 }

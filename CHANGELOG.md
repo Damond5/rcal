@@ -14,6 +14,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Restructured README Installation section into two targeted subsections to improve accessibility: "For humans" provides quick installation with 1-3 commands per method, while "For LLM Agents" includes comprehensive guidance with prerequisites, configuration details, verification steps using exit codes, and troubleshooting for installation, service, and sync issues in collapsible details format. This follows oh-my-opencode documentation standards to reduce time-to-first-run for human users while maintaining detailed automation documentation. All installation methods (AUR, source build, cargo install) are preserved with enhanced clarity.
 
+- **Breaking Change**: Renamed "Time" to "Start Time" throughout the codebase for improved terminology clarity and consistency. This affects:
+    - UI labels in event creation/editing forms
+    - Internal field names and structures
+    - API identifiers: `PopupInputField::Time` → `StartTime`
+
 ### Fixed
 - February 29th leap year fallback for yearly recurring events: Yearly events on February 29th now automatically fall back to February 28th in non-leap years, ensuring birthdays, anniversaries, and other annual events continue occurring annually without being skipped.
 

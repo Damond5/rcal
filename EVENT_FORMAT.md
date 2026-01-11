@@ -19,7 +19,7 @@ Each event file is a Markdown document with the following structure:
 # Event: {title}
 
 - **Date**: {start_date}[ to {end_date}]
-- **Time**: {start_time}[ to {end_time}]
+- **Start Time**: {start_time}[ to {end_time}]
 - **Description**: {description}
 - **Recurrence**: {recurrence}
 ```
@@ -36,7 +36,7 @@ Each event file is a Markdown document with the following structure:
 - **Required**: Yes (start_date required)
 - **Description**: The start date of the event, optionally followed by end date for spanning events
 
-### Time
+### Start Time
 - **Format**: `HH:MM` or `HH:MM to HH:MM` for events with duration, or `all-day` for all-day events
 - **Required**: No (optional for all-day events)
 - **Description**: The start time of the event, optionally followed by end time. If omitted or set to `all-day`, the event is all-day
@@ -58,7 +58,7 @@ Each event file is a Markdown document with the following structure:
 # Event: Team Meeting
 
 - **Date**: 2023-10-01
-- **Time**: 14:30
+- **Start Time**: 14:30
 - **Description**: Weekly team sync
 - **Recurrence**: none
 ```
@@ -68,7 +68,7 @@ Each event file is a Markdown document with the following structure:
 # Event: Conference
 
 - **Date**: 2023-10-01 to 2023-10-03
-- **Time**: 09:00 to 17:00
+- **Start Time**: 09:00 to 17:00
 - **Description**: Annual developer conference
 - **Recurrence**: none
 ```
@@ -78,7 +78,7 @@ Each event file is a Markdown document with the following structure:
 # Event: Daily Standup
 
 - **Date**: 2023-10-01
-- **Time**: 09:00
+- **Start Time**: 09:00
 - **Description**: Daily team standup
 - **Recurrence**: daily
 ```
@@ -88,7 +88,7 @@ Each event file is a Markdown document with the following structure:
 # Event: Holiday
 
 - **Date**: 2023-10-01
-- **Time**: all-day
+- **Start Time**: all-day
 - **Description**: National holiday
 - **Recurrence**: none
 ```

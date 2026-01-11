@@ -3,11 +3,11 @@
 ## Purpose
 TBD - created by archiving change add-agent-guidelines-specs. Update Purpose after archive.
 ## Requirements
-### Requirement: Flexible Time Input Support
-Time inputs MUST support multiple formats (HH:MM, HH, H) with automatic normalization.
+### Requirement: Flexible Start Time Input Support
+Start time inputs MUST support multiple formats (HH:MM, HH, H) with automatic normalization.
 
-#### Scenario: Time Format Acceptance
-Given time input in various formats,
+#### Scenario: Start Time Format Acceptance
+Given start time input in various formats,
 When parsing,
 Then all valid formats are accepted and normalized.
 
@@ -218,10 +218,10 @@ When saving,
 Then no ' to ' in markdown.
 
 ### Requirement: All-Day Event Handling
-Events without time MUST be treated as all-day with "All day" display.
+Events without **start time** MUST be treated as all-day with "All day" display.
 
 #### Scenario: All-Day Display
-Given event without time,
+Given event without **start time**,
 When viewing,
 Then shows "All day".
 
@@ -374,8 +374,8 @@ Then only predefined options are possible, eliminating invalid recurrence string
 ### Requirement: Date Validation on Submission
 Event creation and editing MUST validate date inputs on submission, preventing acceptance of invalid dates and displaying error messages instead of proceeding or closing silently.
 
-#### Scenario: Invalid Time Input Rejection
-Given event popup with invalid time input,
+#### Scenario: Invalid Start Time Input Rejection
+Given event popup with invalid start time input,
 When submitting with Enter,
 Then displays error message and prevents submission.
 
@@ -385,7 +385,7 @@ When submitting with Enter,
 Then displays error message and prevents submission.
 
 #### Scenario: Mixed Valid/Invalid Input Rejection
-Given event popup with valid time but invalid end date,
+Given event popup with valid start time but invalid end date,
 When submitting with Enter,
 Then displays error message and prevents submission.
 
@@ -428,14 +428,13 @@ Given an all-day yearly event on February 29th falling back to February 28th in 
 When the notification is due (midday of day before event),
 Then the notification triggers on February 27th (day before actual occurrence on February 28th).
 
-### Requirement: Real-Time Time Field Validation
-
-Time field input MUST provide real-time format validation with immediate error feedback during input, matching the validation behavior of end date fields.
+### Requirement: Real-Time Start Time Field Validation
+**Start time** field input MUST provide real-time format validation with immediate error feedback during input, matching the validation behavior of end date fields.
 
 #### Scenario: Valid Time Format Detection
 
-**Given** time field with valid input (HH:MM, HH, or H format)  
-**When** user types each character  
+**Given** **start time** field with valid input (HH:MM, HH, or H format)
+**When** user types each character
 **Then** validation passes silently (no error displayed)
 
 **Acceptance Criteria**:
@@ -453,8 +452,8 @@ Time field input MUST provide real-time format validation with immediate error f
 
 #### Scenario: Invalid Time Format Detection
 
-**Given** time field with invalid input  
-**When** user types characters that create invalid format  
+**Given** **start time** field with invalid input
+**When** user types characters that create invalid format
 **Then** error message displays immediately: "Invalid time format. Use HH:MM, HH, or H (e.g., 14:30, 14, 9)"
 
 **Acceptance Criteria**:
@@ -473,8 +472,8 @@ Time field input MUST provide real-time format validation with immediate error f
 
 #### Scenario: Empty Time Field Validation
 
-**Given** time field is empty  
-**When** user tabs to or away from field  
+**Given** **start time** field is empty
+**When** user tabs to or away from field
 **Then** no error is displayed (empty is valid for all-day events)
 
 **Acceptance Criteria**:
@@ -484,8 +483,8 @@ Time field input MUST provide real-time format validation with immediate error f
 
 #### Scenario: Time Field Error Clearing
 
-**Given** time field with active error  
-**When** user corrects the input to valid format  
+**Given** **start time** field with active error
+**When** user corrects the input to valid format
 **Then** error message clears immediately
 
 **Acceptance Criteria**:

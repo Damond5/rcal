@@ -43,7 +43,7 @@ pub enum InputMode {
 #[derive(PartialEq, Debug)]
 pub enum PopupInputField {
     Title,
-    Time,
+    StartTime,
     EndDate,
     EndTime,
     Description,
@@ -60,7 +60,7 @@ pub struct App {
     pub input: String,
     pub input_mode: InputMode,
     pub popup_event_title: String,
-    pub popup_event_time: String,
+    pub popup_event_start_time: String,
     pub popup_event_end_date: String,
     pub popup_event_end_time: String,
     pub popup_event_description: String,
@@ -109,7 +109,7 @@ impl App {
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
-            popup_event_time: String::new(),
+            popup_event_start_time: String::new(),
             popup_event_end_date: String::new(),
             popup_event_end_time: String::new(),
             popup_event_description: String::new(),
@@ -154,7 +154,7 @@ impl App {
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
-            popup_event_time: String::new(),
+            popup_event_start_time: String::new(),
             popup_event_end_date: String::new(),
             popup_event_end_time: String::new(),
             popup_event_description: String::new(),
@@ -196,7 +196,7 @@ impl App {
     pub fn get_current_field(&self) -> &str {
         match self.selected_input_field {
             PopupInputField::Title => &self.popup_event_title,
-            PopupInputField::Time => &self.popup_event_time,
+            PopupInputField::StartTime => &self.popup_event_start_time,
             PopupInputField::EndDate => &self.popup_event_end_date,
             PopupInputField::EndTime => &self.popup_event_end_time,
             PopupInputField::Description => &self.popup_event_description,
@@ -207,7 +207,7 @@ impl App {
     pub fn get_current_field_mut(&mut self) -> &mut String {
         match self.selected_input_field {
             PopupInputField::Title => &mut self.popup_event_title,
-            PopupInputField::Time => &mut self.popup_event_time,
+            PopupInputField::StartTime => &mut self.popup_event_start_time,
             PopupInputField::EndDate => &mut self.popup_event_end_date,
             PopupInputField::EndTime => &mut self.popup_event_end_time,
             PopupInputField::Description => &mut self.popup_event_description,

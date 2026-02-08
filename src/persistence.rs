@@ -177,7 +177,7 @@ pub fn load_events_from_path(
                     } else {
                         start_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok();
                     }
-                } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
+                } else if let Some(stripped) = line.strip_prefix("- **Start Time**: ") {
                     let time_str = stripped.trim();
                     if time_str.contains(" to ") {
                         let parts: Vec<&str> = time_str.split(" to ").collect();
@@ -204,8 +204,6 @@ pub fn load_events_from_path(
                 let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
                 events.push(CalendarEvent {
                     id: Uuid::new_v4().to_string(),
-                    date: sd,
-                    time: st,
                     title,
                     description,
                     recurrence,
@@ -221,7 +219,11 @@ pub fn load_events_from_path(
         }
     }
 
-    events.sort_by(|a, b| a.date.cmp(&b.date).then(a.start_time.cmp(&b.start_time)));
+    events.sort_by(|a, b| {
+        a.start_date
+            .cmp(&b.start_date)
+            .then(a.start_time.cmp(&b.start_time))
+    });
 
     Ok(events)
 }
@@ -300,8 +302,6 @@ fn generate_recurring_instances_in_range(
             });
             instances.push(CalendarEvent {
                 id: Uuid::new_v4().to_string(),
-                date: current_date,
-                time: base_event.start_time,
                 title: base_event.title.clone(),
                 description: base_event.description.clone(),
                 recurrence: crate::app::Recurrence::None,
@@ -414,7 +414,7 @@ pub fn save_event_to_path_without_sync(
     };
 
     let content = format!(
-        "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
+        "# Event: {}\n\n- **Date**: {}\n- **Start Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
         event.title, date_str, time_str, event.description, rec_str
     );
 
@@ -501,8 +501,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
             id: Uuid::new_v4().to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -519,7 +517,7 @@ mod tests {
         let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].date, event.date);
+        assert_eq!(events[0].start_date, event.start_date);
         assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
     }
@@ -529,8 +527,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
             id: "test_id1".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Day 1 Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -544,8 +540,6 @@ mod tests {
         };
         let mut event2 = CalendarEvent {
             id: "test_id2".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Day 2 Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -573,8 +567,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event = CalendarEvent {
             id: "test_id".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(0, 0, 0).unwrap(),
             title: "All Day Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -591,7 +583,7 @@ mod tests {
         let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].date, event.date);
+        assert_eq!(events[0].start_date, event.start_date);
         assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
         assert!(events[0].is_all_day);
@@ -603,8 +595,6 @@ mod tests {
         let mut event = CalendarEvent {
             id: "test_id".to_string(),
             is_all_day: false,
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
             title: "Test Event".to_string(),
             description: "This is a test description".to_string(),
             recurrence: crate::app::Recurrence::None,
@@ -620,7 +610,7 @@ mod tests {
         let events = load_events_from_path(temp_dir.path()).unwrap();
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].date, event.date);
+        assert_eq!(events[0].start_date, event.start_date);
         assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
         assert_eq!(events[0].description, event.description);
@@ -632,8 +622,6 @@ mod tests {
         let mut event1 = CalendarEvent {
             id: "test_id1".to_string(),
             is_all_day: false,
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Event 1".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -647,8 +635,6 @@ mod tests {
         let mut event2 = CalendarEvent {
             id: "test_id2".to_string(),
             is_all_day: false,
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
             title: "Event 2".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -703,8 +689,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
             id: "test_id1".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Test Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -718,7 +702,6 @@ mod tests {
         };
         let mut event2 = event1.clone();
         event2.id = "test_id2".to_string();
-        event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 
         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
@@ -745,8 +728,6 @@ mod tests {
         let temp_dir = TempDir::new().unwrap();
         let mut event1 = CalendarEvent {
             id: "test_id1".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Test Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::None,
@@ -760,7 +741,6 @@ mod tests {
         };
         let mut event2 = event1.clone();
         event2.id = "test_id2".to_string();
-        event2.time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
         event2.start_time = NaiveTime::from_hms_opt(11, 0, 0).unwrap();
 
         save_event_to_path(&mut event1, temp_dir.path(), None).unwrap();
@@ -784,8 +764,6 @@ mod tests {
     fn test_generate_recurring_instances_daily() {
         let base_event = CalendarEvent {
             id: "test_id".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Daily Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::Daily,
@@ -811,15 +789,13 @@ mod tests {
         assert!(instances.iter().all(|i| i.is_recurring_instance));
         assert!(instances
             .iter()
-            .all(|i| i.base_date == Some(base_event.date)));
+            .all(|i| i.base_date == Some(base_event.start_date)));
     }
 
     #[test]
     fn test_generate_recurring_instances_weekly() {
         let base_event = CalendarEvent {
             id: "test_id".to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Weekly Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::Weekly,
@@ -844,8 +820,6 @@ mod tests {
     fn test_generate_recurring_instances_yearly() {
         let base_event = CalendarEvent {
             id: Uuid::new_v4().to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Yearly Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::Yearly,
@@ -878,8 +852,6 @@ mod tests {
     fn test_generate_instances_for_range() {
         let base_events = vec![CalendarEvent {
             id: Uuid::new_v4().to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Yearly Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::Yearly,
@@ -913,8 +885,6 @@ mod tests {
     fn test_generate_monthly_jan31_edge_case() {
         let base_event = CalendarEvent {
             id: Uuid::new_v4().to_string(),
-            date: NaiveDate::from_ymd_opt(2023, 1, 31).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: "Monthly Event".to_string(),
             description: String::new(),
             recurrence: crate::app::Recurrence::Monthly,

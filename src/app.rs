@@ -16,8 +16,6 @@ pub enum Recurrence {
 #[derive(Clone, PartialEq, Debug)]
 pub struct CalendarEvent {
     pub id: String,
-    pub date: NaiveDate, // Deprecated: use start_date
-    pub time: NaiveTime, // Deprecated: use start_time
     pub title: String,
     pub description: String,
     pub recurrence: Recurrence,

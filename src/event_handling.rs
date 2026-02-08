@@ -81,7 +81,7 @@ pub fn find_base_event_for_instance(
         events
             .iter()
             .find(|e| {
-                e.date == base_date
+                e.start_date == base_date
                     && e.title == instance.title
                     && e.start_time == instance.start_time
                     && e.description == instance.description
@@ -322,8 +322,6 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     let description = app.popup_event_description.drain(..).collect();
                     let mut event = CalendarEvent {
                         id: uuid::Uuid::new_v4().to_string(),
-                        date: app.current_date_for_new_event,
-                        time,
                         title,
                         description,
                         recurrence,
@@ -742,7 +740,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             crate::app::Recurrence::Yearly => "yearly".to_string(),
                         };
                         app.popup_event_description = base_event.description.clone();
-                        app.current_date_for_new_event = base_event.date;
+                        app.current_date_for_new_event = base_event.start_date;
                         app.is_editing = true;
                         app.event_being_edited = Some(base_event.clone());
                         app.show_add_event_popup = true;

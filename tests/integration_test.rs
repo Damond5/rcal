@@ -473,31 +473,27 @@ fn test_delete_event_from_view_popup() {
     let today = app.date;
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Delete".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     });
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: today,
-        time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     });
@@ -533,16 +529,14 @@ fn test_cancel_delete_event_confirmation() {
     app.events.push(CalendarEvent {
         id: "test_id".to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Daily Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -610,30 +604,26 @@ fn test_navigate_events_in_view_popup() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: today,
-        time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Second Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     });
@@ -680,7 +670,7 @@ fn test_create_event_success() {
         NaiveTime::from_hms_opt(14, 30, 0).unwrap()
     );
     assert_eq!(
-        app.events[0].date,
+        app.events[0].start_date,
         NaiveDate::from_ymd_opt(2025, 10, 19).unwrap()
     );
     assert!(!app.show_add_event_popup);
@@ -1007,31 +997,27 @@ fn test_view_events_popup_with_events() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         end_time: None,
     });
 
@@ -1067,31 +1053,27 @@ fn test_view_events_popup_filters_by_date() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: tomorrow,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: tomorrow,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: tomorrow,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -1120,16 +1102,14 @@ fn test_open_edit_event_popup() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Edit".to_string(),
         description: "Description".to_string(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -1157,16 +1137,14 @@ fn test_edit_event_success() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: "Original Description".to_string(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -1207,16 +1185,14 @@ fn test_cancel_edit_event() {
     let original_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: "Original Description".to_string(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     app.events.push(original_event.clone());
@@ -1251,16 +1227,14 @@ fn test_edit_event_invalid_time() {
     let original_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     app.events.push(original_event.clone());
@@ -1296,16 +1270,14 @@ fn test_edit_event_empty_title() {
     let original_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     app.events.push(original_event.clone());
@@ -1341,31 +1313,27 @@ fn test_edit_event_change_time_sorting() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Noon Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         end_time: None,
     });
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -1403,16 +1371,14 @@ fn test_edit_event_persistence() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Title".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -1533,16 +1499,14 @@ fn test_cleanup_old_events() {
     // Create old event (finished before cutoff)
     let mut old_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     };
@@ -1551,16 +1515,14 @@ fn test_cleanup_old_events() {
     // Create recent event (finished after cutoff)
     let mut recent_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Recent Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2023, 11, 1).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2023, 11, 1).unwrap()),
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     };
@@ -1569,16 +1531,14 @@ fn test_cleanup_old_events() {
     // Create multi-day old event
     let mut multi_day_old = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Multi Day Old".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2023, 7, 5).unwrap()),
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     };
@@ -1607,16 +1567,14 @@ fn test_cleanup_old_events_preserves_recurring() {
     // Create old recurring event (should not be deleted even if base date is old)
     let mut recurring_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Recurring".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2023, 7, 1).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     };
@@ -1625,16 +1583,14 @@ fn test_cleanup_old_events_preserves_recurring() {
     // Create old non-recurring event (should be deleted)
     let mut old_non_recurring = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
-        date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Non-Recurring".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2023, 8, 1).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
         is_all_day: false,
     };
@@ -1703,16 +1659,14 @@ fn test_delete_recurring_instance() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Daily Standup".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     // Generate instances
@@ -1754,16 +1708,14 @@ fn test_delete_recurring_base_event() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Daily Standup".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     // Generate instances
@@ -1799,31 +1751,27 @@ fn test_find_base_event_for_instance() {
     let base_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Base Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     let instance = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today + chrono::Duration::days(1),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today + chrono::Duration::days(1),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Base Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: true,
         base_date: Some(today),
-        start_date: today + chrono::Duration::days(1),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     let events = vec![base_event.clone(), instance.clone()];
@@ -1838,16 +1786,14 @@ fn test_find_base_event_for_non_instance() {
     let event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     let events = vec![event.clone()];
@@ -1862,16 +1808,14 @@ fn test_find_base_event_no_match() {
     let instance = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today + chrono::Duration::days(1),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today + chrono::Duration::days(1),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Instance".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::None,
         is_recurring_instance: true,
         base_date: Some(today),
-        start_date: today + chrono::Duration::days(1),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     let events = vec![]; // No base event
@@ -1888,16 +1832,14 @@ fn test_delete_recurring_instance_deletes_series() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Weekly Meeting".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
     // Generate instances
@@ -1940,16 +1882,14 @@ fn test_delete_recurring_series_persistence() {
     let mut recurring_event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: today,
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: today,
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Persistent Recurring".to_string(),
         description: String::new(),
         recurrence: rcal::app::Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: today,
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     };
     rcal::persistence::save_event_to_path(&mut recurring_event, temp_dir.path(), None).unwrap();
@@ -2066,16 +2006,14 @@ fn test_cache_invalidation_on_event_delete() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Weekly Meeting".to_string(),
         description: String::new(),
         recurrence: Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2113,16 +2051,14 @@ fn test_cache_invalidation_on_event_edit() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Meeting".to_string(),
         description: String::new(),
         recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2157,16 +2093,14 @@ fn test_get_all_events_for_range_cache_hit() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Weekly Meeting".to_string(),
         description: String::new(),
         recurrence: Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2191,16 +2125,14 @@ fn test_get_all_events_for_range_large_range() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Yearly Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2025, 10, 15).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2307,16 +2239,14 @@ fn test_performance_frequent_invalidations() {
         app.events.push(CalendarEvent {
             id: uuid::Uuid::new_v4().to_string(),
             is_all_day: false,
-            date: NaiveDate::from_ymd_opt(2025, 10, (i % 28) + 1).unwrap(),
-            time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+            start_date: NaiveDate::from_ymd_opt(2025, 10, (i % 28) + 1).unwrap(),
+            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             title: format!("Meeting {}", i),
             description: String::new(),
             recurrence: Recurrence::Weekly,
             is_recurring_instance: false,
             base_date: None,
-            start_date: NaiveDate::from_ymd_opt(2025, 10, (i % 28) + 1).unwrap(),
             end_date: None,
-            start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
             end_time: None,
         });
     }
@@ -2345,16 +2275,14 @@ fn test_feb29_yearly_fallback_to_feb28() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Leap Day Birthday".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2379,16 +2307,14 @@ fn test_feb29_century_year_transitions() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(1896, 2, 29).unwrap(),
-        time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(1896, 2, 29).unwrap(),
+        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Century Test Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(1896, 2, 29).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2411,16 +2337,14 @@ fn test_feb29_multiday_event_duration_preservation() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
-        time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        start_time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
         title: "Multi-Day Conference".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2024, 3, 2).unwrap()),
-        start_time: NaiveTime::from_hms_opt(9, 0, 0).unwrap(),
         end_time: Some(NaiveTime::from_hms_opt(17, 0, 0).unwrap()),
     });
 
@@ -2457,16 +2381,14 @@ fn test_feb28_yearly_no_fallback() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2024, 2, 28).unwrap(),
-        time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 28).unwrap(),
+        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Feb 28 Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2024, 2, 28).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2487,16 +2409,14 @@ fn test_feb29_event_cache_invalidation() {
     app.events.push(CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Cached Leap Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::Yearly,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2024, 2, 29).unwrap(),
         end_date: None,
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: None,
     });
 
@@ -2547,16 +2467,14 @@ fn test_automatic_pull_on_application_startup() {
     let mut event = CalendarEvent {
         id: uuid::Uuid::new_v4().to_string(),
         is_all_day: false,
-        date: NaiveDate::from_ymd_opt(2025, 1, 15).unwrap(),
-        time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
+        start_date: NaiveDate::from_ymd_opt(2025, 1, 15).unwrap(),
+        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Auto Pull Event".to_string(),
         description: String::new(),
         recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
-        start_date: NaiveDate::from_ymd_opt(2025, 1, 15).unwrap(),
         end_date: Some(NaiveDate::from_ymd_opt(2025, 1, 15).unwrap()),
-        start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         end_time: Some(NaiveTime::from_hms_opt(11, 0, 0).unwrap()),
     };
     rcal::persistence::save_event_to_path_without_sync(&mut event, client1_path).unwrap();

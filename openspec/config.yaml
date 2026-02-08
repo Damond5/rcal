@@ -1,0 +1,16 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Rust (edition 2024), Ratatui (TUI), Crossterm, Chrono, Notify-rust, Notify, Clap, Dirs, TOML
+  Architecture: Enum-based input modes, centered popup layouts, custom Unicode cursor management
+  Storage: Markdown files in ~/calendar/ directory, one event per file with title-based filename
+  Sync: Git-based with SSH authentication, background threads for pull/push
+  Notifications: D-Bus desktop notifications 30min before timed events, midday day before all-day events
+  Constraints: Minimum Rust 1.70, D-Bus required for notifications, Unicode terminal support
+
+rules:
+  rust:
+    - snake_case for functions/variables/modules
+    - PascalCase for types and enums
+    - Organize use statements alphabetically
+    - Run cargo fmt and cargo clippy before committing

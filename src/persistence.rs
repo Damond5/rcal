@@ -177,7 +177,7 @@ pub fn load_events_from_path(
                     } else {
                         start_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok();
                     }
-                } else if let Some(stripped) = line.strip_prefix("- **Start Time**: ") {
+                } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
                     let time_str = stripped.trim();
                     if time_str.contains(" to ") {
                         let parts: Vec<&str> = time_str.split(" to ").collect();
@@ -414,7 +414,7 @@ pub fn save_event_to_path_without_sync(
     };
 
     let content = format!(
-        "# Event: {}\n\n- **Date**: {}\n- **Start Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
+        "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
         event.title, date_str, time_str, event.description, rec_str
     );
 

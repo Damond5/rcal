@@ -664,7 +664,7 @@ mod tests {
         let suggestions = get_date_suggestions("12", start_date, current_date);
         println!("Suggestions for input '12':");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {i}: {s} (valid: {v})", i, s, v);
+            println!("  {i}: {s} (valid: {v})");
         }
 
         assert!(!suggestions.is_empty(), "Should have suggestions");
@@ -693,7 +693,7 @@ mod tests {
         println!("Test: Start date Jan 1, user types '12'");
         println!("Suggestions:");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {i}: {s} (valid: {v})", i, s, v);
+            println!("  {i}: {s} (valid: {v})");
         }
 
         // All three should be valid since they're on or after Jan 1
@@ -712,7 +712,7 @@ mod tests {
         let suggestions = get_date_suggestions("12", start_date, current_date);
         println!("Suggestions for input '12' when start_date = today:");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {i}: {s} (valid: {v})", i, s, v);
+            println!("  {i}: {s} (valid: {v})");
         }
 
         // Should have 3 suggestions

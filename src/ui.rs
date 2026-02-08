@@ -494,7 +494,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         } else {
             Style::default()
         };
-        let time_style = if app.selected_input_field == PopupInputField::StartTime {
+        let time_style = if app.selected_input_field == PopupInputField::Time {
             Style::default().fg(Color::Black).bg(Color::LightBlue)
         } else {
             Style::default()
@@ -525,23 +525,23 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .block(Block::default().borders(Borders::ALL).title("Title"));
         f.render_widget(title_input, input_chunks[0]);
 
-        let time_input = ratatui::widgets::Paragraph::new(app.popup_event_start_time.as_str())
+        let time_input = ratatui::widgets::Paragraph::new(app.popup_event_time.as_str())
             .style(time_style)
-            .block(Block::default().borders(Borders::ALL).title("Start Time"));
+            .block(Block::default().borders(Borders::ALL).title("Time"));
         f.render_widget(time_input, input_chunks[1]);
 
         let time_block = if app.time_input_error.is_some() {
             Block::default()
                 .borders(Borders::ALL)
-                .title("Start Time")
+                .title("Time")
                 .border_style(Style::default().fg(Color::Red))
         } else {
-            Block::default().borders(Borders::ALL).title("Start Time")
+            Block::default().borders(Borders::ALL).title("Time")
         };
         let time_text = if let Some(ref error) = app.time_input_error {
-            format!("{}\n{}", app.popup_event_start_time, error)
+            format!("{}\n{}", app.popup_event_time, error)
         } else {
-            app.popup_event_start_time.clone()
+            app.popup_event_time.clone()
         };
         let time_input = ratatui::widgets::Paragraph::new(time_text)
             .style(time_style)
@@ -609,7 +609,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                         input_chunks[0].y + 1,
                     );
                 }
-                PopupInputField::StartTime => {
+                PopupInputField::Time => {
                     f.set_cursor(
                         input_chunks[1].x + app.cursor_position as u16 + 1,
                         input_chunks[1].y + 1,

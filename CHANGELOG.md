@@ -24,7 +24,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Breaking Change**: Changed recurring event deletion behavior - deleting any recurring instance now deletes the entire series persistently. Previously, only the specific instance was removed from memory.
 - Enhanced lazy loading to refresh cached recurring event instances after add, edit, or delete operations, ensuring UI accurately reflects changes without manual refresh.
 - README Installation section restructured into "For humans" (quick) and "For LLM Agents" (comprehensive) subsections
-- **Breaking Change:** "Time" renamed to "Start Time" throughout codebase (UI labels, internal fields, API identifiers)
 
 ### Fixed
 - February 29th leap year fallback for yearly recurring events (falls back to Feb 28th in non-leap years)

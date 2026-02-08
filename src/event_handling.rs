@@ -143,7 +143,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.input_mode = InputMode::EditingEventPopup;
                     app.current_date_for_new_event = app.date;
                     app.popup_event_title.clear();
-                    app.popup_event_start_time.clear();
+                    app.popup_event_time.clear();
                     app.popup_event_end_date.clear();
                     app.popup_event_end_time.clear();
                     app.popup_event_recurrence.clear();
@@ -256,7 +256,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             return Ok(true);
                         }
                     }
-                    let time_str = app.popup_event_start_time.clone();
+                    let time_str = app.popup_event_time.clone();
                     let normalized_time_str = normalize_time_input(&time_str);
                     let is_all_day = normalized_time_str.trim().is_empty();
                     if !is_all_day
@@ -428,8 +428,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     }
 
                     // Real-time validation for time field
-                    if app.selected_input_field == PopupInputField::StartTime {
-                        match date_utils::validate_time_input(&app.popup_event_start_time) {
+                    if app.selected_input_field == PopupInputField::Time {
+                        match date_utils::validate_time_input(&app.popup_event_time) {
                             Ok(_) => {
                                 app.time_input_error = None;
                             }
@@ -483,8 +483,8 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
 
                         // Real-time validation for time field
-                        if app.selected_input_field == PopupInputField::StartTime {
-                            match date_utils::validate_time_input(&app.popup_event_start_time) {
+                        if app.selected_input_field == PopupInputField::Time {
+                            match date_utils::validate_time_input(&app.popup_event_time) {
                                 Ok(_) => {
                                     app.time_input_error = None;
                                 }
@@ -528,7 +528,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Esc => {
                     app.show_add_event_popup = false;
                     app.popup_event_title.clear();
-                    app.popup_event_start_time.clear();
+                    app.popup_event_time.clear();
                     app.popup_event_end_date.clear();
                     app.popup_event_end_time.clear();
                     app.popup_event_description.clear();
@@ -560,15 +560,15 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             app.cursor_position = app.popup_event_recurrence.chars().count();
                             PopupInputField::Recurrence
                         }
-                        PopupInputField::StartTime => {
+                        PopupInputField::Time => {
                             app.cursor_position = app.popup_event_title.chars().count();
                             PopupInputField::Title
                         }
                         PopupInputField::EndDate => {
-                            app.cursor_position = app.popup_event_start_time.chars().count();
+                            app.cursor_position = app.popup_event_time.chars().count();
                             // Clear time error when entering Time field
                             app.time_input_error = None;
-                            PopupInputField::StartTime
+                            PopupInputField::Time
                         }
                         PopupInputField::EndTime => {
                             app.cursor_position = app.popup_event_end_date.chars().count();
@@ -599,10 +599,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                 KeyCode::Tab => {
                     app.selected_input_field = match app.selected_input_field {
                         PopupInputField::Title => {
-                            app.cursor_position = app.popup_event_start_time.chars().count();
-                            PopupInputField::StartTime
+                            app.cursor_position = app.popup_event_time.chars().count();
+                            PopupInputField::Time
                         }
-                        PopupInputField::StartTime => {
+                        PopupInputField::Time => {
                             app.cursor_position = app.popup_event_end_date.chars().count();
                             // Show suggestions when entering EndDate field
                             app.date_input_error = None;
@@ -724,8 +724,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             selected_event.clone()
                         };
                         app.popup_event_title = base_event.title.clone();
-                        app.popup_event_start_time =
-                            base_event.start_time.format("%H:%M").to_string();
+                        app.popup_event_time = base_event.start_time.format("%H:%M").to_string();
                         app.popup_event_end_date = base_event
                             .end_date
                             .map_or(String::new(), |d| d.format("%d/%m").to_string());
@@ -754,7 +753,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     app.input_mode = InputMode::EditingEventPopup;
                     app.current_date_for_new_event = app.date;
                     app.popup_event_title.clear();
-                    app.popup_event_start_time.clear();
+                    app.popup_event_time.clear();
                     app.popup_event_end_date.clear();
                     app.popup_event_end_time.clear();
                     app.popup_event_recurrence.clear();

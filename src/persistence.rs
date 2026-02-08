@@ -898,7 +898,7 @@ mod tests {
         };
         let start = NaiveDate::from_ymd_opt(2023, 1, 31).unwrap();
         let end = NaiveDate::from_ymd_opt(2023, 5, 31).unwrap();
-        let instances = generate_instances_for_range(&vec![base_event], start, end);
+        let instances = generate_instances_for_range(&[base_event], start, end);
         // Feb 31 is invalid, so no instances generated
         assert!(instances.is_empty());
     }

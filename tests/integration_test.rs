@@ -5,7 +5,6 @@ use rcal::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
 use rcal::event_handling::handle_event;
 use std::sync::mpsc;
 use tempfile::TempDir;
-use uuid;
 
 fn setup_app() -> (App, TempDir) {
     let temp_dir = TempDir::new().unwrap();
@@ -2433,7 +2432,7 @@ fn test_feb29_event_cache_invalidation() {
     assert!(events1.iter().all(|e1| events2
         .iter()
         .any(|e2| e1.title == e2.title && e1.start_date == e2.start_date)));
-    assert!(app.cached_instances.len() > 0);
+    assert!(!app.cached_instances.is_empty());
 }
 
 #[test]

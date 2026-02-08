@@ -7,22 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Added
-- Real-time time format validation: Added real-time format checking for time and end time input fields with immediate error feedback, matching the existing validation behavior for end date fields. Supports HH:MM (e.g., "14:30"), HH (e.g., "14", "9", "0"), and H (single digit) formats with error message: "Invalid time format. Use HH:MM, HH, or H (e.g., 14:30, 14, 9)".
-- Enhanced end date autocomplete suggestions: Expanded to include more relative dates ("next monday", "1 day", "next month", "end of year", "same day"), improved fuzzy matching for typos and partial inputs, added descriptive suggestions with arrow key navigation, enhanced partial date completion for inputs like "15/" or "/10", and optimized performance with edge case handling. Suggestions now appear immediately when entering the end date field (even when empty), showing the top 5 most common date suggestions (Tomorrow, Next week, End of month, Next month, Same day) to improve discoverability.
-
-### Changed
-- Restructured README Installation section into two targeted subsections to improve accessibility: "For humans" provides quick installation with 1-3 commands per method, while "For LLM Agents" includes comprehensive guidance with prerequisites, configuration details, verification steps using exit codes, and troubleshooting for installation, service, and sync issues in collapsible details format. This follows oh-my-opencode documentation standards to reduce time-to-first-run for human users while maintaining detailed automation documentation. All installation methods (AUR, source build, cargo install) are preserved with enhanced clarity.
-
-- **Breaking Change**: Renamed "Time" to "Start Time" throughout the codebase for improved terminology clarity and consistency. This affects:
-    - UI labels in event creation/editing forms
-    - Internal field names and structures
-    - API identifiers: `PopupInputField::Time` → `StartTime`
-
-### Fixed
-- February 29th leap year fallback for yearly recurring events: Yearly events on February 29th now automatically fall back to February 28th in non-leap years, ensuring birthdays, anniversaries, and other annual events continue occurring annually without being skipped.
-
-## [1.4.0] - 2025-11-16
+## [1.4.0] - 2026-02-08
 
 ### Added
 - Prevent invalid date acceptance: Added validation on event submission to prevent creation of events with invalid dates, displaying error messages for invalid time input and invalid end date input instead of proceeding silently.
@@ -32,10 +17,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Recurrence dropdown for event creation/editing implemented as a popup overlay instead of inline to prevent invalid syntax and improve usability
 - Suggestions overlay for end date input: Implemented a dedicated overlay popup to display date suggestions without overlapping other input fields.
 - Real-time validation and auto-completion for end date input in event creation/editing, providing immediate feedback for invalid dates, suggesting common date patterns like "tomorrow", "next week", "end of month", while maintaining DD/MM format with automatic year assumption
+- Real-time time format validation for time/end time inputs (supports HH:MM, HH, H formats)
+- Enhanced end date autocomplete suggestions with fuzzy matching, partial date completion, and immediate display of top 5 suggestions
 
 ### Changed
 - **Breaking Change**: Changed recurring event deletion behavior - deleting any recurring instance now deletes the entire series persistently. Previously, only the specific instance was removed from memory.
 - Enhanced lazy loading to refresh cached recurring event instances after add, edit, or delete operations, ensuring UI accurately reflects changes without manual refresh.
+- README Installation section restructured into "For humans" (quick) and "For LLM Agents" (comprehensive) subsections
+- **Breaking Change:** "Time" renamed to "Start Time" throughout codebase (UI labels, internal fields, API identifiers)
+
+### Fixed
+- February 29th leap year fallback for yearly recurring events (falls back to Feb 28th in non-leap years)
 
 ## [1.3.1] - 2025-11-09
 

@@ -658,13 +658,13 @@ mod tests {
     fn test_debug_january_twelve_suggestions() {
         let start_date = NaiveDate::from_ymd_opt(2026, 1, 15).unwrap();
         let current_date = NaiveDate::from_ymd_opt(2026, 1, 10).unwrap();
-        println!("Current date: {}", current_date);
-        println!("Start date: {}", start_date);
+        println!("Current date: {current_date}");
+        println!("Start date: {start_date}");
 
         let suggestions = get_date_suggestions("12", start_date, current_date);
         println!("Suggestions for input '12':");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {}: {} (valid: {})", i, s, v);
+            println!("  {i}: {s} (valid: {v})", i, s, v);
         }
 
         assert!(!suggestions.is_empty(), "Should have suggestions");
@@ -693,7 +693,7 @@ mod tests {
         println!("Test: Start date Jan 1, user types '12'");
         println!("Suggestions:");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {}: {} (valid: {})", i, s, v);
+            println!("  {i}: {s} (valid: {v})", i, s, v);
         }
 
         // All three should be valid since they're on or after Jan 1
@@ -705,14 +705,14 @@ mod tests {
     fn test_user_actual_scenario_january_12() {
         // Test with exact user scenario: today is Jan 10, creating event with same start date
         let today = chrono::Utc::now().date_naive();
-        println!("Testing with actual date: {}", today);
+        println!("Testing with actual date: {today}");
         let start_date = today; // Creating event starting today
         let current_date = today; // Current system date
 
         let suggestions = get_date_suggestions("12", start_date, current_date);
         println!("Suggestions for input '12' when start_date = today:");
         for (i, (s, v)) in suggestions.iter().enumerate() {
-            println!("  {}: {} (valid: {})", i, s, v);
+            println!("  {i}: {s} (valid: {v})", i, s, v);
         }
 
         // Should have 3 suggestions

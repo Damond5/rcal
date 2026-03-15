@@ -33,7 +33,7 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
     let mut overlay_y = input_chunks[2].y + input_chunks[2].height;
 
     // Handle boundary constraints
-    let frame_size = f.size();
+    let frame_size = f.area();
     let space_below = frame_size.height.saturating_sub(overlay_y);
     let space_above = input_chunks[2].y;
 
@@ -204,7 +204,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([Constraint::Min(1), Constraint::Length(1)].as_ref())
-        .split(f.size());
+        .split(f.area());
 
     let calendar_chunk = chunks[0];
     let hints_chunk = chunks[1];
@@ -348,7 +348,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 Constraint::Percentage(50),
                 Constraint::Percentage(25),
             ])
-            .split(f.size())[1];
+            .split(f.area())[1];
 
         let area = Layout::default()
             .direction(Direction::Horizontal)
@@ -397,7 +397,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
                 );
 
                 let area = {
-                    let size = f.size();
+                    let size = f.area();
                     let popup_width = 50;
                     let popup_height = 8;
                     Rect::new(
@@ -438,7 +438,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .style(Style::default().fg(Color::LightCyan));
 
         let area = {
-            let size = f.size();
+            let size = f.area();
             let popup_width = 70.min(size.width.saturating_sub(2));
             let popup_height = 25.min(size.height.saturating_sub(2));
             Rect::new(
@@ -605,34 +605,34 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         if app.input_mode == InputMode::EditingEventPopup {
             match app.selected_input_field {
                 PopupInputField::Title => {
-                    f.set_cursor(
+                    f.set_cursor_position((
                         input_chunks[0].x + app.cursor_position as u16 + 1,
                         input_chunks[0].y + 1,
-                    );
+                    ));
                 }
                 PopupInputField::Time => {
-                    f.set_cursor(
+                    f.set_cursor_position((
                         input_chunks[1].x + app.cursor_position as u16 + 1,
                         input_chunks[1].y + 1,
-                    );
+                    ));
                 }
                 PopupInputField::EndDate => {
-                    f.set_cursor(
+                    f.set_cursor_position((
                         input_chunks[2].x + app.cursor_position as u16 + 1,
                         input_chunks[2].y + 1,
-                    );
+                    ));
                 }
                 PopupInputField::EndTime => {
-                    f.set_cursor(
+                    f.set_cursor_position((
                         input_chunks[3].x + app.cursor_position as u16 + 1,
                         input_chunks[3].y + 1,
-                    );
+                    ));
                 }
                 PopupInputField::Description => {
-                    f.set_cursor(
+                    f.set_cursor_position((
                         input_chunks[4].x + app.cursor_position as u16 + 1,
                         input_chunks[4].y + 1,
-                    );
+                    ));
                 }
                 PopupInputField::Recurrence => {
                     // No cursor for recurrence field as input is disabled
@@ -667,7 +667,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .style(Style::default().fg(Color::LightCyan));
 
         let area = {
-            let size = f.size();
+            let size = f.area();
             let popup_width = 20;
             let popup_height = 7;
             Rect::new(
@@ -705,7 +705,7 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .style(Style::default().fg(Color::LightGreen));
 
         let area = {
-            let size = f.size();
+            let size = f.area();
             let popup_width = 50.min(size.width.saturating_sub(2));
             let popup_height = 10.min(size.height.saturating_sub(2));
             Rect::new(

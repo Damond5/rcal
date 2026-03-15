@@ -99,7 +99,10 @@ pub fn find_base_event_for_instance(
     }
 }
 
-pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()> {
+pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Result<()>
+where
+    std::io::Error: std::convert::From<<B as Backend>::Error>,
+{
     loop {
         terminal.draw(|f| ui(f, &mut app))?;
 

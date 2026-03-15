@@ -9,6 +9,18 @@ A terminal-based calendar application built with Rust and Ratatui.
 
 rcal is a simple yet powerful calendar application that runs entirely in your terminal. It provides an intuitive text-based user interface for managing events, with support for notifications and persistent storage.
 
+## Project Structure
+
+rcal is organized as a Rust workspace with two main components:
+
+- **[rcal-lib](rcal-lib/README.md)**: The reusable calendar library that provides core business logic for event management, including recurring events, file-based persistence, Git synchronization, and optional desktop notifications. This library can be used to build GUI applications, mobile apps, or any calendar application on top of a solid foundation.
+
+- **rcal**: The terminal CLI application built on rcal-lib. It provides the full-featured TUI experience with keyboard navigation, interactive event editing, and daemon-based notifications.
+
+This architecture enables developers to build custom calendar interfaces (GUI, mobile, web) using rcal-lib while benefiting from battle-tested core functionality.
+
+For developers who want to use the library in their own projects, see [rcal-lib/README.md](rcal-lib/README.md) for detailed documentation.
+
 Key benefits:
 - **TUI Interface**: Navigate and manage your calendar without leaving the terminal
 - **Notifications**: Get desktop notifications for upcoming events via daemon mode

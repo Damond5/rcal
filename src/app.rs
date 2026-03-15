@@ -1,32 +1,11 @@
-use crate::sync::{SyncProvider, SyncStatus};
-use chrono::{Datelike, Duration, Local, NaiveDate, NaiveTime};
+// Import from rcal_lib directly
+use rcal_lib::{CalendarEvent, SyncStatus};
+
+use chrono::{Datelike, Duration, Local, NaiveDate};
+use rcal_lib::sync::SyncProvider;
 use std::sync::mpsc::Receiver;
 
 const INSTANCE_BUFFER_DAYS: i64 = 365;
-
-#[derive(Clone, PartialEq, Debug)]
-pub enum Recurrence {
-    None,
-    Daily,
-    Weekly,
-    Monthly,
-    Yearly,
-}
-
-#[derive(Clone, PartialEq, Debug)]
-pub struct CalendarEvent {
-    pub id: String,
-    pub title: String,
-    pub description: String,
-    pub recurrence: Recurrence,
-    pub is_recurring_instance: bool,
-    pub base_date: Option<NaiveDate>,
-    pub start_date: NaiveDate,
-    pub end_date: Option<NaiveDate>,
-    pub start_time: NaiveTime,
-    pub end_time: Option<NaiveTime>,
-    pub is_all_day: bool,
-}
 
 #[derive(PartialEq, Debug)]
 pub enum InputMode {

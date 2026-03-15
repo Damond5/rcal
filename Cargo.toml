@@ -1,3 +1,6 @@
+[workspace]
+members = ["rcal-lib"]
+
 [package]
 name = "rcal"
 version = "1.4.0"
@@ -8,6 +11,7 @@ name = "rcal"
 path = "src/lib.rs"
 
 [dependencies]
+rcal-lib = { path = "rcal-lib" }
 chrono = "0.4.31"
 clap = { version = "4.0", features = ["derive"] }
 crossterm = "0.27.0"

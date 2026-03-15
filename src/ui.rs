@@ -6,6 +6,8 @@ use ratatui::{
     Frame,
 };
 
+use rcal_lib::{CalendarEvent, Recurrence, SyncStatus};
+
 use crate::app::{App, InputMode, PopupInputField};
 
 const MAX_OVERLAY_HEIGHT: u16 = 5;
@@ -92,7 +94,7 @@ fn render_suggestions_overlay(f: &mut Frame, app: &App, input_chunks: &[Rect]) {
 fn build_calendar_table(
     year: i32,
     month: u32,
-    events: &[crate::app::CalendarEvent],
+    events: &[CalendarEvent],
     selected_date: NaiveDate,
 ) -> (Table<'static>, usize) {
     let today = Local::now().date_naive();
@@ -306,13 +308,12 @@ pub fn ui(f: &mut Frame, app: &mut App) {
             .iter()
             .enumerate()
             .map(|(index, event)| {
-                let recurring_indicator = if event.recurrence != crate::app::Recurrence::None
-                    || event.is_recurring_instance
-                {
-                    " (R)"
-                } else {
-                    ""
-                };
+                let recurring_indicator =
+                    if event.recurrence != Recurrence::None || event.is_recurring_instance {
+                        " (R)"
+                    } else {
+                        ""
+                    };
                 let time_str = if event.is_all_day {
                     "All day".to_string()
                 } else {
@@ -744,11 +745,11 @@ pub fn ui(f: &mut Frame, app: &mut App) {
         }
 
         let status_text = match app.sync_status {
-            Some(crate::sync::SyncStatus::UpToDate) => "Status: Up to date",
-            Some(crate::sync::SyncStatus::Ahead) => "Status: Ahead",
-            Some(crate::sync::SyncStatus::Behind) => "Status: Behind",
-            Some(crate::sync::SyncStatus::Conflicts) => "Status: Conflicts",
-            Some(crate::sync::SyncStatus::Error(_)) => "Status: Error",
+            Some(SyncStatus::UpToDate) => "Status: Up to date",
+            Some(SyncStatus::Ahead) => "Status: Ahead",
+            Some(SyncStatus::Behind) => "Status: Behind",
+            Some(SyncStatus::Conflicts) => "Status: Conflicts",
+            Some(SyncStatus::Error(_)) => "Status: Error",
             None => "Status: Unknown",
         };
         let status = List::new(vec![ListItem::new(status_text)]);

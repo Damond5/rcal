@@ -11,7 +11,7 @@ use rcal::app::App;
 use rcal::daemon;
 use rcal::event_handling::run_app;
 use rcal::persistence;
-use rcal::sync::{GitSyncProvider, SyncProvider};
+use rcal_lib::{GitSyncProvider, SyncProvider};
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]

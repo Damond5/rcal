@@ -2,14 +2,14 @@ use std::path::Path;
 
 use chrono::{Datelike, Duration, Local, Months, NaiveDate, NaiveTime};
 use dirs;
+use rcal_lib::{CalendarEvent, Recurrence};
 use uuid::Uuid;
 
-use crate::app::CalendarEvent;
-use crate::sync::SyncProvider;
+use rcal_lib::sync::SyncProvider;
 
 pub fn is_finished_before(event: &CalendarEvent, cutoff: NaiveDate) -> bool {
     // Don't auto-delete recurring events to preserve ongoing schedules
-    if event.recurrence != crate::app::Recurrence::None {
+    if event.recurrence != Recurrence::None {
         return false;
     }
     let end_date = event.end_date.unwrap_or(event.start_date);
@@ -164,7 +164,7 @@ pub fn load_events_from_path(
             let mut start_time = None;
             let mut end_time = None;
             let mut description = String::new();
-            let mut recurrence = crate::app::Recurrence::None;
+            let mut recurrence = Recurrence::None;
             for line in content.lines() {
                 if let Some(stripped) = line.strip_prefix("# Event: ") {
                     title = stripped.trim().to_string();
@@ -191,11 +191,11 @@ pub fn load_events_from_path(
                 } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
                     let rec_str = stripped.trim();
                     recurrence = match rec_str {
-                        "daily" => crate::app::Recurrence::Daily,
-                        "weekly" => crate::app::Recurrence::Weekly,
-                        "monthly" => crate::app::Recurrence::Monthly,
-                        "yearly" => crate::app::Recurrence::Yearly,
-                        _ => crate::app::Recurrence::None,
+                        "daily" => Recurrence::Daily,
+                        "weekly" => Recurrence::Weekly,
+                        "monthly" => Recurrence::Monthly,
+                        "yearly" => Recurrence::Yearly,
+                        _ => Recurrence::None,
                     };
                 }
             }
@@ -239,7 +239,7 @@ pub fn generate_instances_for_range(
 ) -> Vec<CalendarEvent> {
     let mut instances = vec![];
     for base_event in base_events {
-        if base_event.recurrence != crate::app::Recurrence::None {
+        if base_event.recurrence != Recurrence::None {
             instances.extend(generate_recurring_instances_in_range(
                 base_event, start_date, end_date,
             ));
@@ -277,19 +277,19 @@ fn generate_recurring_instances_in_range(
     // Skip to the first date >= range_start
     while current_date < range_start {
         match base_event.recurrence {
-            crate::app::Recurrence::Daily => current_date += Duration::days(1),
-            crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
-            crate::app::Recurrence::Monthly => {
+            Recurrence::Daily => current_date += Duration::days(1),
+            Recurrence::Weekly => current_date += Duration::weeks(1),
+            Recurrence::Monthly => {
                 if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
                     current_date = new_date;
                 } else {
                     return instances; // Stop if invalid
                 }
             }
-            crate::app::Recurrence::Yearly => {
+            Recurrence::Yearly => {
                 current_date = advance_year_with_feb29_fallback(current_date);
             }
-            crate::app::Recurrence::None => return instances,
+            Recurrence::None => return instances,
         }
     }
 
@@ -304,7 +304,7 @@ fn generate_recurring_instances_in_range(
                 id: Uuid::new_v4().to_string(),
                 title: base_event.title.clone(),
                 description: base_event.description.clone(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: true,
                 base_date: Some(base_event.start_date),
                 start_date: current_date,
@@ -316,9 +316,9 @@ fn generate_recurring_instances_in_range(
         }
 
         match base_event.recurrence {
-            crate::app::Recurrence::Daily => current_date += Duration::days(1),
-            crate::app::Recurrence::Weekly => current_date += Duration::weeks(1),
-            crate::app::Recurrence::Monthly => {
+            Recurrence::Daily => current_date += Duration::days(1),
+            Recurrence::Weekly => current_date += Duration::weeks(1),
+            Recurrence::Monthly => {
                 if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
                     current_date = new_date;
                 } else {
@@ -329,10 +329,10 @@ fn generate_recurring_instances_in_range(
                     break;
                 }
             }
-            crate::app::Recurrence::Yearly => {
+            Recurrence::Yearly => {
                 current_date = advance_year_with_feb29_fallback(current_date);
             }
-            crate::app::Recurrence::None => break,
+            Recurrence::None => break,
         }
     }
     instances
@@ -406,11 +406,11 @@ pub fn save_event_to_path_without_sync(
     };
 
     let rec_str = match event.recurrence {
-        crate::app::Recurrence::None => "none",
-        crate::app::Recurrence::Daily => "daily",
-        crate::app::Recurrence::Weekly => "weekly",
-        crate::app::Recurrence::Monthly => "monthly",
-        crate::app::Recurrence::Yearly => "yearly",
+        Recurrence::None => "none",
+        Recurrence::Daily => "daily",
+        Recurrence::Weekly => "weekly",
+        Recurrence::Monthly => "monthly",
+        Recurrence::Yearly => "yearly",
     };
 
     let content = format!(
@@ -503,7 +503,7 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -529,7 +529,7 @@ mod tests {
             id: "test_id1".to_string(),
             title: "Day 1 Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -542,7 +542,7 @@ mod tests {
             id: "test_id2".to_string(),
             title: "Day 2 Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 2).unwrap(),
@@ -569,7 +569,7 @@ mod tests {
             id: "test_id".to_string(),
             title: "All Day Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -597,7 +597,7 @@ mod tests {
             is_all_day: false,
             title: "Test Event".to_string(),
             description: "This is a test description".to_string(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -624,7 +624,7 @@ mod tests {
             is_all_day: false,
             title: "Event 1".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -637,7 +637,7 @@ mod tests {
             is_all_day: false,
             title: "Event 2".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -691,7 +691,7 @@ mod tests {
             id: "test_id1".to_string(),
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -730,7 +730,7 @@ mod tests {
             id: "test_id1".to_string(),
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -766,7 +766,7 @@ mod tests {
             id: "test_id".to_string(),
             title: "Daily Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::Daily,
+            recurrence: Recurrence::Daily,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -798,7 +798,7 @@ mod tests {
             id: "test_id".to_string(),
             title: "Weekly Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::Weekly,
+            recurrence: Recurrence::Weekly,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -822,7 +822,7 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             title: "Yearly Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::Yearly,
+            recurrence: Recurrence::Yearly,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -854,7 +854,7 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             title: "Yearly Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::Yearly,
+            recurrence: Recurrence::Yearly,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 10, 1).unwrap(),
@@ -887,7 +887,7 @@ mod tests {
             id: Uuid::new_v4().to_string(),
             title: "Monthly Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::Monthly,
+            recurrence: Recurrence::Monthly,
             is_recurring_instance: false,
             base_date: None,
             start_date: NaiveDate::from_ymd_opt(2023, 1, 31).unwrap(),

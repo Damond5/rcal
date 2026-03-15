@@ -1,8 +1,9 @@
 use chrono::Utc;
 use chrono::{NaiveDate, NaiveTime};
 use crossterm::event::{Event, KeyCode, KeyEvent};
-use rcal::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
+use rcal::app::{App, InputMode, PopupInputField};
 use rcal::event_handling::handle_event;
+use rcal_lib::{CalendarEvent, Recurrence};
 use std::sync::mpsc;
 use tempfile::TempDir;
 
@@ -476,7 +477,7 @@ fn test_delete_event_from_view_popup() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Delete".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -489,7 +490,7 @@ fn test_delete_event_from_view_popup() {
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Event to Keep".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -607,7 +608,7 @@ fn test_navigate_events_in_view_popup() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "First Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -619,7 +620,7 @@ fn test_navigate_events_in_view_popup() {
         start_time: NaiveTime::from_hms_opt(14, 0, 0).unwrap(),
         title: "Second Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1000,7 +1001,7 @@ fn test_view_events_popup_with_events() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Meeting".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1013,7 +1014,7 @@ fn test_view_events_popup_with_events() {
         start_time: NaiveTime::from_hms_opt(14, 30, 0).unwrap(),
         title: "Afternoon Call".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1056,7 +1057,7 @@ fn test_view_events_popup_filters_by_date() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Today Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1069,7 +1070,7 @@ fn test_view_events_popup_filters_by_date() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Tomorrow Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1105,7 +1106,7 @@ fn test_open_edit_event_popup() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event to Edit".to_string(),
         description: "Description".to_string(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1140,7 +1141,7 @@ fn test_edit_event_success() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: "Original Description".to_string(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1188,7 +1189,7 @@ fn test_cancel_edit_event() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: "Original Description".to_string(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1230,7 +1231,7 @@ fn test_edit_event_invalid_time() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1273,7 +1274,7 @@ fn test_edit_event_empty_title() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Original Title".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1316,7 +1317,7 @@ fn test_edit_event_change_time_sorting() {
         start_time: NaiveTime::from_hms_opt(12, 0, 0).unwrap(),
         title: "Noon Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1329,7 +1330,7 @@ fn test_edit_event_change_time_sorting() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Morning Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1374,7 +1375,7 @@ fn test_edit_event_persistence() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Title".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1502,7 +1503,7 @@ fn test_cleanup_old_events() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
@@ -1518,7 +1519,7 @@ fn test_cleanup_old_events() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Recent Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: Some(NaiveDate::from_ymd_opt(2023, 11, 1).unwrap()),
@@ -1534,7 +1535,7 @@ fn test_cleanup_old_events() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Multi Day Old".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: Some(NaiveDate::from_ymd_opt(2023, 7, 5).unwrap()),
@@ -1570,7 +1571,7 @@ fn test_cleanup_old_events_preserves_recurring() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Recurring".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Weekly,
+        recurrence: Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1586,7 +1587,7 @@ fn test_cleanup_old_events_preserves_recurring() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Old Non-Recurring".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: Some(NaiveDate::from_ymd_opt(2023, 8, 1).unwrap()),
@@ -1620,7 +1621,7 @@ fn test_cleanup_old_events_preserves_recurring() {
     let events_after = rcal::persistence::load_events_from_path(temp_dir.path()).unwrap();
     assert!(events_after
         .iter()
-        .any(|e| e.title == "Old Recurring" && e.recurrence == rcal::app::Recurrence::Weekly));
+        .any(|e| e.title == "Old Recurring" && e.recurrence == Recurrence::Weekly));
 }
 
 #[test]
@@ -1662,7 +1663,7 @@ fn test_delete_recurring_instance() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Daily Standup".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Daily,
+        recurrence: Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1711,7 +1712,7 @@ fn test_delete_recurring_base_event() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Daily Standup".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Daily,
+        recurrence: Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1754,7 +1755,7 @@ fn test_find_base_event_for_instance() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Base Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Daily,
+        recurrence: Recurrence::Daily,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1767,7 +1768,7 @@ fn test_find_base_event_for_instance() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Base Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: true,
         base_date: Some(today),
         end_date: None,
@@ -1789,7 +1790,7 @@ fn test_find_base_event_for_non_instance() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Event".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1811,7 +1812,7 @@ fn test_find_base_event_no_match() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Instance".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::None,
+        recurrence: Recurrence::None,
         is_recurring_instance: true,
         base_date: Some(today),
         end_date: None,
@@ -1835,7 +1836,7 @@ fn test_delete_recurring_instance_deletes_series() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Weekly Meeting".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Weekly,
+        recurrence: Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -1885,7 +1886,7 @@ fn test_delete_recurring_series_persistence() {
         start_time: NaiveTime::from_hms_opt(10, 0, 0).unwrap(),
         title: "Persistent Recurring".to_string(),
         description: String::new(),
-        recurrence: rcal::app::Recurrence::Weekly,
+        recurrence: Recurrence::Weekly,
         is_recurring_instance: false,
         base_date: None,
         end_date: None,
@@ -2437,7 +2438,7 @@ fn test_feb29_event_cache_invalidation() {
 
 #[test]
 fn test_automatic_pull_on_application_startup() {
-    use rcal::sync::{GitSyncProvider, SyncProvider};
+    use rcal_lib::sync::{GitSyncProvider, SyncProvider};
     use std::process::Command;
     use std::sync::mpsc;
     use std::thread;
@@ -2529,7 +2530,7 @@ fn test_automatic_pull_on_application_startup() {
 
 #[test]
 fn test_git_repository_initialization_with_remote() {
-    use rcal::sync::{GitSyncProvider, SyncProvider};
+    use rcal_lib::sync::{GitSyncProvider, SyncProvider};
 
     // Create a bare remote repository
     let remote_temp = TempDir::new().unwrap();
@@ -2581,7 +2582,8 @@ fn test_git_repository_initialization_with_remote() {
 
 #[test]
 fn test_sync_status_method() {
-    use rcal::sync::{GitSyncProvider, SyncProvider, SyncStatus};
+    use rcal_lib::sync::{GitSyncProvider, SyncProvider};
+    use rcal_lib::SyncStatus;
 
     let temp_dir = TempDir::new().unwrap();
     let path = temp_dir.path();

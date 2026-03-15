@@ -1,11 +1,10 @@
 use std::{collections::HashSet, error::Error, thread, time::Duration};
 
+use crate::persistence;
 use chrono::Local;
 use dirs;
 use notify::{Config, RecommendedWatcher, RecursiveMode, Watcher};
 use notify_rust::Notification;
-
-use crate::persistence;
 
 pub fn run_daemon() -> Result<(), Box<dyn Error>> {
     let home = dirs::home_dir().expect("Could not find home directory");
@@ -92,11 +91,15 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
                     Ok(mut new_events) => {
                         // Sort both for order-independent comparison
                         new_events.sort_by(|a, b| {
-                            a.start_date.cmp(&b.start_date).then(a.start_time.cmp(&b.start_time))
+                            a.start_date
+                                .cmp(&b.start_date)
+                                .then(a.start_time.cmp(&b.start_time))
                         });
                         let mut current_sorted = events.clone();
                         current_sorted.sort_by(|a, b| {
-                            a.start_date.cmp(&b.start_date).then(a.start_time.cmp(&b.start_time))
+                            a.start_date
+                                .cmp(&b.start_date)
+                                .then(a.start_time.cmp(&b.start_time))
                         });
                         if new_events != current_sorted {
                             events = new_events;
@@ -120,8 +123,8 @@ pub fn run_daemon() -> Result<(), Box<dyn Error>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::app::CalendarEvent;
     use chrono::{Duration, NaiveDate, NaiveTime, TimeZone};
+    use rcal_lib::{CalendarEvent, Recurrence};
     use std::collections::HashSet;
 
     // Mock function to check upcoming events
@@ -191,7 +194,7 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -222,7 +225,7 @@ mod tests {
             is_all_day: false,
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -248,7 +251,7 @@ mod tests {
             is_all_day: false,
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -280,7 +283,7 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             title: "All Day Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: tomorrow,
@@ -309,7 +312,7 @@ mod tests {
             is_all_day: false,
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -340,7 +343,7 @@ mod tests {
                 is_all_day: false,
                 title: "Event 1".to_string(),
                 description: String::new(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: false,
                 base_date: None,
                 start_date: today,
@@ -353,7 +356,7 @@ mod tests {
                 is_all_day: false,
                 title: "Event 2".to_string(),
                 description: String::new(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: false,
                 base_date: None,
                 start_date: today,
@@ -366,7 +369,7 @@ mod tests {
                 is_all_day: false,
                 title: "Event 3".to_string(),
                 description: String::new(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: false,
                 base_date: None,
                 start_date: today,
@@ -397,7 +400,7 @@ mod tests {
             is_all_day: false,
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -424,7 +427,7 @@ mod tests {
                 is_all_day: false,
                 title: "Event 1".to_string(),
                 description: String::new(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: false,
                 base_date: None,
                 start_date: today,
@@ -437,7 +440,7 @@ mod tests {
                 is_all_day: false,
                 title: "Event 2".to_string(),
                 description: String::new(),
-                recurrence: crate::app::Recurrence::None,
+                recurrence: Recurrence::None,
                 is_recurring_instance: false,
                 base_date: None,
                 start_date: today,
@@ -465,7 +468,7 @@ mod tests {
             id: uuid::Uuid::new_v4().to_string(),
             title: "Test Event".to_string(),
             description: String::new(),
-            recurrence: crate::app::Recurrence::None,
+            recurrence: Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
             start_date: today,
@@ -484,9 +487,17 @@ mod tests {
         let mut new_events = events.clone();
         new_events.reverse(); // Change order
         let mut new_sorted = new_events.clone();
-        new_sorted.sort_by(|a, b| a.start_date.cmp(&b.start_date).then(a.start_time.cmp(&b.start_time)));
+        new_sorted.sort_by(|a, b| {
+            a.start_date
+                .cmp(&b.start_date)
+                .then(a.start_time.cmp(&b.start_time))
+        });
         let mut current_sorted = events.clone();
-        current_sorted.sort_by(|a, b| a.start_date.cmp(&b.start_date).then(a.start_time.cmp(&b.start_time)));
+        current_sorted.sort_by(|a, b| {
+            a.start_date
+                .cmp(&b.start_date)
+                .then(a.start_time.cmp(&b.start_time))
+        });
 
         // Should be equal after sorting
         assert_eq!(new_sorted, current_sorted);

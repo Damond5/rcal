@@ -8,7 +8,9 @@ use ratatui::Terminal;
 use std::sync::mpsc::TryRecvError;
 use std::thread;
 
-use crate::app::{App, CalendarEvent, InputMode, PopupInputField, Recurrence};
+use crate::app::{App, InputMode, PopupInputField};
+use rcal_lib::sync::SyncProvider;
+use rcal_lib::{CalendarEvent, GitSyncProvider, Recurrence, SyncStatus};
 
 fn extract_date_from_suggestion(suggestion: &(String, bool)) -> String {
     let s = &suggestion.0;
@@ -19,7 +21,6 @@ fn extract_date_from_suggestion(suggestion: &(String, bool)) -> String {
     }
     s.to_string()
 }
-use crate::date_utils;
 
 fn recurrence_str_to_index(s: &str) -> usize {
     match s.to_lowercase().as_str() {
@@ -30,8 +31,9 @@ fn recurrence_str_to_index(s: &str) -> usize {
         _ => 0, // Default to "none" for invalid recurrence strings
     }
 }
+
+use crate::date_utils;
 use crate::persistence;
-use crate::sync::SyncProvider;
 use crate::ui::ui;
 
 /// Normalizes time input to HH:MM format.
@@ -114,11 +116,11 @@ pub fn run_app<B: Backend>(terminal: &mut Terminal<B>, mut app: App) -> io::Resu
                     // Invalidate cached instances after reloading events
                     app.invalidate_instance_cache(None);
                     // Update sync status (silently, don't interfere with sync popup)
-                    app.sync_status = Some(crate::sync::SyncStatus::UpToDate);
+                    app.sync_status = Some(SyncStatus::UpToDate);
                 }
                 Ok(Err(e)) => {
                     // Update sync status on error (silently, don't interfere with sync popup)
-                    app.sync_status = Some(crate::sync::SyncStatus::Error(e));
+                    app.sync_status = Some(SyncStatus::Error(e));
                 }
                 Err(TryRecvError::Empty) => {}
                 Err(TryRecvError::Disconnected) => {}
@@ -205,17 +207,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             match provider.status(&app.calendar_dir) {
                                 Ok(status) => {
                                     app.sync_message = match &status {
-                                        crate::sync::SyncStatus::UpToDate => "".to_string(),
-                                        crate::sync::SyncStatus::Ahead => {
-                                            "Ahead of remote".to_string()
-                                        }
-                                        crate::sync::SyncStatus::Behind => {
-                                            "Behind remote".to_string()
-                                        }
-                                        crate::sync::SyncStatus::Conflicts => {
-                                            "Conflicts detected".to_string()
-                                        }
-                                        crate::sync::SyncStatus::Error(e) => {
+                                        SyncStatus::UpToDate => "".to_string(),
+                                        SyncStatus::Ahead => "Ahead of remote".to_string(),
+                                        SyncStatus::Behind => "Behind remote".to_string(),
+                                        SyncStatus::Conflicts => "Conflicts detected".to_string(),
+                                        SyncStatus::Error(e) => {
                                             format!("Status error: {e}")
                                         }
                                     };
@@ -227,8 +223,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 }
                                 Err(e) => {
                                     app.sync_message = format!("Status failed: {e}");
-                                    app.sync_status =
-                                        Some(crate::sync::SyncStatus::Error(e.to_string()));
+                                    app.sync_status = Some(SyncStatus::Error(e.to_string()));
                                 }
                             }
                         }
@@ -313,11 +308,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     let title = app.popup_event_title.drain(..).collect();
                     let recurrence_str = app.popup_event_recurrence.drain(..).collect::<String>();
                     let recurrence = match recurrence_str.trim().to_lowercase().as_str() {
-                        "daily" => crate::app::Recurrence::Daily,
-                        "weekly" => crate::app::Recurrence::Weekly,
-                        "monthly" => crate::app::Recurrence::Monthly,
-                        "yearly" => crate::app::Recurrence::Yearly,
-                        _ => crate::app::Recurrence::None,
+                        "daily" => Recurrence::Daily,
+                        "weekly" => Recurrence::Weekly,
+                        "monthly" => Recurrence::Monthly,
+                        "yearly" => Recurrence::Yearly,
+                        _ => Recurrence::None,
                     };
                     let description = app.popup_event_description.drain(..).collect();
                     let mut event = CalendarEvent {
@@ -346,15 +341,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {
-                                if let Some(git_provider) = provider
-                                    .as_any()
-                                    .downcast_ref::<crate::sync::GitSyncProvider>(
-                                ) {
+                                if let Some(git_provider) =
+                                    provider.as_any().downcast_ref::<GitSyncProvider>()
+                                {
                                     let remote_url = git_provider.remote_url.clone();
                                     let calendar_dir = app.calendar_dir.clone();
                                     thread::spawn(move || {
-                                        let provider =
-                                            crate::sync::GitSyncProvider::new(remote_url);
+                                        let provider = GitSyncProvider::new(remote_url);
                                         let _ = provider.push(&calendar_dir);
                                     });
                                 }
@@ -732,11 +725,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             .end_time
                             .map_or(String::new(), |t| t.format("%H:%M").to_string());
                         app.popup_event_recurrence = match base_event.recurrence {
-                            crate::app::Recurrence::None => "none".to_string(),
-                            crate::app::Recurrence::Daily => "daily".to_string(),
-                            crate::app::Recurrence::Weekly => "weekly".to_string(),
-                            crate::app::Recurrence::Monthly => "monthly".to_string(),
-                            crate::app::Recurrence::Yearly => "yearly".to_string(),
+                            Recurrence::None => "none".to_string(),
+                            Recurrence::Daily => "daily".to_string(),
+                            Recurrence::Weekly => "weekly".to_string(),
+                            Recurrence::Monthly => "monthly".to_string(),
+                            Recurrence::Yearly => "yearly".to_string(),
                         };
                         app.popup_event_description = base_event.description.clone();
                         app.current_date_for_new_event = base_event.start_date;
@@ -824,15 +817,13 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
 
                             // Spawn async sync for delete
                             if let Some(provider) = &app.sync_provider {
-                                if let Some(git_provider) = provider
-                                    .as_any()
-                                    .downcast_ref::<crate::sync::GitSyncProvider>(
-                                ) {
+                                if let Some(git_provider) =
+                                    provider.as_any().downcast_ref::<GitSyncProvider>()
+                                {
                                     let remote_url = git_provider.remote_url.clone();
                                     let calendar_dir = app.calendar_dir.clone();
                                     thread::spawn(move || {
-                                        let provider =
-                                            crate::sync::GitSyncProvider::new(remote_url);
+                                        let provider = GitSyncProvider::new(remote_url);
                                         let _ = provider.push(&calendar_dir);
                                     });
                                 }
@@ -883,8 +874,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             }
                             Err(e) => {
                                 app.sync_message = format!("Pull failed: {e}");
-                                app.sync_status =
-                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
+                                app.sync_status = Some(SyncStatus::Error(e.to_string()));
                             }
                         }
                     }
@@ -900,8 +890,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             }
                             Err(e) => {
                                 app.sync_message = format!("Push failed: {e}");
-                                app.sync_status =
-                                    Some(crate::sync::SyncStatus::Error(e.to_string()));
+                                app.sync_status = Some(SyncStatus::Error(e.to_string()));
                             }
                         }
                     }

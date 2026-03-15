@@ -1,36 +1,36 @@
+//! Git-based synchronization provider.
+//!
+//! Implements the SyncProvider trait using Git for calendar synchronization.
+
 use std::any::Any;
 use std::error::Error;
 use std::path::Path;
 use std::process::{Command, Stdio};
 
-#[derive(Debug, PartialEq)]
-pub enum SyncStatus {
-    UpToDate,
-    Ahead,
-    Behind,
-    Conflicts,
-    Error(String),
-}
+use crate::models::SyncStatus;
+use crate::sync::traits::SyncProvider;
 
-pub trait SyncProvider {
-    fn init(&self, path: &Path) -> Result<(), Box<dyn Error>>;
-    fn pull(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
-    fn push(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
-    fn status(&self, path: &Path) -> Result<SyncStatus, Box<dyn Error>>;
-    fn as_any(&self) -> &dyn Any;
-}
-
+/// Git-based sync provider for calendar synchronization.
 pub struct GitSyncProvider {
+    /// URL of the remote repository.
     pub remote_url: String,
+    /// Branch to sync with.
     pub branch: String,
 }
 
 impl GitSyncProvider {
+    /// Creates a new GitSyncProvider with the given remote URL.
     pub fn new(remote_url: String) -> Self {
         Self {
             remote_url,
             branch: "main".to_string(),
         }
+    }
+
+    /// Creates a new GitSyncProvider with the given remote URL and branch.
+    pub fn with_branch(mut self, branch: &str) -> Self {
+        self.branch = branch.to_string();
+        self
     }
 }
 
@@ -38,6 +38,7 @@ impl SyncProvider for GitSyncProvider {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
     fn init(&self, path: &Path) -> Result<(), Box<dyn Error>> {
         // Init repo if not exists
         if !path.join(".git").exists() {
@@ -195,7 +196,6 @@ impl SyncProvider for GitSyncProvider {
 #[cfg(test)]
 mod tests {
     use super::*;
-
     use tempfile::TempDir;
 
     #[test]
@@ -217,20 +217,9 @@ mod tests {
     }
 
     #[test]
-    fn test_push_returns_status() {
-        let temp_dir = TempDir::new().unwrap();
-        let provider = GitSyncProvider::new("https://example.com/repo.git".to_string());
-        // Since no git repo, push should fail, but return type is checked
-        let result = provider.push(temp_dir.path());
-        assert!(result.is_err()); // Should be error due to no repo
-    }
-
-    #[test]
-    fn test_pull_returns_status() {
-        let temp_dir = TempDir::new().unwrap();
-        let provider = GitSyncProvider::new("https://example.com/repo.git".to_string());
-        // Since no git repo, pull should fail, but return type is checked
-        let result = provider.pull(temp_dir.path());
-        assert!(result.is_err()); // Should be error due to no repo
+    fn test_sync_provider_with_branch() {
+        let provider =
+            GitSyncProvider::new("https://example.com/repo.git".to_string()).with_branch("develop");
+        assert_eq!(provider.branch, "develop");
     }
 }

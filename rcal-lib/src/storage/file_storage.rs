@@ -98,8 +98,7 @@ impl FileEventRepository {
                 .unwrap_or(false)
             {
                 let content = fs::read_to_string(&path)?;
-                // Parse new format
-                let mut id = None;
+                // Parse new format (title-based, no ID in content)
                 let mut title = String::new();
                 let mut start_date = None;
                 let mut end_date = None;
@@ -108,9 +107,7 @@ impl FileEventRepository {
                 let mut description = String::new();
                 let mut recurrence = Recurrence::None;
                 for line in content.lines() {
-                    if let Some(stripped) = line.strip_prefix("- **ID**: ") {
-                        id = Some(stripped.trim().to_string());
-                    } else if let Some(stripped) = line.strip_prefix("# Event: ") {
+                    if let Some(stripped) = line.strip_prefix("# Event: ") {
                         title = stripped.trim().to_string();
                     } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
                         let date_str = stripped.trim();
@@ -140,8 +137,9 @@ impl FileEventRepository {
                 if let Some(sd) = start_date {
                     let is_all_day = start_time.is_none();
                     let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+                    // Generate a new UUID for each loaded event
                     events.push(CalendarEvent {
-                        id: id.unwrap_or_else(|| Uuid::new_v4().to_string()),
+                        id: Uuid::new_v4().to_string(),
                         title,
                         description,
                         recurrence,
@@ -174,8 +172,22 @@ impl FileEventRepository {
     ) -> Result<(), Box<dyn Error>> {
         fs::create_dir_all(calendar_dir)?;
 
-        // Use ID-based filename for reliable lookup by ID
-        let filename = format!("{}.md", event.id);
+        // Check if an event with the same title AND start_date already exists
+        // If so, delete it first to avoid duplicates
+        if let Ok(existing_path) =
+            self.find_event_filepath_by_key(calendar_dir, &event.title, event.start_date)
+        {
+            fs::remove_file(existing_path)?;
+        }
+
+        // Use title-based filename with collision handling
+        let base_name = sanitize_title_for_filename(&event.title);
+        let mut filename = format!("{base_name}.md");
+        let mut counter = 1;
+        while calendar_dir.join(&filename).exists() {
+            filename = format!("{base_name}_{counter}.md");
+            counter += 1;
+        }
         let filepath = calendar_dir.join(&filename);
 
         let content = Self::event_to_markdown(event);
@@ -216,35 +228,19 @@ impl FileEventRepository {
         let rec_str = event.recurrence.to_storage_string();
 
         format!(
-            "# Event: {}\n\n- **ID**: {}\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
-            event.title, event.id, date_str, time_str, event.description, rec_str
+            "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
+            event.title, date_str, time_str, event.description, rec_str
         )
     }
 
-    /// Finds the filepath for an event by ID.
-    /// Since filenames are now ID-based, this first tries direct lookup
-    /// and falls back to content search if needed.
+    /// Finds the filepath for an event by title.
+    /// Searches through all .md files in the directory and looks for
+    /// a matching title in the content.
     fn find_event_filepath(
         &self,
         calendar_dir: &Path,
         event: &CalendarEvent,
     ) -> Result<PathBuf, std::io::Error> {
-        // First try direct filename lookup (optimization for ID-based filenames)
-        let direct_path = calendar_dir.join(format!("{}.md", event.id));
-        if direct_path.exists() {
-            // Verify the content has the matching ID
-            if let Ok(content) = fs::read_to_string(&direct_path) {
-                for line in content.lines() {
-                    if let Some(stripped) = line.strip_prefix("- **ID**: ") {
-                        if stripped.trim() == event.id {
-                            return Ok(direct_path);
-                        }
-                    }
-                }
-            }
-        }
-
-        // Fall back to content search
         let entries = fs::read_dir(calendar_dir)?;
         for entry in entries {
             let entry = entry?;
@@ -257,9 +253,9 @@ impl FileEventRepository {
             {
                 let content = fs::read_to_string(&path)?;
                 for line in content.lines() {
-                    if let Some(stripped) = line.strip_prefix("- **ID**: ") {
-                        let id = stripped.trim();
-                        if id == event.id {
+                    if let Some(stripped) = line.strip_prefix("# Event: ") {
+                        let title = stripped.trim();
+                        if title == event.title {
                             return Ok(path);
                         }
                     }
@@ -268,8 +264,58 @@ impl FileEventRepository {
         }
         Err(std::io::Error::new(
             std::io::ErrorKind::NotFound,
-            format!("Event with id '{}' not found", event.id),
+            format!("Event '{}' not found", event.title),
         ))
+    }
+
+    /// Finds the filepath for an event by title and start_date key.
+    /// This is used for delete operations since UUIDs are not persisted in files.
+    fn find_event_filepath_by_key(
+        &self,
+        calendar_dir: &Path,
+        title: &str,
+        start_date: NaiveDate,
+    ) -> Result<PathBuf, Box<dyn Error>> {
+        let entries = fs::read_dir(calendar_dir)?;
+        for entry in entries {
+            let entry = entry?;
+            let path = entry.path();
+            if path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map(|s| s.ends_with(".md"))
+                .unwrap_or(false)
+            {
+                let content = fs::read_to_string(&path)?;
+                let mut found_title: Option<String> = None;
+                let mut found_date: Option<NaiveDate> = None;
+
+                for line in content.lines() {
+                    if let Some(stripped) = line.strip_prefix("# Event: ") {
+                        found_title = Some(stripped.trim().to_string());
+                    } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
+                        let date_str = stripped.trim();
+                        // Extract just the start date (before " to " if present)
+                        let start_str = if date_str.contains(" to ") {
+                            date_str.split(" to ").next().unwrap_or(date_str)
+                        } else {
+                            date_str
+                        };
+                        found_date = NaiveDate::parse_from_str(start_str, "%Y-%m-%d").ok();
+                    }
+                }
+
+                if let Some(ref t) = found_title {
+                    if t == title && found_date == Some(start_date) {
+                        return Ok(path);
+                    }
+                }
+            }
+        }
+        Err(Box::new(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("Event '{}' on {} not found", title, start_date),
+        )))
     }
 
     /// Deletes an event from a specific directory.
@@ -283,22 +329,17 @@ impl FileEventRepository {
         Ok(())
     }
 
-    /// Deletes an event by its ID from a specific directory.
-    /// Uses find_event_filepath which has fallback logic:
-    /// 1. First tries direct filename lookup ({id}.md)
-    /// 2. Falls back to searching by content if not found
-    ///
-    /// This handles both ID-based filenames (new format) and title-based
-    /// filenames (old format) that still have the ID in their content.
-    pub fn delete_by_id_from_path(
+    /// Deletes an event by its title from a specific directory.
+    /// Searches for the event file by title in the content.
+    pub fn delete_by_title_from_path(
         &self,
-        id: &str,
+        title: &str,
         calendar_dir: &Path,
     ) -> Result<(), Box<dyn Error>> {
-        // Create a minimal event with just the ID for find_event_filepath
+        // Create a minimal event with just the title for find_event_filepath
         let event = CalendarEvent {
-            id: id.to_string(),
-            title: String::new(),
+            id: String::new(),
+            title: title.to_string(),
             description: String::new(),
             recurrence: Recurrence::None,
             is_recurring_instance: false,
@@ -439,12 +480,11 @@ impl EventRepository for FileEventRepository {
         self.save_to_path(event, &self.path_provider.calendar_dir())
     }
 
-    fn delete(&self, id: &Uuid) -> Result<(), Box<dyn Error>> {
-        // Load events to find the one with matching ID
-        let events = self.load()?;
-        if let Some(event) = events.iter().find(|e| e.id == id.to_string()) {
-            self.delete_from_path(event, &self.path_provider.calendar_dir())?;
-        }
+    fn delete(&self, title: &str, start_date: NaiveDate) -> Result<(), Box<dyn Error>> {
+        // Find and delete event by title and start_date
+        let filepath =
+            self.find_event_filepath_by_key(&self.path_provider.calendar_dir(), title, start_date)?;
+        fs::remove_file(filepath)?;
         Ok(())
     }
 
@@ -462,14 +502,15 @@ impl EventRepository for FileEventRepository {
 
     fn delete_with_sync(
         &self,
-        id: &Uuid,
+        title: &str,
+        start_date: NaiveDate,
         sync_provider: Option<&DynSyncProvider>,
         calendar_dir: &Path,
     ) -> Result<(), Box<dyn Error>> {
         // Default implementation - just delete without sync
         // Sync functionality can be handled at a higher level by the caller
         let _ = (sync_provider, calendar_dir);
-        self.delete(id)
+        self.delete(title, start_date)
     }
 }
 
@@ -603,7 +644,9 @@ mod tests {
         let events = repo.load().unwrap();
 
         assert_eq!(events.len(), 1);
-        assert_eq!(events[0].id, event.id); // Verify ID is preserved
+        // ID is NOT preserved - a new UUID is generated when loading
+        assert_ne!(events[0].id, event.id);
+        // But title and other fields should match
         assert_eq!(events[0].start_date, event.start_date);
         assert_eq!(events[0].start_time, event.start_time);
         assert_eq!(events[0].title, event.title);
@@ -648,7 +691,7 @@ mod tests {
     }
 
     #[test]
-    fn test_event_to_markdown_includes_id() {
+    fn test_event_to_markdown_excludes_id() {
         let event = CalendarEvent {
             id: "test-uuid-1234".to_string(),
             title: "Test Event".to_string(),
@@ -664,11 +707,14 @@ mod tests {
         };
 
         let markdown = FileEventRepository::event_to_markdown(&event);
-        assert!(markdown.contains("- **ID**: test-uuid-1234"));
+        // ID should NOT be in the markdown content
+        assert!(!markdown.contains("- **ID**:"));
+        // But title should be there
+        assert!(markdown.contains("# Event: Test Event"));
     }
 
     #[test]
-    fn test_delete_event_by_id() {
+    fn test_delete_event_by_title() {
         let temp_dir = TempDir::new().unwrap();
         let repo = FileEventRepository::with_path(temp_dir.path().to_path_buf());
 
@@ -689,12 +735,12 @@ mod tests {
         // Save the event
         repo.save(&event).unwrap();
 
-        // Verify file exists (filename should be ID-based)
-        let file_path = temp_dir.path().join("delete-test-id.md");
+        // Verify file exists (filename should be title-based)
+        let file_path = temp_dir.path().join("Event_to_Delete.md");
         assert!(file_path.exists());
 
-        // Delete by ID
-        repo.delete_by_id_from_path("delete-test-id", temp_dir.path())
+        // Delete by title
+        repo.delete_by_title_from_path("Event to Delete", temp_dir.path())
             .unwrap();
 
         // Verify file is deleted

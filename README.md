@@ -488,6 +488,8 @@ rcal
 
 ### Event Storage
 Events are stored as individual markdown files in `~/calendar/` directory, one per event with title-based filenames. See EVENT_FORMAT.md for the detailed event format specification.
+- Events use title as the unique identifier - the filename is derived from the event title (e.g., `Team_Meeting.md`), and there is no ID field stored in the file content
+- The ID field exists in the CalendarEvent struct for in-memory use but is not persisted to disk
 - Events include title, start date, start time, end date, end time, and description
 - **Warning**: By default, non-recurring events that finished more than 2 months ago are automatically deleted on application launch to reduce clutter. Recurring events are not cleaned up to preserve ongoing schedules. This can be disabled in the configuration.
 

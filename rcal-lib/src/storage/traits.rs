@@ -6,7 +6,7 @@ use std::any::Any;
 use std::error::Error;
 use std::path::{Path, PathBuf};
 
-use uuid::Uuid;
+use chrono::NaiveDate;
 
 use crate::models::CalendarEvent;
 
@@ -21,11 +21,14 @@ pub trait EventRepository: Send + Sync {
     fn load(&self) -> Result<Vec<CalendarEvent>, Box<dyn Error>>;
 
     /// Saves an event to the repository.
-    /// If the event already exists, it should be updated.
+    /// If an event with the same title AND start_date already exists, it will be replaced.
     fn save(&self, event: &CalendarEvent) -> Result<(), Box<dyn Error>>;
 
-    /// Deletes an event by its ID.
-    fn delete(&self, id: &Uuid) -> Result<(), Box<dyn Error>>;
+    /// Deletes an event by its title and start_date.
+    ///
+    /// This is the key for file-based storage since UUIDs are not persisted
+    /// and are regenerated on each load.
+    fn delete(&self, title: &str, start_date: NaiveDate) -> Result<(), Box<dyn Error>>;
 
     /// Saves an event with optional sync provider.
     /// The sync_provider should be cast to the appropriate type using `as_any()`.
@@ -43,11 +46,12 @@ pub trait EventRepository: Send + Sync {
     #[allow(unused_variables)]
     fn delete_with_sync(
         &self,
-        id: &Uuid,
+        title: &str,
+        start_date: NaiveDate,
         sync_provider: Option<&DynSyncProvider>,
         calendar_dir: &Path,
     ) -> Result<(), Box<dyn Error>> {
-        self.delete(id)
+        self.delete(title, start_date)
     }
 }
 
@@ -88,7 +92,11 @@ mod tests {
 
         fn save(&self, event: &CalendarEvent) -> Result<(), Box<dyn Error>> {
             let mut events = self.events.lock().unwrap();
-            if let Some(pos) = events.iter().position(|e| e.id == event.id) {
+            // Find existing event by title and start_date (key for file storage)
+            if let Some(pos) = events
+                .iter()
+                .position(|e| e.title == event.title && e.start_date == event.start_date)
+            {
                 events[pos] = event.clone();
             } else {
                 events.push(event.clone());
@@ -96,9 +104,9 @@ mod tests {
             Ok(())
         }
 
-        fn delete(&self, id: &Uuid) -> Result<(), Box<dyn Error>> {
+        fn delete(&self, title: &str, start_date: NaiveDate) -> Result<(), Box<dyn Error>> {
             let mut events = self.events.lock().unwrap();
-            events.retain(|e| e.id.as_str() != id.to_string());
+            events.retain(|e| !(e.title == title && e.start_date == start_date));
             Ok(())
         }
     }
@@ -174,9 +182,8 @@ mod tests {
             is_all_day: false,
         };
 
-        let id = Uuid::parse_str(&event.id).unwrap();
         repo.save(&event).unwrap();
-        repo.delete(&id).unwrap();
+        repo.delete("Test Event", event.start_date).unwrap();
 
         let events = repo.load().unwrap();
         assert!(events.is_empty());

@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - rcal binary now captures and displays validation errors to users
 
 ### Fixed
+- Fixed event file storage to comply with EVENT_FORMAT.md
+- Event files now use title-based filenames (e.g., `Team_Meeting.md`) instead of ID-based
+- Removed ID field from saved Markdown content - files no longer contain ID
+- Updated EventRepository trait to use (title, start_date) as the key for delete operations instead of UUID
+- The CalendarEvent.id field is still present for in-memory use
 - Fixed pre-existing test bugs in the test suite
 - Fixed doc-tests that were failing
 

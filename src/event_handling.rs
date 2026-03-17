@@ -240,6 +240,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         app.error_message = "Title cannot be empty".to_string();
                         return Ok(true);
                     }
+                    if app.popup_event_title.len() > 200 {
+                        app.error_message = "Title cannot exceed 200 characters".to_string();
+                        return Ok(true);
+                    }
                     if let Some(ref error) = app.date_input_error {
                         app.error_message = error.clone();
                         return Ok(true);
@@ -359,8 +363,12 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     }
 
                     app.events.push(event.clone());
-                    let _ =
-                        persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir);
+                    if let Err(e) =
+                        persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir)
+                    {
+                        app.error_message = format!("Failed to save event: {}", e);
+                        return Ok(true);
+                    }
 
                     // Reset editing state
                     app.is_editing = false;

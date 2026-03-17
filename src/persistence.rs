@@ -2,7 +2,7 @@ use std::path::Path;
 
 use chrono::{Datelike, Duration, Local, Months, NaiveDate, NaiveTime};
 use dirs;
-use rcal_lib::{CalendarEvent, Recurrence};
+use rcal_lib::{validate_event, validate_filename, CalendarEvent, Recurrence};
 use uuid::Uuid;
 
 use rcal_lib::sync::SyncProvider;
@@ -228,6 +228,228 @@ pub fn load_events_from_path(
     Ok(events)
 }
 
+/// Represents a parsing error for a single event file.
+#[derive(Debug, Clone)]
+pub struct EventParseError {
+    /// The path to the file that failed to parse.
+    pub file_path: std::path::PathBuf,
+    /// A description of what went wrong.
+    pub message: String,
+}
+
+/// Result of loading events with detailed parsing information.
+///
+/// This struct contains both successfully parsed events and any parsing
+/// errors encountered during the load process.
+#[derive(Debug)]
+pub struct LoadEventsResult {
+    /// Successfully parsed events.
+    pub events: Vec<CalendarEvent>,
+    /// Errors encountered while parsing event files.
+    pub parse_errors: Vec<EventParseError>,
+}
+
+impl LoadEventsResult {
+    /// Returns true if there were any parsing errors.
+    pub fn has_errors(&self) -> bool {
+        !self.parse_errors.is_empty()
+    }
+
+    /// Returns the number of events that failed to parse.
+    pub fn error_count(&self) -> usize {
+        self.parse_errors.len()
+    }
+}
+
+/// Loads events from a directory with detailed parsing error information.
+///
+/// This function provides more detailed error information than `load_events_from_path`,
+/// returning both successfully parsed events and any errors encountered during parsing.
+/// This allows downstream projects to handle malformed event files appropriately.
+///
+/// # Arguments
+///
+/// * `calendar_dir` - The directory containing event files.
+///
+/// # Returns
+///
+/// Returns `Ok(LoadEventsResult)` containing the loaded events and any parse errors.
+/// The function still returns successfully even if some events fail to parse -
+/// those events are simply excluded from the events list and reported in parse_errors.
+pub fn load_events_from_path_with_errors(
+    calendar_dir: &Path,
+) -> Result<LoadEventsResult, Box<dyn std::error::Error>> {
+    if !calendar_dir.exists() {
+        std::fs::create_dir_all(calendar_dir)?;
+        return Ok(LoadEventsResult {
+            events: Vec::new(),
+            parse_errors: Vec::new(),
+        });
+    }
+
+    let mut events = Vec::new();
+    let mut parse_errors = Vec::new();
+
+    let entries = std::fs::read_dir(calendar_dir)?;
+    for entry in entries {
+        let entry = entry?;
+        let path = entry.path();
+        if path
+            .file_name()
+            .and_then(|n| n.to_str())
+            .map(|s| s.ends_with(".md"))
+            .unwrap_or(false)
+        {
+            let content = match std::fs::read_to_string(&path) {
+                Ok(c) => c,
+                Err(e) => {
+                    parse_errors.push(EventParseError {
+                        file_path: path.clone(),
+                        message: format!("Failed to read file: {}", e),
+                    });
+                    continue;
+                }
+            };
+
+            // Parse event from content
+            let mut title = String::new();
+            let mut start_date = None;
+            let mut end_date = None;
+            let mut start_time = None;
+            let mut end_time = None;
+            let mut description = String::new();
+            let mut recurrence = Recurrence::None;
+            let mut parse_issues = Vec::new();
+
+            for line in content.lines() {
+                if let Some(stripped) = line.strip_prefix("# Event: ") {
+                    title = stripped.trim().to_string();
+                } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
+                    let date_str = stripped.trim();
+                    if date_str.contains(" to ") {
+                        let parts: Vec<&str> = date_str.split(" to ").collect();
+                        if parts.len() != 2 {
+                            parse_issues.push("Invalid date range format".to_string());
+                        } else {
+                            start_date = NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").ok();
+                            end_date = NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").ok();
+                            if start_date.is_none() {
+                                parse_issues.push(format!("Invalid start date: {}", parts[0]));
+                            }
+                            if end_date.is_none() {
+                                parse_issues.push(format!("Invalid end date: {}", parts[1]));
+                            }
+                        }
+                    } else {
+                        start_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok();
+                        if start_date.is_none() && !date_str.is_empty() {
+                            parse_issues.push(format!("Invalid date format: {}", date_str));
+                        }
+                    }
+                } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
+                    let time_str = stripped.trim();
+                    if time_str.contains(" to ") {
+                        let parts: Vec<&str> = time_str.split(" to ").collect();
+                        if parts.len() != 2 {
+                            parse_issues.push("Invalid time range format".to_string());
+                        } else {
+                            start_time = NaiveTime::parse_from_str(parts[0], "%H:%M").ok();
+                            end_time = NaiveTime::parse_from_str(parts[1], "%H:%M").ok();
+                            if start_time.is_none() && parts[0] != "all-day" {
+                                parse_issues.push(format!("Invalid start time: {}", parts[0]));
+                            }
+                            if end_time.is_none() && parts[1] != "all-day" {
+                                parse_issues.push(format!("Invalid end time: {}", parts[1]));
+                            }
+                        }
+                    } else if time_str != "all-day" {
+                        start_time = NaiveTime::parse_from_str(time_str, "%H:%M").ok();
+                        if start_time.is_none() && !time_str.is_empty() {
+                            parse_issues.push(format!("Invalid time format: {}", time_str));
+                        }
+                    }
+                } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
+                    description = stripped.trim().to_string();
+                } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
+                    let rec_str = stripped.trim();
+                    recurrence = match rec_str {
+                        "daily" => Recurrence::Daily,
+                        "weekly" => Recurrence::Weekly,
+                        "monthly" => Recurrence::Monthly,
+                        "yearly" => Recurrence::Yearly,
+                        _ => Recurrence::None,
+                    };
+                }
+            }
+
+            // Check for required fields
+            if title.is_empty() {
+                parse_issues.push("Missing or empty title".to_string());
+            }
+            if start_date.is_none() {
+                parse_issues.push("Missing start_date".to_string());
+            }
+
+            // Only add event if we have the required start_date
+            if let Some(sd) = start_date {
+                // Validate the parsed event
+                let is_all_day = start_time.is_none();
+                let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
+                let event = CalendarEvent {
+                    id: Uuid::new_v4().to_string(),
+                    title,
+                    description,
+                    recurrence,
+                    is_recurring_instance: false,
+                    base_date: None,
+                    start_date: sd,
+                    end_date: end_date.or(Some(sd)),
+                    start_time: st,
+                    end_time,
+                    is_all_day,
+                };
+
+                // Run validation on the parsed event
+                if let Err(validation_errors) = rcal_lib::validate_event_with_details(&event) {
+                    for err in validation_errors {
+                        parse_issues.push(format!("Validation error: {}", err));
+                    }
+                }
+
+                if parse_issues.is_empty() {
+                    events.push(event);
+                } else {
+                    parse_errors.push(EventParseError {
+                        file_path: path,
+                        message: parse_issues.join("; "),
+                    });
+                }
+            } else {
+                // No valid start date - this is a parse error
+                parse_errors.push(EventParseError {
+                    file_path: path,
+                    message: if parse_issues.is_empty() {
+                        "Missing required start_date field".to_string()
+                    } else {
+                        parse_issues.join("; ")
+                    },
+                });
+            }
+        }
+    }
+
+    events.sort_by(|a, b| {
+        a.start_date
+            .cmp(&b.start_date)
+            .then(a.start_time.cmp(&b.start_time))
+    });
+
+    Ok(LoadEventsResult {
+        events,
+        parse_errors,
+    })
+}
+
 /// Generates recurring event instances for the given base events within the specified date range.
 /// This function implements lazy loading by creating instances only for the requested period,
 /// with a buffer to ensure smooth UI navigation. Instances are generated on-demand to avoid
@@ -368,6 +590,14 @@ pub fn save_event_to_path_without_sync(
     event: &mut CalendarEvent,
     calendar_dir: &Path,
 ) -> Result<(), std::io::Error> {
+    // Validate event before saving - don't save invalid events
+    if let Err(validation_error) = validate_event(event) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Validation failed: {}", validation_error),
+        ));
+    }
+
     std::fs::create_dir_all(calendar_dir)?;
 
     let base_name = sanitize_title_for_filename(&event.title);
@@ -378,6 +608,14 @@ pub fn save_event_to_path_without_sync(
         counter += 1;
     }
     let filepath = calendar_dir.join(&filename);
+
+    // Validate the filename matches the event title
+    if let Err(validation_error) = validate_filename(event, &filename) {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::InvalidData,
+            format!("Filename validation failed: {}", validation_error),
+        ));
+    }
 
     let date_str = if let Some(end) = event.end_date {
         if end != event.start_date {

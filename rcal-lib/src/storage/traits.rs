@@ -161,7 +161,7 @@ mod tests {
         let repo = Arc::new(InMemoryRepository::new());
 
         let event = CalendarEvent {
-            id: "test-id".to_string(),
+            id: "550e8400-e29b-41d4-a716-446655440000".to_string(),
             title: "Test Event".to_string(),
             description: "Description".to_string(),
             recurrence: Recurrence::None,

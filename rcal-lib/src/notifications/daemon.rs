@@ -136,27 +136,36 @@ pub fn run_daemon<R: crate::storage::EventRepository>(
 mod tests {
     use super::*;
     use chrono::{Duration, NaiveDate, NaiveTime};
+    use std::sync::{Arc, RwLock};
 
     struct TestNotifier {
-        notifications: std::sync::Mutex<Vec<(String, String)>>,
+        notifications: Arc<RwLock<Vec<(String, String)>>>,
+    }
+
+    impl Clone for TestNotifier {
+        fn clone(&self) -> Self {
+            Self {
+                notifications: Arc::clone(&self.notifications),
+            }
+        }
     }
 
     impl TestNotifier {
         fn new() -> Self {
             Self {
-                notifications: std::sync::Mutex::new(Vec::new()),
+                notifications: Arc::new(RwLock::new(Vec::new())),
             }
         }
 
         fn get_notifications(&self) -> Vec<(String, String)> {
-            self.notifications.lock().unwrap().clone()
+            self.notifications.read().unwrap().clone()
         }
     }
 
     impl Notifier for TestNotifier {
         fn notify(&self, title: &str, body: &str) -> Result<(), Box<dyn Error>> {
             self.notifications
-                .lock()
+                .write()
                 .unwrap()
                 .push((title.to_string(), body.to_string()));
             Ok(())
@@ -220,13 +229,12 @@ mod tests {
 
     #[test]
     fn test_notification_sent() {
-        let test_notifier = Box::new(TestNotifier::new());
-        let test_notifier_clone = Box::new(TestNotifier::new());
+        let test_notifier = TestNotifier::new();
 
-        let mut daemon = NotificationDaemon::new(test_notifier_clone);
+        let mut daemon = NotificationDaemon::new(Box::new(test_notifier.clone()));
 
-        let now = Local::now();
-        let future_time = now.time() + Duration::minutes(15);
+        let now = Local::now().naive_local();
+        let future_datetime = now + Duration::minutes(15);
 
         let event = CalendarEvent {
             id: "test".to_string(),
@@ -235,9 +243,9 @@ mod tests {
             recurrence: crate::models::Recurrence::None,
             is_recurring_instance: false,
             base_date: None,
-            start_date: now.date_naive(),
+            start_date: future_datetime.date(),
             end_date: None,
-            start_time: future_time,
+            start_time: future_datetime.time(),
             end_time: None,
             is_all_day: false,
         };

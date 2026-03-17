@@ -14,7 +14,7 @@
 //! ## Usage
 //!
 //! ```rust
-//! use rcal_lib::{CalendarEvent, EventService, FileEventRepository, DefaultPathProvider};
+//! use rcal_lib::{CalendarEvent, EventRepository, EventService, FileEventRepository, DefaultPathProvider};
 //! use chrono::{NaiveDate, NaiveTime};
 //!
 //! // Create an event
@@ -57,3 +57,10 @@ pub use sync::{GitSyncProvider, SyncProvider};
 // Re-export notifications
 pub mod notifications;
 pub use notifications::{DefaultNotifier, NotificationDaemon, Notifier};
+
+// Re-export validation
+pub mod validation;
+pub use validation::{
+    sanitize_title_for_filename, validate_event, validate_event_with_details, validate_filename,
+    ValidationError,
+};

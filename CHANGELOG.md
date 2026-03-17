@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- New validation module with `ValidationError` enum, `validate_event()`, `validate_filename()`, and `sanitize_title_for_filename()` functions
+- Validation integration in persistence layer - save functions now validate events before saving
+- rcal binary now captures and displays validation errors to users
+
+### Fixed
+- Fixed pre-existing test bugs in the test suite
+- Fixed doc-tests that were failing
+
 ## [1.4.0] - 2026-02-08
 
 ### Added

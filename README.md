@@ -556,6 +556,72 @@ cargo test --test integration_test  # Run only integration tests
 4. Run `cargo test` and `cargo clippy`
 5. Submit a pull request
 
+## For Downstream Projects
+
+rcal-lib enforces EVENT_FORMAT.md for all downstream projects — they cannot save invalid events. The library provides a comprehensive validation API to ensure data integrity.
+
+### Event Validation
+
+rcal-lib includes a robust validation system that enforces the EVENT_FORMAT.md specification. Downstream projects that build on rcal-lib must validate events before saving them. This ensures all stored events conform to the expected format, preventing data corruption and synchronization issues.
+
+#### Validation Functions
+
+The following functions are exported from `rcal_lib`:
+
+| Function | Description |
+|----------|-------------|
+| `validate_event(event: &CalendarEvent) -> Result<(), ValidationError>` | Fast-fail validation that returns on the first error encountered |
+| `validate_event_with_details(event: &CalendarEvent) -> Result<(), Vec<ValidationError>>` | Collects all validation errors before returning |
+
+#### ValidationError Enum Variants
+
+The `ValidationError` enum provides specific error types for different validation failures:
+
+| Variant | Description |
+|---------|-------------|
+| `EmptyTitle` | Title is empty or whitespace-only |
+| `TitleTooLong` | Title exceeds 200 characters |
+| `MissingStartDate` | Start date is required |
+| `EndDateBeforeStartDate` | End date is before start date |
+| `EndTimeBeforeStartTime` | End time is before start time (when both are specified) |
+| `MissingStartTimeForTimedEvent` | Missing start time for non-all-day event |
+| `InvalidTimeForAllDayEvent` | Invalid time specified for all-day event |
+
+#### Validation Behavior
+
+- **`save_event_to_path_without_sync()`** now validates events BEFORE saving. If the event is invalid, it returns a `ValidationError` instead of writing to disk.
+- **Downstream projects CANNOT save invalid events** — the library enforces this requirement at the API level.
+
+#### Load Function Improvements
+
+The library also provides improved error handling when loading events:
+
+- **`load_events_from_path_with_errors()`** returns both successful events AND parsing errors
+- No more silent failures — all errors are reported to the caller
+
+#### Example Usage
+
+```rust
+use rcal_lib::{CalendarEvent, validate_event, ValidationError};
+
+fn save_safe(event: CalendarEvent, path: &Path) -> Result<(), ValidationError> {
+    // Validate the event before saving
+    // This will fail with a ValidationError if the event is invalid
+    validate_event(&event)?;
+    
+    // Now safe to save
+    save_event_to_path_without_sync(event, path)
+}
+
+// For more detailed error reporting:
+fn save_with_full_validation(event: CalendarEvent, path: &Path) -> Result<(), Vec<ValidationError>> {
+    // Collect all validation errors at once
+    validate_event_with_details(&event)?;
+    
+    save_event_to_path_without_sync(event, path)
+}
+```
+
 ## License
 
 CC0 1.0 Universal - see LICENSE file for details.

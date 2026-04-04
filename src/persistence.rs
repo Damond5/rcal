@@ -64,7 +64,6 @@ pub fn cleanup_old_events_with_cutoff(
                 eprintln!("Sync push failed after cleanup: {e}");
             }
         }
-        println!("Cleaned up {deleted_count} old events.");
     }
 
     Ok(deleted_count)

@@ -91,6 +91,8 @@ impl FileEventRepository {
         for entry in entries {
             let entry = entry?;
             let path = entry.path();
+            let _filename = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+
             if path
                 .file_name()
                 .and_then(|n| n.to_str())
@@ -606,9 +608,6 @@ pub fn cleanup_old_events_with_cutoff(
             deleted_count += 1;
         }
     }
-
-    // Sync can be handled at a higher level by the caller
-    println!("Cleaned up {deleted_count} old events.");
 
     Ok(deleted_count)
 }

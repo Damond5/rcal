@@ -855,7 +855,10 @@ fn test_create_event_empty_title() {
     handle_event(&mut app, Event::Key(key_event)).unwrap();
 
     assert_eq!(app.events.len(), 0); // No event should be created
-    assert_eq!(app.error_message, "Title cannot be empty");
+    assert_eq!(
+        app.error_message,
+        "Title cannot be empty or exceed 200 characters"
+    );
     assert!(app.show_add_event_popup); // Popup should remain open
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
 }
@@ -1301,7 +1304,10 @@ fn test_edit_event_empty_title() {
     assert_eq!(app.input_mode, InputMode::EditingEventPopup);
     assert_eq!(app.events.len(), 1);
     assert_eq!(app.events[0], original_event); // Event unchanged
-    assert_eq!(app.error_message, "Title cannot be empty");
+    assert_eq!(
+        app.error_message,
+        "Title cannot be empty or exceed 200 characters"
+    );
     assert!(app.is_editing);
     assert!(app.event_being_edited.is_some());
 }

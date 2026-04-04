@@ -10,6 +10,7 @@ use std::thread;
 
 use crate::app::{App, InputMode, PopupInputField};
 use rcal_lib::sync::SyncProvider;
+use rcal_lib::validation::{is_valid_date_range, is_valid_title};
 use rcal_lib::{CalendarEvent, GitSyncProvider, Recurrence, SyncStatus};
 
 fn extract_date_from_suggestion(suggestion: &(String, bool)) -> String {
@@ -236,12 +237,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
             },
             InputMode::EditingEventPopup => match key.code {
                 KeyCode::Enter => {
-                    if app.popup_event_title.trim().is_empty() {
-                        app.error_message = "Title cannot be empty".to_string();
-                        return Ok(true);
-                    }
-                    if app.popup_event_title.len() > 200 {
-                        app.error_message = "Title cannot exceed 200 characters".to_string();
+                    // Use library validation for title
+                    if !is_valid_title(&app.popup_event_title) {
+                        app.error_message =
+                            "Title cannot be empty or exceed 200 characters".to_string();
                         return Ok(true);
                     }
                     if let Some(ref error) = app.date_input_error {
@@ -304,12 +303,10 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         NaiveTime::parse_from_str(&normalized_end_time_str, "%H:%M").ok()
                     };
 
-                    // Validate date range
-                    if let Some(ed) = end_date {
-                        if ed < app.current_date_for_new_event {
-                            app.error_message = "End date cannot be before start date".to_string();
-                            return Ok(true);
-                        }
+                    // Validate date range using library function
+                    if !is_valid_date_range(app.current_date_for_new_event, end_date) {
+                        app.error_message = "End date cannot be before start date".to_string();
+                        return Ok(true);
                     }
 
                     let title = app.popup_event_title.drain(..).collect();

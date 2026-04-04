@@ -216,11 +216,16 @@ impl FileEventRepository {
         let time_str = if event.is_all_day {
             "all-day".to_string()
         } else if let Some(end) = event.end_time {
-            format!(
-                "{} to {}",
-                event.start_time.format("%H:%M"),
-                end.format("%H:%M")
-            )
+            // Check if end_time equals start_time (no duration)
+            if end == event.start_time {
+                event.start_time.format("%H:%M").to_string()
+            } else {
+                format!(
+                    "{} to {}",
+                    event.start_time.format("%H:%M"),
+                    end.format("%H:%M")
+                )
+            }
         } else {
             event.start_time.format("%H:%M").to_string()
         };

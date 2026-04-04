@@ -1,8 +1,11 @@
 use std::path::Path;
 
-use chrono::{Datelike, Duration, Local, Months, NaiveDate, NaiveTime};
+use chrono::{Local, Months, NaiveDate, NaiveTime};
 use dirs;
-use rcal_lib::{validate_event, validate_filename, CalendarEvent, Recurrence};
+use rcal_lib::storage::file_storage::FileEventRepository;
+use rcal_lib::{
+    sanitize_title_for_filename, validate_event, validate_filename, CalendarEvent, Recurrence,
+};
 use uuid::Uuid;
 
 use rcal_lib::sync::SyncProvider;
@@ -67,70 +70,6 @@ pub fn cleanup_old_events_with_cutoff(
     Ok(deleted_count)
 }
 
-fn sanitize_title_for_filename(title: &str) -> String {
-    let mut sanitized = title
-        .replace(' ', "_")
-        .chars()
-        .filter(|c| c.is_alphanumeric() || *c == '_')
-        .collect::<String>();
-    // Trim leading and trailing underscores
-    sanitized = sanitized.trim_matches('_').to_string();
-    // Collapse consecutive underscores
-    let mut collapsed = String::new();
-    let mut last_was_underscore = false;
-    for c in sanitized.chars() {
-        if c == '_' {
-            if !last_was_underscore {
-                collapsed.push(c);
-                last_was_underscore = true;
-            }
-        } else {
-            collapsed.push(c);
-            last_was_underscore = false;
-        }
-    }
-    // Limit length to 100 characters
-    if collapsed.len() > 100 {
-        collapsed.truncate(100);
-    }
-    if collapsed.is_empty() {
-        "untitled".to_string() // Fallback for empty or entirely invalid titles
-    } else {
-        collapsed
-    }
-}
-
-fn find_event_filepath(
-    calendar_dir: &Path,
-    event: &CalendarEvent,
-) -> Result<std::path::PathBuf, std::io::Error> {
-    let entries = std::fs::read_dir(calendar_dir)?;
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .map(|s| s.ends_with(".md"))
-            .unwrap_or(false)
-        {
-            let content = std::fs::read_to_string(&path)?;
-            for line in content.lines() {
-                if let Some(stripped) = line.strip_prefix("# Event: ") {
-                    let title = stripped.trim();
-                    if title == event.title {
-                        return Ok(path);
-                    }
-                }
-            }
-        }
-    }
-    Err(std::io::Error::new(
-        std::io::ErrorKind::NotFound,
-        format!("Event '{}' not found", event.title),
-    ))
-}
-
 pub fn load_events() -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
     let home = dirs::home_dir().ok_or("Could not find home directory")?;
     load_events_from_path(&home.join("calendar"))
@@ -139,93 +78,8 @@ pub fn load_events() -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
 pub fn load_events_from_path(
     calendar_dir: &Path,
 ) -> Result<Vec<CalendarEvent>, Box<dyn std::error::Error>> {
-    if !calendar_dir.exists() {
-        std::fs::create_dir_all(calendar_dir)?;
-        return Ok(Vec::new());
-    }
-
-    let mut events = Vec::new();
-
-    let entries = std::fs::read_dir(calendar_dir)?;
-    for entry in entries {
-        let entry = entry?;
-        let path = entry.path();
-        if path
-            .file_name()
-            .and_then(|n| n.to_str())
-            .map(|s| s.ends_with(".md"))
-            .unwrap_or(false)
-        {
-            let content = std::fs::read_to_string(&path)?;
-            // new format
-            let mut title = String::new();
-            let mut start_date = None;
-            let mut end_date = None;
-            let mut start_time = None;
-            let mut end_time = None;
-            let mut description = String::new();
-            let mut recurrence = Recurrence::None;
-            for line in content.lines() {
-                if let Some(stripped) = line.strip_prefix("# Event: ") {
-                    title = stripped.trim().to_string();
-                } else if let Some(stripped) = line.strip_prefix("- **Date**: ") {
-                    let date_str = stripped.trim();
-                    if date_str.contains(" to ") {
-                        let parts: Vec<&str> = date_str.split(" to ").collect();
-                        start_date = NaiveDate::parse_from_str(parts[0], "%Y-%m-%d").ok();
-                        end_date = NaiveDate::parse_from_str(parts[1], "%Y-%m-%d").ok();
-                    } else {
-                        start_date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d").ok();
-                    }
-                } else if let Some(stripped) = line.strip_prefix("- **Time**: ") {
-                    let time_str = stripped.trim();
-                    if time_str.contains(" to ") {
-                        let parts: Vec<&str> = time_str.split(" to ").collect();
-                        start_time = NaiveTime::parse_from_str(parts[0], "%H:%M").ok();
-                        end_time = NaiveTime::parse_from_str(parts[1], "%H:%M").ok();
-                    } else {
-                        start_time = NaiveTime::parse_from_str(time_str, "%H:%M").ok();
-                    }
-                } else if let Some(stripped) = line.strip_prefix("- **Description**: ") {
-                    description = stripped.trim().to_string();
-                } else if let Some(stripped) = line.strip_prefix("- **Recurrence**: ") {
-                    let rec_str = stripped.trim();
-                    recurrence = match rec_str {
-                        "daily" => Recurrence::Daily,
-                        "weekly" => Recurrence::Weekly,
-                        "monthly" => Recurrence::Monthly,
-                        "yearly" => Recurrence::Yearly,
-                        _ => Recurrence::None,
-                    };
-                }
-            }
-            if let Some(sd) = start_date {
-                let is_all_day = start_time.is_none();
-                let st = start_time.unwrap_or(NaiveTime::from_hms_opt(0, 0, 0).unwrap());
-                events.push(CalendarEvent {
-                    id: Uuid::new_v4().to_string(),
-                    title,
-                    description,
-                    recurrence,
-                    is_recurring_instance: false,
-                    base_date: None,
-                    start_date: sd,
-                    end_date: end_date.or(Some(sd)),
-                    start_time: st,
-                    end_time,
-                    is_all_day,
-                });
-            }
-        }
-    }
-
-    events.sort_by(|a, b| {
-        a.start_date
-            .cmp(&b.start_date)
-            .then(a.start_time.cmp(&b.start_time))
-    });
-
-    Ok(events)
+    let repo = FileEventRepository::with_path(calendar_dir.to_path_buf());
+    repo.load_from_path(calendar_dir)
 }
 
 /// Represents a parsing error for a single event file.
@@ -459,112 +313,14 @@ pub fn generate_instances_for_range(
     start_date: NaiveDate,
     end_date: NaiveDate,
 ) -> Vec<CalendarEvent> {
-    let mut instances = vec![];
-    for base_event in base_events {
-        if base_event.recurrence != Recurrence::None {
-            instances.extend(generate_recurring_instances_in_range(
-                base_event, start_date, end_date,
-            ));
-        }
-    }
-    instances
-}
-
-// Helper function to advance year for yearly recurring events with Feb 29th fallback.
-// If the date is Feb 29 and the target year is not a leap year, fall back to Feb 28.
-// This ensures yearly events like birthdays occur annually even in non-leap years.
-fn advance_year_with_feb29_fallback(current_date: NaiveDate) -> NaiveDate {
-    let next_year = current_date.year() + 1;
-    if let Some(new_date) = current_date.with_year(next_year) {
-        new_date
-    } else if current_date.month() == 2 && current_date.day() == 29 {
-        NaiveDate::from_ymd_opt(next_year, 2, 28).unwrap_or_else(|| {
-            eprintln!("Warning: Could not create Feb 28 for year {next_year}");
-            current_date
-        })
-    } else {
-        eprintln!("Warning: Could not advance year from {current_date:?}");
-        current_date
-    }
-}
-
-fn generate_recurring_instances_in_range(
-    base_event: &CalendarEvent,
-    range_start: NaiveDate,
-    range_end: NaiveDate,
-) -> Vec<CalendarEvent> {
-    let mut instances = vec![];
-    let mut current_date = base_event.start_date;
-
-    // Skip to the first date >= range_start
-    while current_date < range_start {
-        match base_event.recurrence {
-            Recurrence::Daily => current_date += Duration::days(1),
-            Recurrence::Weekly => current_date += Duration::weeks(1),
-            Recurrence::Monthly => {
-                if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
-                    current_date = new_date;
-                } else {
-                    return instances; // Stop if invalid
-                }
-            }
-            Recurrence::Yearly => {
-                current_date = advance_year_with_feb29_fallback(current_date);
-            }
-            Recurrence::None => return instances,
-        }
-    }
-
-    // Now generate from current_date to range_end
-    while current_date <= range_end {
-        if current_date != base_event.start_date {
-            let end_date = base_event.end_date.map(|end| {
-                let duration = end - base_event.start_date;
-                current_date + duration
-            });
-            instances.push(CalendarEvent {
-                id: Uuid::new_v4().to_string(),
-                title: base_event.title.clone(),
-                description: base_event.description.clone(),
-                recurrence: Recurrence::None,
-                is_recurring_instance: true,
-                base_date: Some(base_event.start_date),
-                start_date: current_date,
-                end_date,
-                start_time: base_event.start_time,
-                end_time: base_event.end_time,
-                is_all_day: base_event.is_all_day,
-            });
-        }
-
-        match base_event.recurrence {
-            Recurrence::Daily => current_date += Duration::days(1),
-            Recurrence::Weekly => current_date += Duration::weeks(1),
-            Recurrence::Monthly => {
-                if let Some(new_date) = current_date.with_month(current_date.month() + 1) {
-                    current_date = new_date;
-                } else {
-                    eprintln!(
-                        "Warning: Invalid date for recurring event '{}': {:?}",
-                        base_event.title, current_date
-                    );
-                    break;
-                }
-            }
-            Recurrence::Yearly => {
-                current_date = advance_year_with_feb29_fallback(current_date);
-            }
-            Recurrence::None => break,
-        }
-    }
-    instances
+    FileEventRepository::generate_instances_for_range(base_events, start_date, end_date)
 }
 
 pub fn generate_recurring_instances(
     base_event: &CalendarEvent,
     until: NaiveDate,
 ) -> Vec<CalendarEvent> {
-    generate_recurring_instances_in_range(base_event, base_event.start_date, until)
+    FileEventRepository::generate_recurring_instances(base_event, until)
 }
 
 pub fn save_event(event: &mut CalendarEvent) -> Result<(), std::io::Error> {
@@ -617,44 +373,8 @@ pub fn save_event_to_path_without_sync(
         ));
     }
 
-    let date_str = if let Some(end) = event.end_date {
-        if end != event.start_date {
-            format!(
-                "{} to {}",
-                event.start_date.format("%Y-%m-%d"),
-                end.format("%Y-%m-%d")
-            )
-        } else {
-            event.start_date.format("%Y-%m-%d").to_string()
-        }
-    } else {
-        event.start_date.format("%Y-%m-%d").to_string()
-    };
-
-    let time_str = if event.is_all_day {
-        "all-day".to_string()
-    } else if let Some(end) = event.end_time {
-        format!(
-            "{} to {}",
-            event.start_time.format("%H:%M"),
-            end.format("%H:%M")
-        )
-    } else {
-        event.start_time.format("%H:%M").to_string()
-    };
-
-    let rec_str = match event.recurrence {
-        Recurrence::None => "none",
-        Recurrence::Daily => "daily",
-        Recurrence::Weekly => "weekly",
-        Recurrence::Monthly => "monthly",
-        Recurrence::Yearly => "yearly",
-    };
-
-    let content = format!(
-        "# Event: {}\n\n- **Date**: {}\n- **Time**: {}\n- **Description**: {}\n- **Recurrence**: {}\n",
-        event.title, date_str, time_str, event.description, rec_str
-    );
+    // Use the library's event_to_markdown for consistent serialization
+    let content = FileEventRepository::event_to_markdown(event);
 
     std::fs::write(filepath, content)?;
 
@@ -700,10 +420,9 @@ pub fn delete_event_from_path_without_sync(
     event: &CalendarEvent,
     calendar_dir: &Path,
 ) -> Result<(), std::io::Error> {
-    let filepath = find_event_filepath(calendar_dir, event)?;
-    std::fs::remove_file(filepath)?;
-
-    Ok(())
+    let repo = FileEventRepository::with_path(calendar_dir.to_path_buf());
+    repo.delete_from_path(event, calendar_dir)
+        .map_err(|e| std::io::Error::other(format!("{}", e)))
 }
 
 pub fn delete_event_from_path(

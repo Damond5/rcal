@@ -9,7 +9,7 @@ use tempfile::TempDir;
 
 fn setup_app() -> (App, TempDir) {
     let temp_dir = TempDir::new().unwrap();
-    let mut app = App::new_with_calendar_dir(temp_dir.path().to_path_buf());
+    let app = App::new_with_calendar_dir(temp_dir.path().to_path_buf());
     let events = rcal::persistence::load_events_from_path(&app.calendar_dir).unwrap();
     app.set_events(events);
     (app, temp_dir)

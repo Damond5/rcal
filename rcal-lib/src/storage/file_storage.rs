@@ -375,6 +375,9 @@ impl FileEventRepository {
                 instances.extend(Self::generate_recurring_instances_in_range(
                     base_event, start_date, end_date,
                 ));
+            } else if base_event.start_date >= start_date && base_event.start_date <= end_date {
+                // Only include non-recurring events that fall within the date range
+                instances.push(base_event.clone());
             }
         }
         instances

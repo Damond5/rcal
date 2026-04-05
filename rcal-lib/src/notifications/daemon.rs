@@ -136,6 +136,7 @@ pub fn run_daemon<R: crate::storage::EventRepository>(
 mod tests {
     use super::*;
     use chrono::{Duration, NaiveDate, NaiveTime};
+    use std::error::Error;
     use std::sync::{Arc, RwLock};
 
     struct TestNotifier {

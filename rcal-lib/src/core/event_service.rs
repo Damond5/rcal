@@ -103,7 +103,14 @@ impl EventService {
             self.cached_range = Some((gen_start, gen_end));
         }
         let mut all = self.events.clone();
-        all.extend(self.cached_instances.iter().cloned());
+        // Filter out non-recurring events from instances since they're already in self.events
+        let recurring_instances: Vec<_> = self
+            .cached_instances
+            .iter()
+            .filter(|e| e.recurrence != Recurrence::None)
+            .cloned()
+            .collect();
+        all.extend(recurring_instances);
         all.sort_by(|a, b| {
             a.start_date
                 .cmp(&b.start_date)
@@ -155,6 +162,9 @@ impl EventService {
                 instances.extend(Self::generate_recurring_instances_in_range(
                     base_event, start_date, end_date,
                 ));
+            } else if base_event.start_date >= start_date && base_event.start_date <= end_date {
+                // Only include non-recurring events that fall within the date range
+                instances.push(base_event.clone());
             }
         }
         instances

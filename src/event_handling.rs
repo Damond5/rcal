@@ -112,11 +112,12 @@ where
             match receiver.try_recv() {
                 Ok(Ok(_)) => {
                     // Reload events
-                    app.events = persistence::load_events_from_path(&app.calendar_dir)
+                    let events = persistence::load_events_from_path(&app.calendar_dir)
                         .unwrap_or_else(|e| {
                             eprintln!("Failed to reload events after sync: {e}");
                             Vec::new()
                         });
+                    app.set_events(events);
                     // Invalidate cached instances after reloading events
                     app.invalidate_instance_cache(None);
                     // Update sync status (silently, don't interfere with sync popup)
@@ -336,7 +337,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                     if app.is_editing {
                         if let Some(old_event) = &app.event_being_edited {
                             // Remove old event from main events list
-                            app.events.retain(|e| e != old_event);
+                            app.with_events_mut(|svc| {
+                                svc.remove_event(&old_event.id);
+                            });
                             // Remove from persistence
                             let _ = persistence::delete_event_from_path_without_sync(
                                 old_event,
@@ -359,7 +362,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         }
                     }
 
-                    app.events.push(event.clone());
+                    app.add_event(event.clone());
                     if let Err(e) =
                         persistence::save_event_to_path_without_sync(&mut event, &app.calendar_dir)
                     {
@@ -718,7 +721,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                         let selected_event =
                             &app.events_to_display_in_popup[app.selected_event_index];
                         let base_event = if let Some(base) =
-                            find_base_event_for_instance(selected_event, &app.events)
+                            find_base_event_for_instance(selected_event, &app.events())
                         {
                             base
                         } else {
@@ -786,7 +789,7 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             let event_to_delete = app.events_to_display_in_popup[index].clone();
                             // Determine if we need to delete a recurring series
                             let base_to_delete = if event_to_delete.is_recurring_instance {
-                                find_base_event_for_instance(&event_to_delete, &app.events)
+                                find_base_event_for_instance(&event_to_delete, &app.events())
                             } else if event_to_delete.recurrence != Recurrence::None {
                                 Some(event_to_delete.clone())
                             } else {
@@ -798,9 +801,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 app.invalidate_instance_cache(Some(base));
                                 // Delete the entire recurring series: remove all events with matching title (base + instances) from memory
                                 // and delete only the base event file from persistence (instances are in-memory only)
-                                app.events.retain(|event| {
-                                    !(event.title == base.title
-                                        && (event.is_recurring_instance || event == base))
+                                app.with_events_mut(|svc| {
+                                    svc.events_mut().retain(|event| {
+                                        !(event.title == base.title
+                                            && (event.is_recurring_instance || event == base))
+                                    });
                                 });
                                 // Remove base event from persistence
                                 let _ = persistence::delete_event_from_path_without_sync(
@@ -812,7 +817,9 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 // Invalidate cached instances before deletion
                                 app.invalidate_instance_cache(Some(&event_to_delete.clone()));
                                 // Delete single non-recurring event
-                                app.events.retain(|event| event != &event_to_delete);
+                                app.with_events_mut(|svc| {
+                                    svc.events_mut().retain(|event| event != &event_to_delete);
+                                });
                                 // Remove from persistence only if not a recurring instance
                                 if !event_to_delete.is_recurring_instance {
                                     let _ = persistence::delete_event_from_path_without_sync(
@@ -873,10 +880,11 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                                 app.sync_message = "Pull successful".to_string();
                                 app.sync_status = Some(status);
                                 // Reload events
-                                app.events = persistence::load_events().unwrap_or_else(|e| {
+                                let events = persistence::load_events().unwrap_or_else(|e| {
                                     eprintln!("Failed to reload events after pull: {e}");
                                     Vec::new()
                                 });
+                                app.set_events(events);
                                 // Invalidate cached instances after reloading events
                                 app.invalidate_instance_cache(None);
                             }

@@ -1,11 +1,10 @@
 // Import from rcal_lib directly
-use rcal_lib::{CalendarEvent, SyncStatus};
+use rcal_lib::{CalendarEvent, EventService, SyncStatus};
 
-use chrono::{Datelike, Duration, Local, NaiveDate};
+use chrono::{Datelike, Local, NaiveDate};
 use rcal_lib::sync::SyncProvider;
+use std::cell::RefCell;
 use std::sync::mpsc::Receiver;
-
-const INSTANCE_BUFFER_DAYS: i64 = 365;
 
 #[derive(PartialEq, Debug)]
 pub enum InputMode {
@@ -31,9 +30,7 @@ pub struct App {
     pub date: NaiveDate, // Now represents the selected date
     pub view_start_month: u32,
     pub view_start_year: i32,
-    pub events: Vec<CalendarEvent>, // Base events only
-    pub cached_instances: Vec<CalendarEvent>,
-    pub cached_range: Option<(NaiveDate, NaiveDate)>,
+    pub event_service: RefCell<EventService>,
     pub input: String,
     pub input_mode: InputMode,
     pub popup_event_title: String,
@@ -80,9 +77,7 @@ impl App {
             date,
             view_start_month: date.month(),
             view_start_year: date.year(),
-            events: Vec::new(),
-            cached_instances: Vec::new(),
-            cached_range: None,
+            event_service: RefCell::new(EventService::new()),
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
@@ -125,9 +120,7 @@ impl App {
             date,
             view_start_month: date.month(),
             view_start_year: date.year(),
-            events: Vec::new(),
-            cached_instances: Vec::new(),
-            cached_range: None,
+            event_service: RefCell::new(EventService::new()),
             input: String::new(),
             input_mode: InputMode::Normal,
             popup_event_title: String::new(),
@@ -198,29 +191,12 @@ impl App {
 
     /// Retrieves all events (base events + generated instances) for the given date range.
     /// Uses session-level caching to avoid regenerating instances for the same range.
-    /// Generates instances with a buffer (INSTANCE_BUFFER_DAYS) around the requested range
+    /// Generates instances with a buffer around the requested range
     /// to support smooth navigation without frequent regenerations.
-    pub fn get_all_events_for_range(
-        &mut self,
-        start: NaiveDate,
-        end: NaiveDate,
-    ) -> Vec<CalendarEvent> {
-        let buffer = Duration::days(INSTANCE_BUFFER_DAYS);
-        let gen_start = start - buffer;
-        let gen_end = end + buffer;
-        if self.cached_range != Some((gen_start, gen_end)) {
-            self.cached_instances =
-                crate::persistence::generate_instances_for_range(&self.events, gen_start, gen_end);
-            self.cached_range = Some((gen_start, gen_end));
-        }
-        let mut all = self.events.clone();
-        all.extend(self.cached_instances.iter().cloned());
-        all.sort_by(|a, b| {
-            a.start_date
-                .cmp(&b.start_date)
-                .then(a.start_time.cmp(&b.start_time))
-        });
-        all
+    pub fn get_all_events_for_range(&self, start: NaiveDate, end: NaiveDate) -> Vec<CalendarEvent> {
+        self.event_service
+            .borrow_mut()
+            .get_all_events_for_range(start, end)
     }
 
     pub fn adjust_view_boundaries(&mut self) {
@@ -249,18 +225,42 @@ impl App {
     /// If no event is provided, all cached instances are cleared.
     /// Call this after events are added, deleted, or edited to ensure
     /// lazy loading refreshes the display with accurate instances.
-    pub fn invalidate_instance_cache(&mut self, event: Option<&CalendarEvent>) {
-        if let Some(event) = event {
-            // Selective invalidation: remove only instances related to this event
-            self.cached_instances.retain(|instance| {
-                // Keep instances that don't match the event's title and base_date
-                !(instance.title == event.title && instance.base_date == Some(event.start_date))
-            });
-            // Note: cached_range is kept, as other events' instances may still be valid
-        } else {
-            // Full invalidation
-            self.cached_range = None;
-            self.cached_instances.clear();
-        }
+    pub fn invalidate_instance_cache(&self, event: Option<&CalendarEvent>) {
+        self.event_service
+            .borrow_mut()
+            .invalidate_instance_cache(event);
+    }
+
+    /// Sets the events in the EventService (used when loading from storage).
+    pub fn set_events(&self, events: Vec<CalendarEvent>) {
+        self.event_service.borrow_mut().set_events(events);
+    }
+
+    /// Adds a new event to the EventService.
+    pub fn add_event(&self, event: CalendarEvent) {
+        self.event_service.borrow_mut().add_event(event);
+    }
+
+    /// Removes an event by ID from the EventService.
+    pub fn remove_event(&self, id: &str) -> Option<CalendarEvent> {
+        self.event_service.borrow_mut().remove_event(id)
+    }
+
+    /// Updates an existing event in the EventService.
+    pub fn update_event(&self, event: CalendarEvent) -> Option<CalendarEvent> {
+        self.event_service.borrow_mut().update_event(event)
+    }
+
+    /// Returns a reference to the base events from the EventService.
+    pub fn events(&self) -> std::cell::Ref<'_, [CalendarEvent]> {
+        std::cell::Ref::map(self.event_service.borrow(), |service| service.events())
+    }
+
+    /// Provides mutable access to the EventService for direct event manipulation.
+    pub fn with_events_mut<F, R>(&self, f: F) -> R
+    where
+        F: FnOnce(&mut EventService) -> R,
+    {
+        f(&mut self.event_service.borrow_mut())
     }
 }

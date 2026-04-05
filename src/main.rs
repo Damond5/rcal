@@ -148,21 +148,23 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // create app and run it
     let mut app = App::new();
-    app.events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
+    let events = persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
         eprintln!("Failed to load events: {e}");
         Vec::new()
     });
+    app.set_events(events);
 
     // Auto cleanup old events if enabled
     if should_auto_cleanup_old_events() {
         match persistence::cleanup_old_events(&app.calendar_dir, app.sync_provider.as_deref()) {
             Ok(_) => {
                 // Reload events to reflect deletions
-                app.events =
+                let events =
                     persistence::load_events_from_path(&app.calendar_dir).unwrap_or_else(|e| {
                         eprintln!("Failed to reload events after cleanup: {e}");
                         Vec::new()
                     });
+                app.set_events(events);
             }
             Err(e) => eprintln!("Auto cleanup failed: {e}"),
         }

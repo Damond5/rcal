@@ -107,7 +107,7 @@ impl EventService {
         let recurring_instances: Vec<_> = self
             .cached_instances
             .iter()
-            .filter(|e| e.recurrence != Recurrence::None)
+            .filter(|e| e.is_recurring_instance)
             .cloned()
             .collect();
         all.extend(recurring_instances);

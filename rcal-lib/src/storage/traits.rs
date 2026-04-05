@@ -92,11 +92,8 @@ mod tests {
 
         fn save(&self, event: &CalendarEvent) -> Result<(), Box<dyn Error>> {
             let mut events = self.events.lock().unwrap();
-            // Find existing event by title and start_date (key for file storage)
-            if let Some(pos) = events
-                .iter()
-                .position(|e| e.title == event.title && e.start_date == event.start_date)
-            {
+            // Find existing event by id
+            if let Some(pos) = events.iter().position(|e| e.id == event.id) {
                 events[pos] = event.clone();
             } else {
                 events.push(event.clone());

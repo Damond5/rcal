@@ -789,10 +789,14 @@ pub fn handle_event(app: &mut App, event: CrosstermEvent) -> io::Result<bool> {
                             let event_to_delete = app.events_to_display_in_popup[index].clone();
                             // Determine if we need to delete a recurring series
                             let base_to_delete = if event_to_delete.is_recurring_instance {
+                                // It's an instance - find the base event to delete the whole series
                                 find_base_event_for_instance(&event_to_delete, &app.events())
+                                    .or_else(|| Some(event_to_delete.clone()))
                             } else if event_to_delete.recurrence != Recurrence::None {
+                                // It's a base recurring event - delete the whole series
                                 Some(event_to_delete.clone())
                             } else {
+                                // Non-recurring single event - just delete this one
                                 None
                             };
 

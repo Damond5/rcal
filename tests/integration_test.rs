@@ -1992,7 +1992,7 @@ fn test_yearly_recurring_event_creation_and_display() {
 
 #[test]
 fn test_cache_invalidation_on_event_edit() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
 
@@ -2030,7 +2030,7 @@ fn test_cache_invalidation_on_event_edit() {
 
 #[test]
 fn test_get_all_events_for_range_large_range() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2020, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2030, 12, 31).unwrap();
 
@@ -2056,7 +2056,7 @@ fn test_get_all_events_for_range_large_range() {
 
 #[test]
 fn test_get_all_events_for_range_invalid_dates() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     // Invalid range: end before start
     let start = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
     let end = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
@@ -2142,7 +2142,7 @@ fn test_suggestions_appear_on_end_date_field_entry() {
 
 #[test]
 fn test_performance_frequent_invalidations() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2025, 10, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2025, 10, 31).unwrap();
 
@@ -2180,7 +2180,7 @@ fn test_performance_frequent_invalidations() {
 
 #[test]
 fn test_feb29_yearly_fallback_to_feb28() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2027, 12, 31).unwrap();
 
@@ -2212,7 +2212,7 @@ fn test_feb29_yearly_fallback_to_feb28() {
 
 #[test]
 fn test_feb29_century_year_transitions() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(1899, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(1901, 12, 31).unwrap();
 
@@ -2242,7 +2242,7 @@ fn test_feb29_century_year_transitions() {
 
 #[test]
 fn test_feb29_multiday_event_duration_preservation() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
 
@@ -2286,7 +2286,7 @@ fn test_feb29_multiday_event_duration_preservation() {
 
 #[test]
 fn test_feb28_yearly_no_fallback() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2025, 12, 31).unwrap();
 
@@ -2314,7 +2314,7 @@ fn test_feb28_yearly_no_fallback() {
 
 #[test]
 fn test_feb29_event_cache_invalidation() {
-    let (mut app, _temp_dir) = setup_app();
+    let (app, _temp_dir) = setup_app();
     let start = NaiveDate::from_ymd_opt(2024, 1, 1).unwrap();
     let end = NaiveDate::from_ymd_opt(2026, 12, 31).unwrap();
 
